@@ -1,0 +1,265 @@
+/**
+ * ╔════════════════════════════════════════════════════════════════════╗
+ * ║        SYGIM — Services API (React ES Module)                      ║
+ * ║     Endpoints métier organisés par domaine                        ║
+ * ╚════════════════════════════════════════════════════════════════════╝
+ */
+
+import { httpClient } from './client';
+import { CONFIG } from './config';
+
+export const API = {
+    /**
+     * Authentification & Profil
+     */
+    Auth: {
+        login: (credentials) => 
+            httpClient.post('/auth/login', credentials),
+        
+        logout: () => {
+            if (typeof window !== 'undefined') {
+                localStorage.removeItem(CONFIG.STORAGE.JWT_TOKEN);
+                localStorage.removeItem(CONFIG.STORAGE.CURRENT_USER);
+            }
+            httpClient.setToken(null);
+            return Promise.resolve({ success: true });
+        },
+
+        register: (userData) => 
+            httpClient.post('/auth/register', userData),
+
+        refreshToken: () => 
+            httpClient.post('/auth/refresh', {}),
+
+        getCurrentUser: () => 
+            httpClient.get('/auth/me'),
+
+        updateProfile: (data) => 
+            httpClient.put('/auth/profile', data),
+
+        changePassword: (data) => 
+            httpClient.post('/auth/change-password', data),
+
+        requestPasswordReset: (email) => 
+            httpClient.post('/auth/reset-password', { email }),
+
+        resetPassword: (token, newPassword) => 
+            httpClient.post('/auth/reset-password/confirm', { token, newPassword })
+    },
+
+    /**
+     * Utilisateurs
+     */
+    Users: {
+        getAll: (filters = {}) => 
+            httpClient.get('/users', { params: filters }),
+        
+        getById: (userId) => 
+            httpClient.get(`/users/${userId}`),
+        
+        create: (userData) => 
+            httpClient.post('/users', userData),
+        
+        update: (userId, userData) => 
+            httpClient.put(`/users/${userId}`, userData),
+        
+        delete: (userId) => 
+            httpClient.delete(`/users/${userId}`),
+        
+        activate: (userId) => 
+            httpClient.patch(`/users/${userId}/activate`, {}),
+        
+        deactivate: (userId) => 
+            httpClient.patch(`/users/${userId}/deactivate`, {})
+    },
+
+    /**
+     * Clients & Locataires
+     */
+    Clients: {
+        getAll: (filters = {}) => 
+            httpClient.get('/clients', { params: filters }),
+        
+        getById: (clientId) => 
+            httpClient.get(`/clients/${clientId}`),
+        
+        create: (clientData) => 
+            httpClient.post('/clients', clientData),
+        
+        update: (clientId, clientData) => 
+            httpClient.put(`/clients/${clientId}`, clientData),
+        
+        delete: (clientId) => 
+            httpClient.delete(`/clients/${clientId}`),
+        
+        getTransactions: (clientId) => 
+            httpClient.get(`/clients/${clientId}/transactions`),
+        
+        getProperties: (clientId) => 
+            httpClient.get(`/clients/${clientId}/properties`)
+    },
+
+    /**
+     * Propriétés & Biens
+     */
+    Properties: {
+        getAll: (filters = {}) => 
+            httpClient.get('/properties', { params: filters }),
+        
+        getById: (propertyId) => 
+            httpClient.get(`/properties/${propertyId}`),
+        
+        create: (propertyData) => 
+            httpClient.post('/properties', propertyData),
+        
+        update: (propertyId, propertyData) => 
+            httpClient.put(`/properties/${propertyId}`, propertyData),
+        
+        delete: (propertyId) => 
+            httpClient.delete(`/properties/${propertyId}`),
+        
+        getTransactions: (propertyId) => 
+            httpClient.get(`/properties/${propertyId}/transactions`),
+        
+        getDocuments: (propertyId) => 
+            httpClient.get(`/properties/${propertyId}/documents`),
+        
+        uploadDocument: (propertyId, formData) => 
+            httpClient.post(`/properties/${propertyId}/documents`, formData, { 
+                headers: { 'Content-Type': 'multipart/form-data' } 
+            })
+    },
+
+    /**
+     * Propriétaires
+     */
+    Owners: {
+        getAll: (filters = {}) => 
+            httpClient.get('/owners', { params: filters }),
+        
+        getById: (ownerId) => 
+            httpClient.get(`/owners/${ownerId}`),
+        
+        create: (ownerData) => 
+            httpClient.post('/owners', ownerData),
+        
+        update: (ownerId, ownerData) => 
+            httpClient.put(`/owners/${ownerId}`, ownerData),
+        
+        delete: (ownerId) => 
+            httpClient.delete(`/owners/${ownerId}`),
+        
+        getProperties: (ownerId) => 
+            httpClient.get(`/owners/${ownerId}/properties`),
+        
+        getTransactions: (ownerId) => 
+            httpClient.get(`/owners/${ownerId}/transactions`)
+    },
+
+    /**
+     * Transactions
+     */
+    Transactions: {
+        getAll: (filters = {}) => 
+            httpClient.get('/transactions', { params: filters }),
+        
+        getById: (transactionId) => 
+            httpClient.get(`/transactions/${transactionId}`),
+        
+        create: (transactionData) => 
+            httpClient.post('/transactions', transactionData),
+        
+        update: (transactionId, transactionData) => 
+            httpClient.put(`/transactions/${transactionId}`, transactionData),
+        
+        delete: (transactionId) => 
+            httpClient.delete(`/transactions/${transactionId}`),
+        
+        getByClient: (clientId) => 
+            httpClient.get(`/transactions/client/${clientId}`),
+        
+        getByProperty: (propertyId) => 
+            httpClient.get(`/transactions/property/${propertyId}`),
+        
+        getByOwner: (ownerId) => 
+            httpClient.get(`/transactions/owner/${ownerId}`),
+        
+        export: (filters = {}) => 
+            httpClient.get('/transactions/export/csv', { params: filters })
+    },
+
+    /**
+     * Collecteurs / Récolteurs
+     */
+    Collectors: {
+        getAll: (filters = {}) => 
+            httpClient.get('/collectors', { params: filters }),
+        
+        getById: (collectorId) => 
+            httpClient.get(`/collectors/${collectorId}`),
+        
+        create: (collectorData) => 
+            httpClient.post('/collectors', collectorData),
+        
+        update: (collectorId, collectorData) => 
+            httpClient.put(`/collectors/${collectorId}`, collectorData),
+        
+        delete: (collectorId) => 
+            httpClient.delete(`/collectors/${collectorId}`),
+        
+        getStats: () => 
+            httpClient.get('/collectors/stats'),
+        
+        assignProperties: (collectorId, propertyIds) => 
+            httpClient.post(`/collectors/${collectorId}/assign-properties`, { propertyIds })
+    },
+
+    /**
+     * Alertes & Notifications
+     */
+    Alerts: {
+        getOverduePayments: (filters = {}) => 
+            httpClient.get('/alerts/overdue-payments', { params: filters }),
+        
+        getDashboard: () => 
+            httpClient.get('/alerts/dashboard'),
+        
+        getSummary: () => 
+            httpClient.get('/alerts/summary'),
+        
+        acknowledge: (clientId) => 
+            httpClient.put(`/alerts/${clientId}/acknowledge`, {})
+    },
+
+    /**
+     * Rapports & Analytics
+     */
+    Reports: {
+        getDashboard: () => 
+            httpClient.get('/reports/dashboard'),
+        
+        getRevenue: (dateRange) => 
+            httpClient.get('/reports/revenue', { params: dateRange }),
+        
+        getPropertyStats: () => 
+            httpClient.get('/reports/properties/stats'),
+        
+        getClientStats: () => 
+            httpClient.get('/reports/clients/stats'),
+        
+        generatePdf: (reportType, filters = {}) => 
+            httpClient.get(`/reports/export/pdf/${reportType}`, { params: filters }),
+
+        getMonthly: (filters = {}) =>
+            httpClient.get('/reports/monthly', { params: { ...filters, format: 'json' } }),
+
+        getOverdue: (filters = {}) =>
+            httpClient.get('/reports/overdue', { params: { ...filters, format: 'json' } }),
+
+        getOwner: (filters = {}) =>
+            httpClient.get('/reports/owner', { params: { ...filters, format: 'json' } }),
+
+        getAgent: (filters = {}) =>
+            httpClient.get('/reports/agent', { params: { ...filters, format: 'json' } })
+    }
+};

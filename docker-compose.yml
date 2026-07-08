@@ -1,0 +1,78 @@
+# ╔══════════════════════════════════════════════════════════════════╗
+# ║           SYGIM — Docker Compose (Local)                        ║
+# ╚══════════════════════════════════════════════════════════════════╝
+
+version: '3.9'
+
+services:
+
+  # ── Base de données MySQL ──────────────────────────────────────────
+  mysql:
+    image: mysql:8.0
+    container_name: sygim_mysql
+    restart: unless-stopped
+    env_file:
+      - .env.docker
+    environment:
+      MYSQL_ROOT_PASSWORD: L2026@!King
+      MYSQL_DATABASE: sygim_db
+      MYSQL_USER: sygim_user
+      MYSQL_PASSWORD: L2026@!King
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./backend/database/sygim_schema.sql:/docker-entrypoint-initdb.d/01_schema.sql
+      - ./backend/database/migration_001_collectors_fk.sql:/docker-entrypoint-initdb.d/02_migration.sql
+    networks:
+      - sygim_network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pL2026@!King"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Backend Node.js / Express ──────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: sygim_backend
+    restart: unless-stopped
+    env_file:
+      - .env.docker
+    environment:
+      - PORT=5000
+    ports:
+      - "5000:5000"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - sygim_network
+    volumes:
+      - ./backend:/app
+      - /app/node_modules          # évite d'écraser node_modules du container
+
+  # ── Frontend Nginx ─────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: sygim_frontend
+    restart: unless-stopped
+    ports:
+      - "5001:80"
+    depends_on:
+      - backend
+    networks:
+      - sygim_network
+
+# ── Volumes persistants ────────────────────────────────────────────
+volumes:
+  mysql_data:
+
+# ── Réseau interne ────────────────────────────────────────────────
+networks:
+  sygim_network:
+    driver: bridge

@@ -1,0 +1,25 @@
+{
+  "name": "sygim-app",
+  "version": "1.0.0",
+  "description": "SYGIM — Système de Gestion Immobilière (Complete App)",
+  "private": true,
+  "scripts": {
+    "dev": "cd backend && npm run dev",
+    "start": "cd backend && npm start",
+    "backend": "cd backend && npm run dev",
+    "frontend": "cd frontend/react-app && npm run dev",
+    "frontend:build": "cd frontend/react-app && npm run build",
+    "install-all": "npm install",
+    "seed": "cd backend && npm run seed"
+  },
+  "workspaces": [
+    "backend",
+    "frontend/react-app"
+  ],
+  "keywords": [
+    "sygim",
+    "gestion-immobiliere"
+  ],
+  "author": "SYGIM Team",
+  "license": "UNLICENSED"
+}

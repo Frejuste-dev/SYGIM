@@ -1,0 +1,5 @@
+node_modules/
+.env*
+CREDENTIALS_PRODUCTION.md
+backend/.env*
+backend/certs/
