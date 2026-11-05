@@ -5,7 +5,7 @@
  * ╚════════════════════════════════════════════════════════════════════╝
  */
 
-import { CONFIG } from './config';
+import { CONFIG } from './config.js';
 
 export class ApiError extends Error {
     constructor(message, code, status, data = {}) {
@@ -23,32 +23,10 @@ export class HttpClient {
         this.timeout = config.timeout || CONFIG.API.TIMEOUT;
         this.retryAttempts = config.retryAttempts || CONFIG.API.RETRY_ATTEMPTS;
         this.retryDelay = config.retryDelay || CONFIG.API.RETRY_DELAY;
-        this.token = this._getToken();
 
         // Event listeners pour la gestion globale d'erreurs
         this.onError = config.onError || (() => {});
         this.onUnauthorized = config.onUnauthorized || (() => {});
-    }
-
-    /**
-     * Récupère le JWT du localStorage
-     */
-    _getToken() {
-        if (typeof window === 'undefined') return null;
-        return localStorage.getItem(CONFIG.STORAGE.JWT_TOKEN);
-    }
-
-    /**
-     * Met à jour le token (appelé après login)
-     */
-    setToken(token) {
-        this.token = token;
-        if (typeof window === 'undefined') return;
-        if (token) {
-            localStorage.setItem(CONFIG.STORAGE.JWT_TOKEN, token);
-        } else {
-            localStorage.removeItem(CONFIG.STORAGE.JWT_TOKEN);
-        }
     }
 
     /**
@@ -60,15 +38,39 @@ export class HttpClient {
             ...additionalHeaders
         };
 
-        if (this.token) {
-            headers['Authorization'] = `Bearer ${this.token}`;
-        }
-
         return headers;
     }
 
     /**
-     * Effectue une requête HTTP avec retry automatique et gestion des paramètres de requête (query string)
+     * Tente un refresh token (via cookie HttpOnly)
+     * Utilise une promesse partagée pour éviter les refreshes concurrents
+     * (race condition quand plusieurs appels API reçoivent 401 simultanément)
+     */
+    async _refreshToken() {
+        if (this._refreshPromise) return this._refreshPromise;
+
+        this._refreshPromise = (async () => {
+            const response = await fetch(`${this.baseUrl}/auth/refresh`, {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' }
+            });
+
+            if (!response.ok) throw new Error('Refresh token expiré ou invalide');
+
+            // Succès de la rotation côté backend, le nouveau cookie a été posé.
+            return true;
+        })();
+
+        this._refreshPromise
+            .catch(() => {}) // silently absorb rejection so finally runs
+            .finally(() => { this._refreshPromise = null; });
+
+        return this._refreshPromise;
+    }
+
+    /**
+     * Effectue une requête HTTP avec retry automatique, refresh token et gestion des paramètres de requête
      */
     async request(method, path, options = {}) {
         let url = `${this.baseUrl}${path}`;
@@ -85,8 +87,10 @@ export class HttpClient {
         }
 
         let lastError = null;
+        let refreshed = false;
+        let maxAttempts = Math.max(1, this.retryAttempts);
 
-        for (let attempt = 0; attempt < this.retryAttempts; attempt++) {
+        for (let attempt = 0; attempt < maxAttempts; attempt++) {
             try {
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), this.timeout);
@@ -95,7 +99,9 @@ export class HttpClient {
                     method,
                     headers: this._getHeaders(options.headers),
                     signal: controller.signal,
-                    ...options.fetchOptions
+                    ...options.fetchOptions,
+                    // L'authentification dépend exclusivement des cookies HttpOnly.
+                    credentials: 'include'
                 };
 
                 if (options.body && method !== 'GET') {
@@ -110,7 +116,18 @@ export class HttpClient {
 
                 // Gestion des erreurs HTTP
                 if (!response.ok) {
-                    if (response.status === 401) {
+                    if (response.status === 401 && !refreshed && path !== '/auth/refresh') {
+                        try {
+                            await this._refreshToken();
+                            refreshed = true;
+                            // Le rejeu après rotation ne consomme pas une tentative réseau.
+                            maxAttempts += 1;
+                            continue; // retry now that cookies are refreshed
+                        } catch (refreshError) {
+                            this.onUnauthorized(data);
+                            throw new ApiError('Unauthorized', 'UNAUTHORIZED', response.status, data);
+                        }
+                    } else if (response.status === 401) {
                         this.onUnauthorized(data);
                         throw new ApiError('Unauthorized', 'UNAUTHORIZED', response.status, data);
                     } else if (response.status === 403) {
@@ -176,12 +193,15 @@ export class HttpClient {
 }
 
 // Client HTTP global
+// IMPORTANT : onUnauthorized NE doit PAS faire window.location.href
+// car cela bypasse React Router et AuthContext.
+// ProtectedRoute + AuthContext gerent la redirection vers /login automatiquement.
 export const httpClient = new HttpClient({
     onUnauthorized: () => {
         if (typeof window !== 'undefined') {
-            localStorage.removeItem(CONFIG.STORAGE.JWT_TOKEN);
             localStorage.removeItem(CONFIG.STORAGE.CURRENT_USER);
-            // On laisse l'application gérer la redirection vers /login via React Router
+            // NE PAS faire window.location.href = '/login' ici.
+            // AuthContext.setUser(null) -> ProtectedRoute -> <Navigate to="/login" />
         }
     }
 });

@@ -3,10 +3,11 @@
  * Permet une gestion cohérente et professionnelle des erreurs
  */
 class AppError extends Error {
-  constructor(message, statusCode = 500, code = 'INTERNAL_ERROR') {
+  constructor(message, statusCode = 500, code = 'INTERNAL_ERROR', data = null) {
     super(message);
     this.statusCode = statusCode;
     this.code = code;
+    this.data = data;
     this.timestamp = new Date().toISOString();
     this.isOperational = true; // Erreurs connues et gérées
 
@@ -16,6 +17,11 @@ class AppError extends Error {
   // Erreurs de validation
   static validation(message, field = null) {
     return new AppError(message, 400, 'VALIDATION_ERROR', { field });
+  }
+
+  // Mauvaise requête
+  static badRequest(message = 'Requête invalide', code = 'BAD_REQUEST') {
+    return new AppError(message, 400, code);
   }
 
   // Erreurs d'authentification

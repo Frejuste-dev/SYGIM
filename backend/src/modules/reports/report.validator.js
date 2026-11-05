@@ -5,13 +5,26 @@
  * Rôle     : Validation des paramètres de rapport
  */
 
-const { query } = require('express-validator');
+const { query, param, validationResult } = require('express-validator');
+
+// Middleware pour gérer les erreurs de validation
+const handleValidationErrors = (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    const firstError = errors.array()[0];
+    return res.status(400).json({
+      success: false,
+      error: firstError.msg
+    });
+  }
+  next();
+};
 
 const reportValidator = [
   query('startDate')
     .optional()
     .isDate({ format: 'YYYY-MM-DD' }).withMessage('Format date invalide (YYYY-MM-DD)'),
-  
+
   query('endDate')
     .optional()
     .isDate({ format: 'YYYY-MM-DD' }).withMessage('Format date invalide (YYYY-MM-DD)'),
@@ -22,7 +35,21 @@ const reportValidator = [
 
   query('type')
     .optional()
-    .isIn(['dashboard', 'collectors', 'properties', 'transactions']).withMessage('Type de rapport invalide')
+    .isIn(['dashboard', 'collectors', 'properties', 'transactions']).withMessage('Type de rapport invalide'),
+
+  handleValidationErrors
 ];
 
-module.exports = reportValidator;
+const exportTypeValidator = [
+  param('type')
+    .notEmpty().withMessage('Le type de rapport est requis')
+    .isIn(['dashboard', 'collectors', 'properties', 'transactions']).withMessage('Type de rapport invalide'),
+
+  handleValidationErrors
+];
+
+module.exports = {
+  reportValidator,
+  exportTypeValidator,
+  handleValidationErrors
+};

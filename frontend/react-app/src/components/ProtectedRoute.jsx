@@ -14,18 +14,9 @@ export default function ProtectedRoute({ children, allowedRoles }) {
 
     if (loading) {
         return (
-            <div style={{ 
-                display: 'flex', 
-                flexDirection: 'column',
-                justifyContent: 'center', 
-                alignItems: 'center', 
-                height: '100vh', 
-                background: '#0f172a', // var(--dark)
-                color: 'white',
-                fontFamily: 'Poppins, sans-serif'
-            }}>
-                <i className="fas fa-building fa-bounce fa-3x" style={{ color: '#6366f1', marginBottom: '20px' }}></i>
-                <div style={{ fontSize: '18px', fontWeight: '500' }}>Chargement de SYGIM...</div>
+            <div className="flex flex-col justify-center items-center h-screen bg-slate-900 text-white font-sans">
+                <i className="fas fa-building fa-bounce fa-3x text-indigo-500 mb-5"></i>
+                <div className="text-lg font-medium">Chargement de SYGIM...</div>
             </div>
         );
     }
@@ -35,16 +26,18 @@ export default function ProtectedRoute({ children, allowedRoles }) {
     }
 
     if (allowedRoles && !allowedRoles.includes(user.role)) {
-        // Redirection vers la page appropriée selon le rôle
-        if (user.role === 'admin') {
-            return <Navigate to="/admin" replace />;
-        } else if (user.role === 'collector') {
-            return <Navigate to="/collector" replace />;
-        } else if (user.role === 'collector_manager') {
-            return <Navigate to="/manager" replace />;
-        } else {
-            return <Navigate to="/dashboard" replace />;
-        }
+        // Redirection vers la page appropriee selon le role
+        const ROLE_HOME = {
+            admin:             '/admin/dashboard',
+            super_admin:       '/admin/dashboard',
+            director:          '/admin/dashboard',
+            accounting:        '/admin/dashboard',
+            gestionnaire:      '/admin/dashboard',
+            collector_manager: '/admin/manager',
+            collector:         '/admin/collector',
+        };
+        const home = ROLE_HOME[user.role] || '/admin/dashboard';
+        return <Navigate to={home} replace />;
     }
 
     return children;

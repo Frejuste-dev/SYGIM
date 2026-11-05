@@ -24,16 +24,16 @@ class ReportRepository {
     const params = [startDate, endDate];
 
     if (ownerId) {
-      query += ` AND property_id IN (SELECT id FROM properties WHERE owner_id = ?)`;
+      query += ' AND property_id IN (SELECT id FROM properties WHERE owner_id = ?)';
       params.push(ownerId);
     }
 
     if (collectorId) {
-      query += ` AND collector_id = ?`;
+      query += ' AND collector_id = ?';
       params.push(collectorId);
     }
 
-    query += ` GROUP BY method, status`;
+    query += ' GROUP BY method, status';
 
     const [rows] = await db.query(query, params);
     return rows;
@@ -73,15 +73,15 @@ class ReportRepository {
         COUNT(*) as count,
         SUM(rent) as totalRent
       FROM properties
-      WHERE active = 1`;
+      WHERE 1=1`;
     const params = [];
 
     if (ownerId) {
-      query += ` AND owner_id = ?`;
+      query += ' AND owner_id = ?';
       params.push(ownerId);
     }
 
-    query += ` GROUP BY status`;
+    query += ' GROUP BY status';
 
     const [rows] = await db.query(query, params);
     return rows;
@@ -103,11 +103,11 @@ class ReportRepository {
     const params = [startDate, endDate];
 
     if (ownerId) {
-      query += ` AND o.id = ?`;
+      query += ' AND o.id = ?';
       params.push(ownerId);
     }
 
-    query += ` GROUP BY o.id`;
+    query += ' GROUP BY o.id';
 
     const [rows] = await db.query(query, params);
     return rows;
@@ -147,22 +147,77 @@ class ReportRepository {
     const params = [startDate, endDate];
 
     if (ownerId) {
-      query += ` AND p.owner_id = ?`;
+      query += ' AND p.owner_id = ?';
       params.push(ownerId);
     }
     if (collectorId) {
-      query += ` AND t.collector_id = ?`;
+      query += ' AND t.collector_id = ?';
       params.push(collectorId);
     }
     if (propertyId) {
-      query += ` AND t.property_id = ?`;
+      query += ' AND t.property_id = ?';
       params.push(propertyId);
     }
 
-    query += ` ORDER BY t.date DESC`;
+    query += ' ORDER BY t.date DESC';
 
     const [rows] = await db.query(query, params);
     return rows;
+  }
+  /**
+   * KPIs scalaires pour le Dashboard
+   * Une seule requête multi-agrégat, calculée en SQL
+   */
+  async getKpis() {
+    // Phase 1 : Montant attendu et statuts depuis la table clients
+    const [[clientStats]] = await db.query(`
+      SELECT
+        COALESCE(SUM(amount_due), 0)    AS totalDue,
+        COUNT(*)                         AS totalClients,
+        SUM(CASE WHEN status IN ('pending', 'overdue', 'late', 'partial') THEN 1 ELSE 0 END) AS pendingPaymentsCount
+      FROM clients
+    `);
+
+    // Phase 2 : Montant encaissé filtré temporellement sur le mois courant
+    const [[transactionStats]] = await db.query(`
+      SELECT COALESCE(SUM(amount), 0) AS totalRevenue
+      FROM transactions
+      WHERE status IN ('paid', 'processed', 'completed', 'partiel', 'partial')
+        AND YEAR(date) = YEAR(CURRENT_DATE())
+        AND MONTH(date) = MONTH(CURRENT_DATE())
+    `);
+
+    const [[propertyStats]] = await db.query(`
+      SELECT
+        COUNT(*) AS totalProperties,
+        SUM(CASE WHEN status IN ('loue', 'partiel') OR tenant_id IS NOT NULL THEN 1 ELSE 0 END) AS occupiedCount
+      FROM properties
+    `);
+
+    const totalRevenue      = Number(transactionStats.totalRevenue) || 0;
+    const totalDue          = Number(clientStats.totalDue)          || 0;
+    const totalClients      = Number(clientStats.totalClients)      || 0;
+    const pendingPaymentsCount = Number(clientStats.pendingPaymentsCount) || 0;
+    const totalProperties   = Number(propertyStats.totalProperties) || 0;
+    const occupiedCount     = Number(propertyStats.occupiedCount)   || 0;
+
+    // Phase 3 : Le ratio brut (peut dépasser 100 si arriérés payés)
+    const rawRate = totalDue > 0 ? Math.round((totalRevenue / totalDue) * 100) : 0;
+    
+    // Plafonné à 100% pour la sécurité métier et l'affichage (AccountingDashboard / AdminDashboard)
+    const collectionRate = Math.min(rawRate, 100);
+
+    return {
+      totalRevenue,
+      totalDue,
+      totalClients,
+      pendingPaymentsCount,
+      collectionRate,
+      rawCollectionRate: rawRate,
+      totalProperties,
+      occupiedCount,
+      occupancyRate: totalProperties > 0 ? Math.round((occupiedCount / totalProperties) * 100) : 0,
+    };
   }
 }
 

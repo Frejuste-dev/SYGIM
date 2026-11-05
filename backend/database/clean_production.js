@@ -1,6 +1,6 @@
 /**
  * ╔══════════════════════════════════════════════════════════════════╗
- * ║           SYGIM — Script de Nettoyage BD Production              ║
+ * ║           SYGIM - Script de Nettoyage BD Production              ║
  * ║     Supprime TOUTES les données de test/développement            ║
  * ╚══════════════════════════════════════════════════════════════════╝
  *
@@ -24,7 +24,7 @@ async function clean() {
     try {
         console.log('');
         console.log('╔══════════════════════════════════════════════════════╗');
-        console.log('║     SYGIM — Nettoyage BD Production                 ║');
+        console.log('║     SYGIM - Nettoyage BD Production                 ║');
         console.log('║     ⚠️  Supprime TOUTES les données!                ║');
         console.log('╚══════════════════════════════════════════════════════╝');
         console.log('');

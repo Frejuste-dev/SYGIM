@@ -5,6 +5,7 @@
  */
 
 const { pool } = require('../../../config/db');
+const Logger = require('../../utils/logger/Logger');
 
 class AuthRepository {
   /**
@@ -20,11 +21,22 @@ class AuthRepository {
   }
 
   /**
+   * Trouve un collecteur associé à un user_id
+   */
+  async findCollectorByUserId(userId) {
+    const [rows] = await pool.query(
+      `SELECT id, first_name, last_name, phone, zone FROM collectors WHERE user_id = ?`,
+      [userId]
+    );
+    return rows[0] || null;
+  }
+
+  /**
    * Trouve un refresh token valide et retourne les infos user associées
    */
   async findRefreshToken(hashedToken) {
     const [rows] = await pool.query(
-      `SELECT rt.*, u.role, u.active
+      `SELECT rt.*, u.username, u.role, u.active
        FROM refresh_tokens rt
        JOIN users u ON rt.userId = u.id
        WHERE rt.token = ? AND rt.revokedAt IS NULL`,
@@ -61,6 +73,7 @@ class AuthRepository {
    * Trouve un utilisateur par son username via l'index optimisé
    */
   async findByUsername(username) {
+    Logger.debug('Querying user by username', { username: username.toLowerCase() });
     const [rows] = await pool.query(
       `SELECT id as primaryKey, username, password_hash as password, role, active as isActive, deletedAt
        FROM users 

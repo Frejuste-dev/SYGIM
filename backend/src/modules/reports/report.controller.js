@@ -10,6 +10,15 @@ const ApiResponse = require('../../utils/responses/ApiResponse');
 const { validationResult } = require('express-validator');
 
 class ReportController {
+  async getKpis(req, res, next) {
+    try {
+      const data = await reportService.getKpis();
+      res.status(200).json(ApiResponse.success(data));
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async getDashboard(req, res, next) {
     try {
       const data = await reportService.getDashboardReport(req.query);

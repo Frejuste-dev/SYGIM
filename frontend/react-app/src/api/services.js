@@ -5,8 +5,8 @@
  * ╚════════════════════════════════════════════════════════════════════╝
  */
 
-import { httpClient } from './client';
-import { CONFIG } from './config';
+import { httpClient } from './client.js';
+import { CONFIG } from './config.js';
 
 export const API = {
     /**
@@ -17,19 +17,28 @@ export const API = {
             httpClient.post('/auth/login', credentials),
         
         logout: () => {
-            if (typeof window !== 'undefined') {
-                localStorage.removeItem(CONFIG.STORAGE.JWT_TOKEN);
-                localStorage.removeItem(CONFIG.STORAGE.CURRENT_USER);
-            }
-            httpClient.setToken(null);
-            return Promise.resolve({ success: true });
+            return httpClient.post('/auth/logout')
+                .then(() => {
+                    // Nettoyer uniquement les données utilisateur du localStorage
+                    if (typeof window !== 'undefined') {
+                        localStorage.removeItem(CONFIG.STORAGE.CURRENT_USER);
+                    }
+                    return { success: true };
+                })
+                .catch((error) => {
+                    console.error("Erreur lors de l'appel logout API:", error);
+                    if (typeof window !== 'undefined') {
+                        localStorage.removeItem(CONFIG.STORAGE.CURRENT_USER);
+                    }
+                    return { success: true }; // Considérer comme succès pour l'UX
+                });
         },
 
         register: (userData) => 
             httpClient.post('/auth/register', userData),
 
         refreshToken: () => 
-            httpClient.post('/auth/refresh', {}),
+            httpClient.post('/auth/refresh'),
 
         getCurrentUser: () => 
             httpClient.get('/auth/me'),
@@ -80,6 +89,9 @@ export const API = {
         getAll: (filters = {}) => 
             httpClient.get('/clients', { params: filters }),
         
+        getStats: (filters = {}) =>
+            httpClient.get('/clients/stats', { params: filters }),
+        
         getById: (clientId) => 
             httpClient.get(`/clients/${clientId}`),
         
@@ -105,6 +117,9 @@ export const API = {
     Properties: {
         getAll: (filters = {}) => 
             httpClient.get('/properties', { params: filters }),
+        
+        getStats: (filters = {}) =>
+            httpClient.get('/properties/stats', { params: filters }),
         
         getById: (propertyId) => 
             httpClient.get(`/properties/${propertyId}`),
@@ -137,6 +152,9 @@ export const API = {
         getAll: (filters = {}) => 
             httpClient.get('/owners', { params: filters }),
         
+        getStats: (filters = {}) =>
+            httpClient.get('/owners/stats', { params: filters }),
+        
         getById: (ownerId) => 
             httpClient.get(`/owners/${ownerId}`),
         
@@ -162,6 +180,9 @@ export const API = {
     Transactions: {
         getAll: (filters = {}) => 
             httpClient.get('/transactions', { params: filters }),
+        
+        getStats: (filters = {}) =>
+            httpClient.get('/transactions/stats', { params: filters }),
         
         getById: (transactionId) => 
             httpClient.get(`/transactions/${transactionId}`),
@@ -237,12 +258,15 @@ export const API = {
     Reports: {
         getDashboard: () => 
             httpClient.get('/reports/dashboard'),
+
+        getKpis: () =>
+            httpClient.get('/reports/kpis'),
         
         getRevenue: (dateRange) => 
             httpClient.get('/reports/revenue', { params: dateRange }),
         
         getPropertyStats: () => 
-            httpClient.get('/reports/properties/stats'),
+            httpClient.get('/reports/properties'),
         
         getClientStats: () => 
             httpClient.get('/reports/clients/stats'),
@@ -254,12 +278,32 @@ export const API = {
             httpClient.get('/reports/monthly', { params: { ...filters, format: 'json' } }),
 
         getOverdue: (filters = {}) =>
-            httpClient.get('/reports/overdue', { params: { ...filters, format: 'json' } }),
+            httpClient.get('/alerts/overdue-payments', { params: { ...filters, format: 'json' } }),
 
         getOwner: (filters = {}) =>
             httpClient.get('/reports/owner', { params: { ...filters, format: 'json' } }),
 
         getAgent: (filters = {}) =>
-            httpClient.get('/reports/agent', { params: { ...filters, format: 'json' } })
+            httpClient.get('/reports/collectors', { params: { ...filters, format: 'json' } })
+    },
+
+    /**
+     * Moteur Financier (Phase 7 - Grand Livre, FIFO, Avances & Extournes)
+     */
+    Financial: {
+        registerPayment: (paymentData) =>
+            httpClient.post('/financial/payments', paymentData),
+
+        reversePayment: (paymentId, data) =>
+            httpClient.post(`/financial/payments/${paymentId}/reverse`, data),
+
+        generateMonthlyInvoice: (invoiceData) =>
+            httpClient.post('/financial/invoices/generate-monthly', invoiceData),
+
+        generateSettlement: (settlementData) =>
+            httpClient.post('/financial/settlements/generate', settlementData),
+
+        getTenantStatement: (clientId) =>
+            httpClient.get(`/financial/tenants/${clientId}/statement`)
     }
 };

@@ -11,8 +11,12 @@ class CollectorRepository {
   /**
    * Liste paginée des collecteurs
    */
-  async findAll(filters = {}, limit = 50, offset = 0) {
-    let query = `SELECT c.*, u.username, u.email as user_email, u.phone as user_phone
+  async findAll(filters = {}, limit = 50, offset = 0, user = null) {
+    let query = `SELECT c.*, u.username, u.email as user_email, u.phone as user_phone,
+                   (SELECT COUNT(*) FROM properties p WHERE p.collector_id = c.id) as assignedPropsCount,
+                   (SELECT COUNT(*) FROM clients cl WHERE cl.collector_id = c.id) as assignedClientsCount,
+                   (SELECT COALESCE(SUM(amount_due), 0) FROM clients cl WHERE cl.collector_id = c.id) as totalDue,
+                   (SELECT COALESCE(SUM(amount), 0) FROM transactions t WHERE t.collector_id = c.id AND t.status IN ('processed', 'paid') AND DATE_FORMAT(COALESCE(t.date, t.created_at), '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')) as totalCollected
                  FROM collectors c
                  LEFT JOIN users u ON c.user_id = u.id
                  WHERE c.deletedAt IS NULL`;
@@ -29,6 +33,11 @@ class CollectorRepository {
       params.push(s, s, s);
     }
 
+    if (user && user.role === 'collector_manager') {
+      query += ' AND c.manager_id = ?';
+      params.push(user.id);
+    }
+
     query += ' ORDER BY c.last_name, c.first_name LIMIT ? OFFSET ?';
     params.push(limit, offset);
 
@@ -39,13 +48,18 @@ class CollectorRepository {
   /**
    * Comptage pour pagination
    */
-  async count(filters = {}) {
+  async count(filters = {}, user = null) {
     let query = 'SELECT COUNT(*) as total FROM collectors WHERE deletedAt IS NULL';
     const params = [];
 
     if (filters.active !== undefined && filters.active !== 'all') {
       query += ' AND active = ?';
       params.push(filters.active ? 1 : 0);
+    }
+
+    if (user && user.role === 'collector_manager') {
+      query += ' AND manager_id = ?';
+      params.push(user.id);
     }
 
     const [rows] = await db.query(query, params);
@@ -64,6 +78,20 @@ class CollectorRepository {
       [id]
     );
     return rows[0];
+  }
+
+  /**
+   * Recherche par User ID
+   */
+  async findByUserId(userId) {
+    const [rows] = await db.query(
+      `SELECT c.*, u.username, u.email as user_email, u.phone as user_phone
+       FROM collectors c
+       LEFT JOIN users u ON c.user_id = u.id
+       WHERE c.user_id = ? AND c.deletedAt IS NULL`,
+      [userId]
+    );
+    return rows[0] || null;
   }
 
   /**
@@ -86,8 +114,8 @@ class CollectorRepository {
    */
   async create(data) {
     const [result] = await db.query(
-      `INSERT INTO collectors (first_name, last_name, phone, email, zone, user_id, active)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO collectors (first_name, last_name, phone, email, zone, user_id, active, manager_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         data.firstName || '',
         data.lastName,
@@ -95,7 +123,8 @@ class CollectorRepository {
         data.email || null,
         data.zone || null,
         data.userId || null,
-        data.active !== undefined ? data.active : 1
+        data.active !== undefined ? data.active : 1,
+        data.managerId || null
       ]
     );
     return { primaryKey: result.insertId, ...data };
@@ -114,7 +143,8 @@ class CollectorRepository {
       email: 'email',
       zone: 'zone',
       active: 'active',
-      userId: 'user_id'
+      userId: 'user_id',
+      managerId: 'manager_id'
     };
 
     for (const [key, col] of Object.entries(fieldMap)) {
@@ -124,7 +154,9 @@ class CollectorRepository {
       }
     }
 
-    if (fields.length === 0) return null;
+    if (fields.length === 0) {
+      return null;
+    }
 
     values.push(id);
     await db.query(`UPDATE collectors SET ${fields.join(', ')} WHERE id = ?`, values);
@@ -154,6 +186,13 @@ class CollectorRepository {
       [id]
     );
     return rows[0];
+  }
+
+  /**
+   * Assigner des propriétés à un collecteur
+   */
+  async assignProperties(collectorId, propertyIds) {
+    await db.query('UPDATE properties SET collector_id = ? WHERE id IN (?)', [collectorId, propertyIds]);
   }
 
   /**

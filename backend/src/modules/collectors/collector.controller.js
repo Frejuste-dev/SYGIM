@@ -13,8 +13,9 @@ class CollectorController {
   async getAll(req, res, next) {
     try {
       const { page, limit, search, active } = req.query;
-      const result = await collectorService.getAllCollectors({ search, active }, page, limit);
-      res.status(200).json(ApiResponse.success(result));
+      const result = await collectorService.getAllCollectors({ search, active }, page, limit, req.user);
+      const { data, pagination } = result;
+      res.status(200).json(ApiResponse.paginated(data, pagination.page, pagination.limit, pagination.total));
     } catch (error) {
       next(error);
     }
@@ -22,7 +23,7 @@ class CollectorController {
 
   async getById(req, res, next) {
     try {
-      const result = await collectorService.getCollectorById(req.params.id);
+      const result = await collectorService.getCollectorById(req.params.id, req.user);
       res.status(200).json(ApiResponse.success(result));
     } catch (error) {
       next(error);
@@ -31,7 +32,7 @@ class CollectorController {
 
   async getStats(req, res, next) {
     try {
-      const result = await collectorService.getCollectorWithStats(req.params.id);
+      const result = await collectorService.getCollectorWithStats(req.params.id, req.user);
       res.status(200).json(ApiResponse.success(result));
     } catch (error) {
       next(error);
@@ -68,8 +69,21 @@ class CollectorController {
         return res.status(400).json({ success: false, errors: errors.array() });
       }
 
-      const result = await collectorService.updateCollector(req.params.id, req.body);
+      const result = await collectorService.updateCollector(req.params.id, req.body, req.user);
       res.status(200).json(ApiResponse.updated(result, 'Collecteur mis à jour avec succès'));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async assignProperties(req, res, next) {
+    try {
+      const { propertyIds } = req.body;
+      if (!Array.isArray(propertyIds) || propertyIds.length === 0) {
+        return res.status(400).json(ApiResponse.error('Liste de propriétés invalide', 400));
+      }
+      const result = await collectorService.assignProperties(req.params.id, propertyIds, req.user);
+      res.status(200).json(ApiResponse.success(result));
     } catch (error) {
       next(error);
     }
@@ -77,7 +91,7 @@ class CollectorController {
 
   async delete(req, res, next) {
     try {
-      const result = await collectorService.deleteCollector(req.params.id);
+      const result = await collectorService.deleteCollector(req.params.id, req.user);
       res.status(200).json(ApiResponse.success(result, 'Collecteur supprimé avec succès'));
     } catch (error) {
       next(error);

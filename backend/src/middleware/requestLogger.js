@@ -8,9 +8,9 @@ const Logger = require('../utils/logger/Logger');
 function requestLogger(req, res, next) {
   // Générer un ID unique pour la requête
   req.id = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-  
+
   const start = Date.now();
-  
+
   // Intercepter la fin de la réponse
   res.on('finish', () => {
     const duration = Date.now() - start;
@@ -33,6 +33,7 @@ function requestLogger(req, res, next) {
     }
   });
 
+  // Délégation au sanitizer central Winston : transmission des métadonnées brutes sans mutation de req
   Logger.debug(`Incoming request [${req.method} ${req.path}]`, {
     requestId: req.id,
     body: req.body,

@@ -108,7 +108,17 @@ describe('AuthService Unit Tests', () => {
 
       const result = await authService.refreshAccessToken('validRefreshToken');
 
-      expect(result).toEqual({ accessToken: 'newAccessToken' });
+      expect(result).toEqual({
+        accessToken: 'newAccessToken',
+        refreshToken: expect.any(String),
+        user: { id: 1, username: 'testuser', role: 'admin' }
+      });
+      expect(authRepository.revokeRefreshToken).toHaveBeenCalledWith(expect.any(String));
+      expect(authRepository.createRefreshToken).toHaveBeenCalledWith(expect.objectContaining({
+        userId: 1,
+        token: expect.any(String),
+        expiresAt: expect.any(Date)
+      }));
       expect(jwt.sign).toHaveBeenCalled();
     });
   });

@@ -1,6 +1,6 @@
 /**
  * ╔══════════════════════════════════════════════════════════════════╗
- * ║           SYGIM — Script de Seed (Données initiales)            ║
+ * ║           SYGIM - Script de Seed (Données initiales)            ║
  * ╚══════════════════════════════════════════════════════════════════╝
  *
  * Exécuter avec :  node database/seed.js
@@ -74,7 +74,7 @@ const DEFAULT_USERS = [
 
 async function seed() {
     console.log('');
-    console.log('🌱 SYGIM — Initialisation des données...');
+    console.log('🌱 SYGIM - Initialisation des données...');
     console.log('');
 
     try {

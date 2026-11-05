@@ -1,146 +1,146 @@
-/**
- * ╔════════════════════════════════════════════════════════════════════╗
- * ║        SYGIM — Page de Connexion (React)                          ║
- * ║     Authentification des utilisateurs et routage par rôle          ║
- * ╚════════════════════════════════════════════════════════════════════╝
- */
-
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import AuthBranding from '../components/AuthBranding';
+import LoginForm from '../components/LoginForm';
+import { CONFIG } from '../api/config';
+
+const ROLE_ROUTES = {
+  admin:             '/admin/dashboard',
+  super_admin:       '/admin/dashboard',
+  director:          '/admin/dashboard',
+  accounting:        '/admin/dashboard',
+  gestionnaire:      '/admin/dashboard',
+  collector_manager: '/admin/manager',
+  collector:         '/admin/collector',
+};
+
+const ERROR_MAP = {
+  LOCKED: 'Compte temporairement indisponible, contactez un administrateur.',
+  RATE_LIMIT: 'Trop de tentatives de connexion. Réessayez dans une heure.',
+};
+
+const REMEMBER_KEY = 'sygim_remembered_user';
 
 export default function Login() {
-    const [username, setUsername] = useState('');
-    const [password, setPassword] = useState('');
-    const [error, setError] = useState('');
-    const [loading, setLoading] = useState(false);
-    const [showPassword, setShowPassword] = useState(false);
-    const { login } = useAuth();
-    const navigate = useNavigate();
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const { login } = useAuth();
+  const navigate = useNavigate();
 
-    const handleLogin = async () => {
-        if (!username.trim() || !password) {
-            setError('Veuillez entrer votre nom et votre mot de passe.');
-            return;
-        }
+  const remembered = localStorage.getItem(REMEMBER_KEY) || '';
 
-        setError('');
-        setLoading(true);
+  const handleLogin = async (username, password, remember) => {
+    setError('');
+    setLoading(true);
 
-        try {
-            const result = await login(username.trim(), password);
-            setLoading(false);
+    if (remember) {
+      localStorage.setItem(REMEMBER_KEY, username);
+    } else {
+      localStorage.removeItem(REMEMBER_KEY);
+    }
 
-            if (result.success) {
-                const userType = result.user.role;
-                if (userType === 'admin') {
-                    navigate('/admin');
-                } else if (userType === 'collector') {
-                    navigate('/collector');
-                } else if (userType === 'collector_manager') {
-                    navigate('/manager');
-                } else {
-                    navigate('/dashboard');
-                }
-            } else {
-                setError(result.error || 'Identifiants incorrects.');
-            }
-        } catch (err) {
-            setLoading(false);
-            setError(err.message || 'Erreur lors de la connexion.');
-        }
-    };
+    try {
+      const result = await login(username, password);
 
-    const handleKeyDown = (e) => {
-        if (e.key === 'Enter') {
-            handleLogin();
-        }
-    };
+      if (result.success) {
+        const route = ROLE_ROUTES[result.user.role] || '/dashboard';
+        navigate(route);
+      } else {
+        setError(ERROR_MAP[result.errorType] || result.error || 'Identifiants invalides.');
+      }
+    } catch (err) {
+      setError('Erreur de connexion au serveur.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    return (
-        <div className="auth-container" id="authContainer">
-            <div className="auth-section auth-left">
-                <div className="auth-logo-large">
-                    <i className="fas fa-building"></i>
-                </div>
-                <h1 className="auth-title-large">SYGIM</h1>
-                <p className="auth-subtitle" style={{ marginTop: '12px' }}>Système de Gestion Immobilière</p>
-                <p style={{ opacity: 0.85, fontSize: '14px', marginTop: '60px', maxWidth: '320px', lineHeight: 1.7 }}>
-                    Gerez vos proprietes, clients et finances en toute simplicite
-                </p>
-            </div>
-
-            <div className="auth-section auth-right">
-                <div className="auth-form">
-                    <h2>Bienvenue</h2>
-                    <p className="subtitle">Connectez-vous à votre compte</p>
-
-                    {error && (
-                        <div className="alert-error show" id="alertError" style={{ display: 'block', marginBottom: '16px' }}>
-                            <i className="fas fa-exclamation-circle" style={{ marginRight: '8px' }}></i>
-                            {error}
-                        </div>
-                    )}
-
-                    <div className="form-group">
-                        <label htmlFor="loginUsername">Nom</label>
-                        <div style={{ position: 'relative' }}>
-                            <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--gray-400)', fontSize: '15px', pointerEvents: 'none' }}>
-                                <i className="fas fa-user"></i>
-                            </span>
-                            <input 
-                                type="text" 
-                                id="loginUsername" 
-                                placeholder="Votre nom" 
-                                value={username}
-                                onChange={(e) => setUsername(e.target.value)}
-                                onKeyDown={handleKeyDown}
-                                autoComplete="username" 
-                                style={{ paddingLeft: '38px' }} 
-                            />
-                        </div>
-                    </div>
-
-                    <div className="form-group">
-                        <label htmlFor="loginPassword">Mot de passe</label>
-                        <div style={{ position: 'relative' }}>
-                            <input 
-                                type={showPassword ? "text" : "password"} 
-                                id="loginPassword" 
-                                placeholder="Mot de passe"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                onKeyDown={handleKeyDown}
-                                style={{ paddingRight: '44px' }} 
-                            />
-                            <button 
-                                type="button" 
-                                onClick={() => setShowPassword(!showPassword)}
-                                style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--gray-400)', fontSize: '16px' }}
-                            >
-                                <i className={showPassword ? "fas fa-eye-slash" : "fas fa-eye"}></i>
-                            </button>
-                        </div>
-                    </div>
-
-                    <button 
-                        className="btn btn-primary" 
-                        onClick={handleLogin} 
-                        disabled={loading}
-                        style={{ width: '100%', marginTop: '8px' }}
-                    >
-                        {loading ? (
-                            <>
-                                <i className="fas fa-spinner fa-spin" style={{ marginRight: '8px' }}></i> Connexion...
-                            </>
-                        ) : (
-                            <>
-                                <i className="fas fa-sign-in-alt" style={{ marginRight: '8px' }}></i> Se connecter
-                            </>
-                        )}
-                    </button>
-                </div>
-            </div>
+  return (
+    <div className="min-h-screen grid grid-cols-1 lg:grid-cols-12 bg-white font-sans">
+      
+      {/* LEFT COLUMN - Visual/Immersion */}
+      <div className="hidden lg:flex lg:col-span-7 bg-gradient-to-br from-indigo-50/50 via-slate-50 to-indigo-100/30 flex-col justify-between p-8 lg:p-12 relative overflow-hidden">
+        {/* Ambient glow */}
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl pointer-events-none animate-pulse -z-0"></div>
+        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-indigo-200/20 rounded-full blur-3xl pointer-events-none animate-pulse -z-0 [animation-delay:2s]"></div>
+        
+        {/* Logo */}
+        <div className="relative z-10 flex items-center gap-3">
+          <i className="fas fa-building text-primary text-2xl"></i>
+          <span className="text-primary font-bold text-xl tracking-wide">SYGIM</span>
         </div>
-    );
+
+        {/* Content */}
+        <div className="relative z-10 max-w-2xl animate-fade-in-up">
+          <h1 className="text-4xl lg:text-5xl font-bold text-slate-900 leading-tight mb-6">
+            Gérez votre parc immobilier et vos collectes en toute sérénité
+          </h1>
+          <p className="text-lg text-slate-600 mb-8">
+            Une plateforme tout-en-un pour centraliser vos opérations, automatiser vos relances et piloter votre activité de gestion locative.
+          </p>
+
+          {/* Mockup UI */}
+          <div className="mt-8 w-full max-w-lg bg-white/80 backdrop-blur-md rounded-2xl shadow-2xl border border-white/50 p-4 transform lg:translate-x-4 lg:rotate-1 transition-transform hover:rotate-0 duration-500">
+            {/* Fake Window Header */}
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-3 h-3 rounded-full bg-rose-400"></div>
+              <div className="w-3 h-3 rounded-full bg-amber-400"></div>
+              <div className="w-3 h-3 rounded-full bg-emerald-400"></div>
+            </div>
+            
+            {/* Fake Stats */}
+            <div className="grid grid-cols-3 gap-4 mb-4">
+              <div className="bg-white rounded-lg p-3 shadow-sm border border-slate-100">
+                <div className="text-xs text-slate-500 mb-1">Collectes</div>
+                <div className="text-sm font-bold text-slate-900">4.5M XOF</div>
+              </div>
+              <div className="bg-white rounded-lg p-3 shadow-sm border border-slate-100">
+                <div className="text-xs text-slate-500 mb-1">Taux Recouv.</div>
+                <div className="text-sm font-bold text-emerald-600">98%</div>
+              </div>
+              <div className="bg-white rounded-lg p-3 shadow-sm border border-slate-100">
+                <div className="text-xs text-slate-500 mb-1">Locataires</div>
+                <div className="text-sm font-bold text-slate-900">142</div>
+              </div>
+            </div>
+
+            {/* Fake Chart / Progress */}
+            <div className="bg-white rounded-lg p-4 shadow-sm border border-slate-100">
+              <div className="flex justify-between text-xs text-slate-500 mb-2">
+                <span>Objectif Mensuel</span>
+                <span className="text-primary font-medium">85%</span>
+              </div>
+              <div className="w-full bg-slate-100 rounded-full h-2">
+                <div className="bg-primary h-2 rounded-full" style={{ width: '85%' }}></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="relative z-10 text-sm text-slate-500">
+          © {new Date().getFullYear()} SYGIM. Tous droits réservés.
+        </div>
+      </div>
+
+      {/* RIGHT COLUMN - Form */}
+      <div className="col-span-1 lg:col-span-5 bg-white flex flex-col justify-center px-8 sm:px-12 lg:px-16 py-12 relative">
+        {/* Mobile Logo */}
+        <div className="flex lg:hidden items-center gap-3 mb-10 justify-center">
+          <i className="fas fa-building text-primary text-3xl"></i>
+          <span className="text-primary font-bold text-2xl tracking-wide">SYGIM</span>
+        </div>
+
+        <div className={`w-full max-w-md mx-auto ${error ? 'animate-shake' : ''}`}>
+          <div className="mb-8 animate-fade-in-up [animation-delay:100ms]">
+            <h2 className="text-2xl lg:text-3xl font-bold text-slate-900 mb-2">Connectez-vous à votre espace</h2>
+            <p className="text-sm text-slate-500">Saisissez vos identifiants pour accéder au back-office SYGIM.</p>
+          </div>
+
+          <LoginForm onLogin={handleLogin} loading={loading} error={error} remembered={remembered} />
+        </div>
+      </div>
+    </div>
+  );
 }

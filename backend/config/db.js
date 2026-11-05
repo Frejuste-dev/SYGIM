@@ -6,6 +6,7 @@
 
 const mysql = require('mysql2/promise');
 require('dotenv').config();
+const Logger = require('../src/utils/logger/Logger');
 
 const pool = mysql.createPool({
     host:               process.env.DB_HOST     || 'localhost',
@@ -14,7 +15,7 @@ const pool = mysql.createPool({
     password:           process.env.DB_PASSWORD || '',
     database:           process.env.DB_NAME     || 'sygim_db',
     waitForConnections: true,
-    connectionLimit:    10,
+    connectionLimit:    parseInt(process.env.DB_CONNECTION_LIMIT || '25'),
     queueLimit:         0,
     charset:            'utf8mb4',
     timezone:           '+00:00',
@@ -26,11 +27,15 @@ const pool = mysql.createPool({
 async function testConnection() {
     try {
         const conn = await pool.getConnection();
-        console.log('✅ MySQL connecté —', process.env.DB_NAME || 'sygim_db');
+        Logger.info('MySQL connecté avec succès', { database: process.env.DB_NAME || 'sygim_db' });
         conn.release();
         return true;
     } catch (err) {
-        console.error('❌ Erreur connexion MySQL :', err.message);
+        Logger.error('Erreur connexion MySQL', err, {
+            code: err.code,
+            errno: err.errno,
+            sqlState: err.sqlState
+        });
         return false;
     }
 }

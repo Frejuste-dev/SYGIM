@@ -1,5 +1,39 @@
+# Dependencies
 node_modules/
+*/node_modules/
+
+# Environment variables & secrets
 .env*
-CREDENTIALS_PRODUCTION.md
+!.env.example
+!.env.*.example
+!.env.docker.example
 backend/.env*
+CREDENTIALS_PRODUCTION.md
 backend/certs/
+
+# Logs & temporary files
+logs/
+*.log
+backend/logs/
+*.tmp*
+.tmp*
+backups/
+coverage/
+routes_dump.txt
+services_dump.txt
+text.tex
+fix*.js
+backend/clean-dashes.js
+backend/real_schema.txt
+backend/real_schema_utf8.txt
+
+# Build outputs
+dist/
+dist-ssr/
+build/
+
+# IDE & OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

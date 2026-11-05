@@ -6,14 +6,22 @@
 const rateLimit = require('express-rate-limit');
 const ApiResponse = require('../utils/responses/ApiResponse');
 
+const isDev = process.env.NODE_ENV !== 'production';
+
 /**
- * Limiteur général pour toute l'API
+ * Limiteur général pour toute l'API.
+ * En développement : 500 req/15min (React StrictMode double les appels)
+ * En production : 200 req/15min
  */
 const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limite chaque IP à 100 requêtes par fenêtre
-  standardHeaders: true, // Retourne les infos de limite dans les headers `RateLimit-*`
-  legacyHeaders: false, // Désactive les headers `X-RateLimit-*`
+  windowMs: 15 * 60 * 1000,
+  max: isDev ? 500 : 200,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => {
+    // Ne jamais bloquer la validation de session (appelée à chaque navigation)
+    return req.path === '/auth/me';
+  },
   handler: (req, res) => {
     res.status(429).json(
       ApiResponse.error(
@@ -26,15 +34,16 @@ const apiLimiter = rateLimit({
 });
 
 /**
- * Limiteur strict pour les routes sensibles (Login, Register)
+ * Limiteur strict pour les routes sensibles (Login)
+ * 10 tentatives maximum par fenêtre de 15 minutes
  */
 const authLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 heure
-  max: 5, // 5 tentatives par heure
+  windowMs: 15 * 60 * 1000,
+  max: 10,
   handler: (req, res) => {
     res.status(429).json(
       ApiResponse.error(
-        'Trop de tentatives de connexion, veuillez réessayer dans une heure.',
+        'Trop de tentatives de connexion, veuillez réessayer plus tard.',
         429,
         'TOO_MANY_LOGIN_ATTEMPTS'
       )

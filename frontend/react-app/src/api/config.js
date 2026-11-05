@@ -10,13 +10,12 @@ export const CONFIG = {
     API: {
         BASE: typeof window !== 'undefined' ? window.location.origin + '/api' : 'http://localhost:5000/api',
         TIMEOUT: 30000, // 30 secondes
-        RETRY_ATTEMPTS: 3,
+        RETRY_ATTEMPTS: 1, // Pas de retry sur les erreurs 401/403 — evite les boucles
         RETRY_DELAY: 1000
     },
 
     // ── Storage Keys ───────────────────────────────────────────
     STORAGE: {
-        JWT_TOKEN: 'sygim_jwt_token',
         CURRENT_USER: 'sygim_current_user',
         USER_PREFERENCES: 'sygim_preferences',
         LAST_SYNC: 'sygim_last_sync'

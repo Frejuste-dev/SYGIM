@@ -7,7 +7,7 @@
 
 const express = require('express');
 const reportController = require('./report.controller');
-const reportValidator = require('./report.validator');
+const { reportValidator, exportTypeValidator } = require('./report.validator');
 const { authenticate } = require('../../middleware/auth.middleware');
 const { checkRole } = require('../../middleware/role.middleware');
 
@@ -15,7 +15,12 @@ const router = express.Router();
 
 // Middleware de protection
 router.use(authenticate);
-router.use(checkRole(['admin', 'director']));
+router.use(checkRole(['admin', 'super_admin', 'director', 'accounting', 'gestionnaire', 'manager', 'collector_manager', 'collector', 'collecteur']));
+
+/**
+ * @route   GET /api/reports/kpis
+ */
+router.get('/kpis', reportController.getKpis);
 
 /**
  * @route   GET /api/reports/dashboard
@@ -35,11 +40,11 @@ router.get('/properties', reportValidator, reportController.getProperty);
 /**
  * @route   GET /api/reports/export/csv/:type
  */
-router.get('/export/csv/:type', reportValidator, reportController.exportCsv);
+router.get('/export/csv/:type', exportTypeValidator, reportController.exportCsv);
 
 /**
  * @route   GET /api/reports/export/pdf/:type
  */
-router.get('/export/pdf/:type', reportValidator, reportController.exportPdf);
+router.get('/export/pdf/:type', exportTypeValidator, reportController.exportPdf);
 
 module.exports = router;

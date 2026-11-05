@@ -22,12 +22,27 @@ class ReportService {
   }
 
   /**
+   * KPIs scalaires du Dashboard (TTL: 60s)
+   */
+  async getKpis() {
+    const cacheKey = 'report:kpis:global';
+    const cached = await cacheService.get(cacheKey);
+    if (cached) return cached;
+
+    const data = await reportRepository.getKpis();
+    await cacheService.set(cacheKey, data, 60);
+    return data;
+  }
+
+  /**
    * Dashboard (Résumé global)
    */
   async getDashboardReport(filters) {
     const cacheKey = this._getCacheKey('dashboard', filters);
     const cached = await cacheService.get(cacheKey);
-    if (cached) return cached;
+    if (cached) {
+      return cached;
+    }
 
     const data = await reportRepository.getTransactionSummary(filters);
     await cacheService.set(cacheKey, data, 300);
@@ -40,7 +55,9 @@ class ReportService {
   async getCollectorReport(filters) {
     const cacheKey = this._getCacheKey('collector', filters);
     const cached = await cacheService.get(cacheKey);
-    if (cached) return cached;
+    if (cached) {
+      return cached;
+    }
 
     const data = await reportRepository.getCollectorPerformance(filters);
     await cacheService.set(cacheKey, data, 180);
@@ -53,7 +70,9 @@ class ReportService {
   async getPropertyReport(filters) {
     const cacheKey = this._getCacheKey('property', filters);
     const cached = await cacheService.get(cacheKey);
-    if (cached) return cached;
+    if (cached) {
+      return cached;
+    }
 
     const data = await reportRepository.getPropertyOccupancy(filters);
     await cacheService.set(cacheKey, data, 180);
@@ -77,16 +96,18 @@ class ReportService {
     try {
       const methodName = this._getRepositoryMethod(reportType);
       const data = await reportRepository[methodName](filters);
-      
+
       if (!data || data.length === 0) {
         throw new AppError('Aucune donnée pour la période sélectionnée', 404);
       }
-      
+
       const parser = new Parser();
       const csv = parser.parse(data);
       return Buffer.from('\uFEFF' + csv, 'utf8'); // BOM for Excel
     } catch (error) {
-      if (error instanceof AppError) throw error;
+      if (error instanceof AppError) {
+        throw error;
+      }
       throw new AppError('Erreur lors de l\'export CSV: ' + error.message, 500);
     }
   }
@@ -98,7 +119,7 @@ class ReportService {
     try {
       const methodName = this._getRepositoryMethod(reportType);
       const data = await reportRepository[methodName](filters);
-      
+
       if (!data || data.length === 0) {
         throw new AppError('Aucune donnée pour la période sélectionnée', 404);
       }
@@ -128,7 +149,9 @@ class ReportService {
         doc.end();
       });
     } catch (error) {
-      if (error instanceof AppError) throw error;
+      if (error instanceof AppError) {
+        throw error;
+      }
       throw new AppError('Erreur lors de l\'export PDF: ' + error.message, 500);
     }
   }

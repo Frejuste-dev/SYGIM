@@ -73,7 +73,7 @@ class Validator {
       try {
         for (const [field, rules] of Object.entries(schema)) {
           const value = req.body[field];
-          
+
           for (const rule of rules) {
             rule(value, field);
           }

@@ -1,11 +1,11 @@
 
 
 -- Création de la base de données
-CREATE DATABASE IF NOT EXISTS sygim_db
-    CHARACTER SET utf8mb4
-    COLLATE utf8mb4_unicode_ci;
+-- CREATE DATABASE IF NOT EXISTS sygim_db
+--     CHARACTER SET utf8mb4
+--     COLLATE utf8mb4_unicode_ci;
 
-USE sygim_db;
+-- USE sygim_db;
 
 -- ───────────────────────────────────────────────────────────────
 -- TABLE 1 : UTILISATEURS (Authentification + Rôles)
@@ -27,6 +27,8 @@ CREATE TABLE IF NOT EXISTS users (
     last_login      DATETIME        DEFAULT NULL,
     created_at      DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at      DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    username_normalized VARCHAR(255) COLLATE utf8mb4_unicode_ci GENERATED ALWAYS AS (lower(`username`)) STORED,
+    deletedAt       DATETIME        DEFAULT NULL,
 
     INDEX idx_users_role    (role),
     INDEX idx_users_active  (active)
@@ -65,11 +67,14 @@ CREATE TABLE IF NOT EXISTS collectors (
     commission_rate DECIMAL(5,2)    DEFAULT 0.00 COMMENT 'Taux de commission en %',
     active          TINYINT(1)      NOT NULL DEFAULT 1,
     user_id         INT             DEFAULT NULL COMMENT 'Lien vers le compte utilisateur',
+    manager_id      INT             DEFAULT NULL COMMENT 'Référence au gestionnaire (users.id)',
     created_at      DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at      DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deletedAt       DATETIME        DEFAULT NULL,
 
     INDEX idx_collectors_active  (active),
     INDEX idx_collectors_user    (user_id),
+    INDEX idx_collectors_manager (manager_id),
     CONSTRAINT fk_collectors_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
@@ -172,11 +177,11 @@ CREATE TABLE IF NOT EXISTS transactions (
 
     INDEX idx_transactions_date       (date),
     INDEX idx_transactions_client     (client_id),
-    INDEX idx_transactions_status     (status),
+    INDEX idx_transactions_status_date (status, date),
     INDEX idx_transactions_method     (method),
     INDEX idx_transactions_reference  (reference),
-    INDEX idx_transactions_collector  (collector_id),
-    CONSTRAINT fk_transactions_client    FOREIGN KEY (client_id)    REFERENCES clients(id) ON DELETE SET NULL,
+    INDEX idx_transactions_collector_status (collector_id, status),
+    CONSTRAINT fk_transactions_client    FOREIGN KEY (client_id)    REFERENCES clients(id) ON DELETE RESTRICT,
     CONSTRAINT fk_transactions_collector FOREIGN KEY (collector_id) REFERENCES collectors(id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
@@ -237,6 +242,37 @@ CREATE TABLE IF NOT EXISTS settings (
     setting_value   TEXT            DEFAULT NULL,
     description     VARCHAR(255)    DEFAULT NULL,
     updated_at      DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+-- ═══════════════════════════════════════════════════════════════
+-- TABLE : Acquittement des alertes
+-- ═══════════════════════════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS alert_acknowledgements (
+    id              INT AUTO_INCREMENT PRIMARY KEY,
+    client_id       INT NOT NULL,
+    acknowledged_by INT NOT NULL,
+    acknowledged_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_alert_client_user (client_id, acknowledged_by),
+    CONSTRAINT fk_alert_ack_client FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE,
+    CONSTRAINT fk_alert_ack_user   FOREIGN KEY (acknowledged_by) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- ═══════════════════════════════════════════════════════════════
+-- TABLE : Refresh Tokens
+-- ═══════════════════════════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS refresh_tokens (
+    primaryKey      INT AUTO_INCREMENT PRIMARY KEY,
+    userId          INT NOT NULL,
+    token           VARCHAR(512) NOT NULL UNIQUE,
+    expiresAt       DATETIME NOT NULL,
+    revokedAt       DATETIME DEFAULT NULL,
+    createdAt       DATETIME DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_token (token),
+    INDEX idx_userId (userId),
+    CONSTRAINT fk_user_refresh_token FOREIGN KEY (userId) 
+        REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
 -- ═══════════════════════════════════════════════════════════════

@@ -7,7 +7,6 @@
 const express = require('express');
 const router = express.Router();
 const { pool } = require('../../config/db');
-const redisClient = require('../infrastructure/cache/redis.client');
 
 /**
  * @route   GET /health
@@ -20,8 +19,7 @@ router.get('/', async (req, res) => {
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
     services: {
-      database: 'ok',
-      redis: 'ok'
+      database: 'ok'
     }
   };
 
@@ -32,19 +30,6 @@ router.get('/', async (req, res) => {
   } catch (err) {
     health.status = 'degraded';
     health.services.database = 'error';
-  }
-
-  try {
-    // Vérification Redis
-    if (!redisClient.isReady) {
-      health.status = 'degraded';
-      health.services.redis = 'error';
-    } else {
-      await redisClient.ping();
-    }
-  } catch (err) {
-    health.status = 'degraded';
-    health.services.redis = 'error';
   }
 
   const statusCode = health.status === 'ok' ? 200 : 503;

@@ -1,516 +1,264 @@
-/**
- * ╔════════════════════════════════════════════════════════════════════╗
- * ║        SYGIM — Administration Panel (React)                       ║
- * ║     Gestion des utilisateurs, paramètres, sauvegardes et logs     ║
- * ╚════════════════════════════════════════════════════════════════════╝
- */
-
 import React, { useState, useEffect } from 'react';
+import { useNavigate, NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { useData } from '../contexts/DataContext';
+import { useClientStats } from '../hooks/queries/useClients';
+import { usePropertyStats } from '../hooks/queries/useProperties';
+import { useTransactionStats } from '../hooks/queries/useTransactions';
+import { useOwnerStats } from '../hooks/queries/useOwners';
 import { API } from '../api/services';
+import AdminNav from '../components/AdminNav';
+import StatsCard from '../components/StatsCard';
+import UsersTable from '../components/UsersTable';
+import UserFormModal from '../components/UserFormModal';
+import OverdueAlertPanel from '../components/OverdueAlertPanel';
+import DataIntegrityPanel from '../components/DataIntegrityPanel';
+import ActivityLog from '../components/ActivityLog';
+import SystemSettingsPanel from '../components/SystemSettingsPanel';
+import { useToast } from '../components/ToastContext';
+import { useConfirm } from '../components/ConfirmContext';
 
 export default function Admin() {
-    const { user, logout } = useAuth();
-    const { clients, properties, transactions, collectors, owners, refreshData } = useData();
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
 
-    // Navigation state
-    const [activeTab, setActiveTab] = useState('access');
-    const [isDark, setIsDark] = useState(document.body.classList.contains('dark-mode'));
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
+  };
 
-    // Users (Access Tab) state
-    const [usersList, setUsersList] = useState([]);
-    const [usersLoading, setUsersLoading] = useState(false);
-    const [searchUser, setSearchUser] = useState('');
-    const [roleFilter, setRoleFilter] = useState('');
-    const [statusFilter, setStatusFilter] = useState('');
-    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const isAdmin = user?.role === 'admin' || user?.role === 'super_admin' || user?.isSuperAdmin;
+  const userRole = user?.role?.toLowerCase() || '';
 
-    // New user form state
-    const [newUserForm, setNewUserForm] = useState({
-        username: '',
-        password: '',
-        firstName: '',
-        lastName: '',
-        email: '',
-        role: 'collector',
-        active: true
-    });
-    const [formError, setFormError] = useState('');
-    const [formSubmitting, setFormSubmitting] = useState(false);
+  const dashboardPath = userRole === 'collector' || userRole === 'collecteur' 
+    ? '/admin/collector' 
+    : userRole === 'collector_manager' || userRole === 'manager' 
+      ? '/admin/manager' 
+      : '/admin/dashboard';
 
-    // Logs & activity state
-    const [activityLogs, setActivityLogs] = useState([
-        { type: 'auth', message: 'Connexion de l\'administrateur réussie', time: '10:14:22', date: '24/06/2026' },
-        { type: 'system', message: 'Serveur démarré avec succès', time: '09:00:00', date: '24/06/2026' }
-    ]);
+  const navigationSections = [
+    {
+      title: 'PRINCIPAL',
+      items: [
+        { name: 'Tableau de bord', path: dashboardPath, icon: 'fas fa-chart-pie', roles: ['admin', 'super_admin', 'gestionnaire', 'collecteur', 'collector', 'collector_manager', 'director', 'accounting'] },
+      ]
+    },
+    {
+      title: 'GESTION',
+      items: [
+        { name: 'Utilisateurs', path: '/admin/users', icon: 'fas fa-users', roles: ['admin', 'super_admin'] },
+        { name: 'Propriétés', path: '/admin/properties', icon: 'fas fa-building', roles: ['admin', 'super_admin', 'gestionnaire', 'director', 'accounting', 'collector_manager'] },
+        { name: 'Locataires', path: '/admin/clients', icon: 'fas fa-user-friends', roles: ['admin', 'super_admin', 'gestionnaire', 'director', 'accounting', 'collector_manager'] },
+        { name: 'Propriétaires', path: '/admin/owners', icon: 'fas fa-user-tie', roles: ['admin', 'super_admin', 'gestionnaire', 'director', 'accounting', 'collector_manager'] },
+        { name: 'Transactions', path: '/admin/transactions', icon: 'fas fa-exchange-alt', roles: ['admin', 'super_admin', 'gestionnaire', 'collecteur', 'collector', 'collector_manager', 'director', 'accounting'] },
+      ]
+    },
+    {
+      title: 'ANALYSE',
+      items: [
+        { name: 'Rapports', path: '/admin/reports', icon: 'fas fa-file-alt', roles: ['admin', 'super_admin', 'director', 'accounting'] },
+        { name: 'Journal d\'activité', path: '/admin/activity', icon: 'fas fa-history', roles: ['admin', 'super_admin'] },
+      ]
+    },
+    {
+      title: 'SYSTÈME',
+      items: [
+        { name: 'Paramètres', path: '/admin/settings', icon: 'fas fa-cog', roles: ['super_admin', 'admin'] },
+      ]
+    }
+  ];
 
-    // Fetch users when Access tab is selected
-    useEffect(() => {
-        if (activeTab === 'access') {
-            loadUsers();
-        }
-    }, [activeTab]);
+  const navLinkStyle = ({ isActive }) => 
+    isActive
+      ? "w-full text-left px-6 py-2.5 border-none cursor-pointer flex items-center gap-3 bg-primary/10 text-primary rounded-r-full mr-4 font-medium transition-colors"
+      : "w-full text-left px-6 py-2.5 bg-transparent border-none text-slate-700 cursor-pointer flex items-center gap-3 hover:bg-slate-50 hover:text-slate-900 rounded-r-full mr-4 transition-colors";
 
-    const loadUsers = async () => {
-        setUsersLoading(true);
-        try {
-            const resp = await API.Users.getAll();
-            if (resp && resp.data) {
-                const rawList = Array.isArray(resp.data) ? resp.data : resp.data.data || resp.data.rows || [];
-                const list = rawList.map(u => ({
-                    ...u,
-                    firstName: u.firstName || u.first_name || '',
-                    lastName: u.lastName || u.last_name || '',
-                    displayName: u.displayName || u.display_name || '',
-                    avatar: u.avatar || '',
-                    active: u.active === 1 || u.active === true
-                }));
-                setUsersList(list);
-            }
-        } catch (err) {
-            console.error("Error loading users:", err);
-        } finally {
-            setUsersLoading(false);
-        }
-    };
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
 
-    const toggleTheme = () => {
-        document.body.classList.toggle('dark-mode');
-        setIsDark(document.body.classList.contains('dark-mode'));
-    };
+  const handleNotificationClick = (path) => {
+    setIsNotificationsOpen(false);
+    navigate(path);
+  };
 
-    const handleCreateUser = async (e) => {
-        e.preventDefault();
-        if (!newUserForm.username || !newUserForm.password || !newUserForm.role) {
-            setFormError('Nom d\'utilisateur, mot de passe et rôle obligatoires.');
-            return;
-        }
+  const [overdueAlerts, setOverdueAlerts] = useState([]);
 
-        setFormError('');
-        setFormSubmitting(true);
+  useEffect(() => {
+    API.Alerts.getOverduePayments()
+      .then(res => { if (res?.success) setOverdueAlerts(res.data); })
+      .catch(() => {});
+  }, []);
 
-        try {
-            const resp = await API.Users.create(newUserForm);
-            if (resp.success) {
-                // Refresh list
-                await loadUsers();
-                setIsCreateModalOpen(false);
-                setNewUserForm({
-                    username: '',
-                    password: '',
-                    firstName: '',
-                    lastName: '',
-                    email: '',
-                    role: 'collector',
-                    active: true
-                });
-                addLog('user', `Utilisateur '${resp.data?.username}' créé avec succès`);
-            } else {
-                setFormError(resp.error || 'Erreur lors de la création de l\'utilisateur.');
-            }
-        } catch (err) {
-            setFormError(err.message || 'Erreur serveur.');
-        } finally {
-            setFormSubmitting(false);
-        }
-    };
-
-    const handleDeleteUser = async (userId, username) => {
-        if (!window.confirm(`Voulez-vous vraiment supprimer l'utilisateur ${username} ?`)) {
-            return;
-        }
-
-        try {
-            const resp = await API.Users.delete(userId);
-            if (resp.success) {
-                setUsersList(usersList.filter(u => u.id !== userId));
-                addLog('user', `Utilisateur '${username}' supprimé`);
-            }
-        } catch (err) {
-            alert('Erreur lors de la suppression: ' + err.message);
-        }
-    };
-
-    const handleToggleUserStatus = async (userItem) => {
-        try {
-            const newStatus = !userItem.active;
-            const resp = newStatus 
-                ? await API.Users.activate(userItem.id)
-                : await API.Users.deactivate(userItem.id);
-            
-            if (resp.success) {
-                setUsersList(usersList.map(u => u.id === userItem.id ? { ...u, active: newStatus } : u));
-                addLog('user', `Statut de '${userItem.username}' modifié : ${newStatus ? 'Actif' : 'Inactif'}`);
-            }
-        } catch (err) {
-            alert('Erreur de modification du statut: ' + err.message);
-        }
-    };
-
-    const addLog = (type, message) => {
-        const now = new Date();
-        const time = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        const date = now.toLocaleDateString('fr-FR');
-        setActivityLogs(prev => [{ type, message, time, date }, ...prev]);
-    };
-
-    // Filters logic
-    const filteredUsers = usersList.filter(u => {
-        const searchLower = searchUser.toLowerCase();
-        const matchesSearch = 
-            (u.username || '').toLowerCase().includes(searchLower) ||
-            (u.firstName || '').toLowerCase().includes(searchLower) ||
-            (u.lastName || '').toLowerCase().includes(searchLower) ||
-            (u.role || '').toLowerCase().includes(searchLower);
-        
-        const matchesRole = roleFilter ? u.role === roleFilter : true;
-        const matchesStatus = statusFilter 
-            ? (statusFilter === 'active' ? u.active : !u.active)
-            : true;
-
-        return matchesSearch && matchesRole && matchesStatus;
-    });
-
-    const getRoleLabel = (role) => {
-        const roles = {
-            admin: 'Administrateur',
-            director: 'Directeur',
-            accounting: 'Comptable',
-            collector_manager: 'Manager des Récolteurs',
-            collector: 'Récolteur'
-        };
-        return roles[role] || role;
-    };
-
-    return (
-        <div className="admin-main" style={{ display: 'flex', minHeight: '100vh', flexDirection: 'column' }}>
-            {/* Header admin */}
-            <div className="admin-header">
-                <div className="admin-header-left">
-                    <div className="admin-logo"><i className="fas fa-building"></i> SYGIM</div>
-                    <span className="admin-badge"><i className="fas fa-shield-alt"></i> Administration</span>
-                </div>
-                <div className="admin-header-right">
-                    <button className="btn btn-success btn-small" onClick={() => { refreshData(); refreshData(); }} title="Rafraîchir"><i className="fas fa-sync-alt"></i></button>
-                    <button className="btn btn-secondary btn-small" onClick={toggleTheme} title="Thème sombre/clair">
-                        <i className={isDark ? "fas fa-sun" : "fas fa-moon"}></i>
-                    </button>
-                    <div className="admin-user-info">
-                        <div className="avatar admin-avatar-sm">{user?.displayName?.slice(0, 3).toUpperCase() || 'ADM'}</div>
-                        <span>{user?.displayName || 'Administrateur'}</span>
-                    </div>
-                    <button className="btn btn-danger btn-small" onClick={logout}><i className="fas fa-sign-out-alt"></i> Déconnexion</button>
-                </div>
-            </div>
-
-            {/* Nav tabs */}
-            <div className="admin-nav" style={{ overflowX: 'auto', whiteSpace: 'nowrap', scrollbarWidth: 'none' }}>
-                <button className={`admin-tab ${activeTab === 'access' ? 'active' : ''}`} onClick={() => setActiveTab('access')}>
-                    <i className="fas fa-users-cog"></i> Accès
-                </button>
-                <button className={`admin-tab ${activeTab === 'dashboard' ? 'active' : ''}`} onClick={() => setActiveTab('dashboard')}>
-                    <i className="fas fa-tachometer-alt"></i> Tableau de bord
-                </button>
-                <button className={`admin-tab ${activeTab === 'data' ? 'active' : ''}`} onClick={() => setActiveTab('data')}>
-                    <i className="fas fa-database"></i> Données
-                </button>
-                <button className={`admin-tab ${activeTab === 'logs' ? 'active' : ''}`} onClick={() => setActiveTab('logs')}>
-                    <i className="fas fa-history"></i> Journal
-                </button>
-                <button className={`admin-tab ${activeTab === 'settings' ? 'active' : ''}`} onClick={() => setActiveTab('settings')}>
-                    <i className="fas fa-cog"></i> Paramètres
-                </button>
-            </div>
-
-            {/* Content panels */}
-            <div style={{ padding: '24px', flex: 1, overflowY: 'auto' }}>
-                {/* TAB : Gestion des accès */}
-                {activeTab === 'access' && (
-                    <div className="admin-panel active">
-                        <div className="admin-panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                            <div>
-                                <h2>Gestion des accès</h2>
-                                <p>Créez, modifiez ou supprimez les comptes utilisateurs de la plateforme.</p>
-                            </div>
-                            <button className="btn btn-primary" onClick={() => setIsCreateModalOpen(true)}>
-                                <i className="fas fa-user-plus"></i> Nouvel utilisateur
-                            </button>
-                        </div>
-                        <div className="admin-filters" style={{ display: 'flex', gap: '10px', marginBottom: '20px', flexWrap: 'wrap' }}>
-                            <input 
-                                type="text" 
-                                placeholder="Rechercher par nom, rôle..." 
-                                value={searchUser}
-                                onChange={(e) => setSearchUser(e.target.value)}
-                                className="admin-search-input"
-                                style={{ flex: 1, minWidth: '200px', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border)' }}
-                            />
-                            <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} className="admin-select-sm" style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--border)' }}>
-                                <option value="">Tous les rôles</option>
-                                <option value="admin">Administrateur</option>
-                                <option value="director">Directeur</option>
-                                <option value="accounting">Comptable</option>
-                                <option value="collector_manager">Manager</option>
-                                <option value="collector">Récolteur</option>
-                            </select>
-                            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="admin-select-sm" style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--border)' }}>
-                                <option value="">Tous les statuts</option>
-                                <option value="active">Actifs</option>
-                                <option value="inactive">Inactifs</option>
-                            </select>
-                            <button className="btn btn-outline btn-small" onClick={loadUsers}><i className="fas fa-sync"></i> Actualiser</button>
-                        </div>
-
-                        {usersLoading ? (
-                            <div style={{ textAlign: 'center', padding: '40px' }}>
-                                <i className="fas fa-spinner fa-spin fa-2x"></i>
-                                <p style={{ marginTop: '10px' }}>Chargement des utilisateurs...</p>
-                            </div>
-                        ) : (
-                            <div className="admin-table-wrapper" style={{ overflowX: 'auto', background: 'var(--surface)', borderRadius: '10px', border: '1px solid var(--border)' }}>
-                                <table className="admin-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
-                                    <thead>
-                                        <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--border)' }}>
-                                            <th style={{ padding: '12px' }}>Utilisateur</th>
-                                            <th style={{ padding: '12px' }}>Identifiant</th>
-                                            <th style={{ padding: '12px' }}>Rôle</th>
-                                            <th style={{ padding: '12px' }}>Statut</th>
-                                            <th style={{ padding: '12px' }}>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {filteredUsers.length > 0 ? (
-                                            filteredUsers.map(u => (
-                                                <tr key={u.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                                                    <td style={{ padding: '12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                                        <div className="avatar admin-avatar-sm" style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--primary-light)', color: 'white', borderRadius: '50%' }}>
-                                                            {((u.firstName || '').slice(0, 1) + (u.lastName || '').slice(0, 1)).toUpperCase() || (u.username || '').slice(0, 2).toUpperCase()}
-                                                        </div>
-                                                        <div>
-                                                            <div style={{ fontWeight: '500' }}>{u.firstName} {u.lastName}</div>
-                                                            <small style={{ color: 'var(--gray-400)' }}>{u.email || 'Aucun email'}</small>
-                                                        </div>
-                                                    </td>
-                                                    <td style={{ padding: '12px' }}>{u.username}</td>
-                                                    <td style={{ padding: '12px' }}><span className="status-badge info">{getRoleLabel(u.role)}</span></td>
-                                                    <td style={{ padding: '12px' }}>
-                                                        <span className={`status-badge ${u.active ? 'paid' : 'overdue'}`}>
-                                                            {u.active ? 'Actif' : 'Inactif'}
-                                                        </span>
-                                                    </td>
-                                                    <td style={{ padding: '12px' }}>
-                                                        <div style={{ display: 'flex', gap: '8px' }}>
-                                                            <button 
-                                                                className={`btn ${u.active ? 'btn-secondary' : 'btn-success'} btn-small`} 
-                                                                onClick={() => handleToggleUserStatus(u)}
-                                                                title={u.active ? "Désactiver" : "Activer"}
-                                                            >
-                                                                <i className={u.active ? "fas fa-user-slash" : "fas fa-user-check"}></i>
-                                                            </button>
-                                                            <button 
-                                                                className="btn btn-danger btn-small"
-                                                                onClick={() => handleDeleteUser(u.id, u.username)}
-                                                                title="Supprimer"
-                                                            >
-                                                                <i className="fas fa-trash-alt"></i>
-                                                            </button>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            ))
-                                        ) : (
-                                            <tr>
-                                                <td colSpan="5" style={{ padding: '24px', textAlign: 'center', color: 'var(--gray-400)' }}>
-                                                    Aucun utilisateur trouvé.
-                                                </td>
-                                            </tr>
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
-                        )}
-                    </div>
-                )}
-
-                {/* TAB : Dashboard Admin */}
-                {activeTab === 'dashboard' && (
-                    <div className="admin-panel active">
-                        <h2>Vue Globale & Métriques</h2>
-                        <p style={{ marginBottom: '24px' }}>Statistiques agrégées des entités du système.</p>
-                        
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '30px' }}>
-                            <div className="stat-card success" style={{ padding: '20px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '10px' }}>
-                                <div className="stat-label" style={{ color: 'var(--gray-400)', fontSize: '14px' }}>Locataires</div>
-                                <div className="stat-value" style={{ fontSize: '28px', fontWeight: '700', margin: '10px 0' }}>{clients.length}</div>
-                                <div style={{ color: 'var(--success)', fontSize: '12px' }}><i className="fas fa-users"></i> Total des locataires actifs</div>
-                            </div>
-                            <div className="stat-card" style={{ padding: '20px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '10px' }}>
-                                <div className="stat-label" style={{ color: 'var(--gray-400)', fontSize: '14px' }}>Biens immobiliers</div>
-                                <div className="stat-value" style={{ fontSize: '28px', fontWeight: '700', margin: '10px 0' }}>{properties.length}</div>
-                                <div style={{ color: 'var(--primary)', fontSize: '12px' }}><i className="fas fa-hotel"></i> Sous gestion</div>
-                            </div>
-                            <div className="stat-card warning" style={{ padding: '20px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '10px' }}>
-                                <div className="stat-label" style={{ color: 'var(--gray-400)', fontSize: '14px' }}>Propriétaires</div>
-                                <div className="stat-value" style={{ fontSize: '28px', fontWeight: '700', margin: '10px 0' }}>{owners.length}</div>
-                                <div style={{ color: 'var(--warning)', fontSize: '12px' }}><i className="fas fa-user-tie"></i> Partenaires</div>
-                            </div>
-                            <div className="stat-card info" style={{ padding: '20px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '10px' }}>
-                                <div className="stat-label" style={{ color: 'var(--gray-400)', fontSize: '14px' }}>Transactions</div>
-                                <div className="stat-value" style={{ fontSize: '28px', fontWeight: '700', margin: '10px 0' }}>{transactions.length}</div>
-                                <div style={{ color: 'var(--info)', fontSize: '12px' }}><i className="fas fa-wallet"></i> Enregistrées</div>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* TAB : Données */}
-                {activeTab === 'data' && (
-                    <div className="admin-panel active">
-                        <h2>Gestion des Données</h2>
-                        <p>Contrôle de l'intégrité et gestion des synchronisations.</p>
-                        
-                        <div style={{ marginTop: '20px', padding: '20px', background: 'var(--surface)', borderRadius: '10px', border: '1px solid var(--border)' }}>
-                            <h3>Scan d'intégrité</h3>
-                            <p style={{ color: 'var(--gray-400)', marginBottom: '15px' }}>Lance un audit de cohérence entre la base de données locale (Cache) et l'API.</p>
-                            <button className="btn btn-primary" onClick={() => alert('Scan d\'intégrité terminé. Aucune incohérence détectée.')}>
-                                <i className="fas fa-check-double"></i> Lancer le scan
-                            </button>
-                        </div>
-                    </div>
-                )}
-
-                {/* TAB : Journal */}
-                {activeTab === 'logs' && (
-                    <div className="admin-panel active">
-                        <h2>Journal d'Activité</h2>
-                        <p>Traces des dernières opérations effectuées sur la plateforme.</p>
-                        
-                        <div style={{ marginTop: '20px', background: 'var(--surface)', borderRadius: '10px', border: '1px solid var(--border)', padding: '16px', maxHeight: '400px', overflowY: 'auto' }}>
-                            {activityLogs.map((log, idx) => (
-                                <div key={idx} style={{ display: 'flex', gap: '20px', borderBottom: '1px solid var(--border)', padding: '10px 0', fontSize: '14px' }}>
-                                    <span style={{ color: 'var(--gray-400)', minWidth: '150px' }}>{log.date} - {log.time}</span>
-                                    <span className={`status-badge ${log.type === 'auth' ? 'paid' : 'info'}`} style={{ minWidth: '80px', textAlign: 'center' }}>{log.type}</span>
-                                    <span style={{ flex: 1 }}>{log.message}</span>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                )}
-
-                {/* TAB : Paramètres */}
-                {activeTab === 'settings' && (
-                    <div className="admin-panel active">
-                        <h2>Paramètres Système</h2>
-                        <p>Configuration générale de l'application SYGIM.</p>
-                        
-                        <div style={{ marginTop: '20px', padding: '20px', background: 'var(--surface)', borderRadius: '10px', border: '1px solid var(--border)' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)', paddingBottom: '15px', marginBottom: '15px' }}>
-                                <div>
-                                    <h4 style={{ margin: 0 }}>Mode maintenance</h4>
-                                    <small style={{ color: 'var(--gray-400)' }}>Désactive l'accès à la plateforme pour les récolteurs.</small>
-                                </div>
-                                <button className="btn btn-outline" onClick={() => alert('Mode maintenance activé.')}>Activer</button>
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <div>
-                                    <h4 style={{ margin: 0 }}>Sauvegarde automatique</h4>
-                                    <small style={{ color: 'var(--gray-400)' }}>Effectuer des sauvegardes automatiques dans localStorage.</small>
-                                </div>
-                                <span style={{ color: 'var(--success)', fontWeight: '600' }}><i className="fas fa-check-circle"></i> Activé</span>
-                            </div>
-                        </div>
-                    </div>
-                )}
-            </div>
-
-            {/* Create User Modal */}
-            {isCreateModalOpen && (
-                <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, fontFamily: 'Poppins, sans-serif' }}>
-                    <div style={{ background: 'var(--surface)', padding: '30px', borderRadius: '14px', width: '90%', maxWidth: '500px', border: '1px solid var(--border)' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                            <h3 style={{ margin: 0 }}>Nouvel Utilisateur</h3>
-                            <button onClick={() => setIsCreateModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px', color: 'var(--gray-400)' }}><i className="fas fa-times"></i></button>
-                        </div>
-                        {formError && (
-                            <div className="alert-error show" style={{ display: 'block', marginBottom: '15px' }}>
-                                {formError}
-                            </div>
-                        )}
-                        <form onSubmit={handleCreateUser}>
-                            <div className="form-group" style={{ marginBottom: '15px' }}>
-                                <label style={{ display: 'block', marginBottom: '5px' }}>Identifiant</label>
-                                <input 
-                                    type="text" 
-                                    required 
-                                    value={newUserForm.username}
-                                    onChange={(e) => setNewUserForm({ ...newUserForm, username: e.target.value })}
-                                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--border)' }}
-                                />
-                            </div>
-                            <div className="form-group" style={{ marginBottom: '15px' }}>
-                                <label style={{ display: 'block', marginBottom: '5px' }}>Mot de passe</label>
-                                <input 
-                                    type="password" 
-                                    required 
-                                    value={newUserForm.password}
-                                    onChange={(e) => setNewUserForm({ ...newUserForm, password: e.target.value })}
-                                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--border)' }}
-                                />
-                            </div>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '15px' }}>
-                                <div className="form-group">
-                                    <label style={{ display: 'block', marginBottom: '5px' }}>Prénom</label>
-                                    <input 
-                                        type="text" 
-                                        value={newUserForm.firstName}
-                                        onChange={(e) => setNewUserForm({ ...newUserForm, firstName: e.target.value })}
-                                        style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--border)' }}
-                                    />
-                                </div>
-                                <div className="form-group">
-                                    <label style={{ display: 'block', marginBottom: '5px' }}>Nom</label>
-                                    <input 
-                                        type="text" 
-                                        value={newUserForm.lastName}
-                                        onChange={(e) => setNewUserForm({ ...newUserForm, lastName: e.target.value })}
-                                        style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--border)' }}
-                                    />
-                                </div>
-                            </div>
-                            <div className="form-group" style={{ marginBottom: '15px' }}>
-                                <label style={{ display: 'block', marginBottom: '5px' }}>Email</label>
-                                <input 
-                                    type="email" 
-                                    value={newUserForm.email}
-                                    onChange={(e) => setNewUserForm({ ...newUserForm, email: e.target.value })}
-                                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--border)' }}
-                                />
-                            </div>
-                            <div className="form-group" style={{ marginBottom: '20px' }}>
-                                <label style={{ display: 'block', marginBottom: '5px' }}>Rôle</label>
-                                <select 
-                                    value={newUserForm.role} 
-                                    onChange={(e) => setNewUserForm({ ...newUserForm, role: e.target.value })}
-                                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--border)' }}
-                                >
-                                    <option value="admin">Administrateur</option>
-                                    <option value="director">Directeur</option>
-                                    <option value="accounting">Comptable</option>
-                                    <option value="collector_manager">Manager des Récolteurs</option>
-                                    <option value="collector">Récolteur</option>
-                                </select>
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-                                <button type="button" className="btn btn-outline" onClick={() => setIsCreateModalOpen(false)}>Annuler</button>
-                                <button type="submit" className="btn btn-primary" disabled={formSubmitting}>
-                                    {formSubmitting ? <i className="fas fa-spinner fa-spin"></i> : 'Enregistrer'}
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
+  return (
+    <div className="flex h-screen w-full bg-slate-50 font-sans text-slate-900 overflow-hidden">
+      {/* SIDEBAR */}
+      {isSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 md:hidden" 
+          onClick={() => setIsSidebarOpen(false)}
+        ></div>
+      )}
+      <aside className={`w-64 bg-white border-r border-slate-200 flex-col z-50 fixed inset-y-0 left-0 transform transition-transform duration-300 md:z-20 md:relative md:translate-x-0 md:flex ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+        {/* EN-TÊTE SIDEBAR */}
+        <div className="h-16 flex items-center gap-3 border-b border-slate-200 px-6 shrink-0">
+          <i className="fas fa-building text-primary text-2xl"></i>
+          <span className="text-primary font-bold text-xl tracking-wide">SYGIM</span>
         </div>
-    );
+        
+        <nav className="flex-1 py-4 overflow-y-auto">
+          {navigationSections.map((section, sIdx) => {
+            const visibleItems = section.items.filter(item => item.roles.includes(userRole));
+            if (visibleItems.length === 0) return null;
+            return (
+              <React.Fragment key={section.title}>
+                <div className={`px-6 mb-2 text-[11px] font-bold text-slate-500 uppercase tracking-wider ${sIdx > 0 ? 'mt-6' : 'mt-2'}`}>
+                  {section.title}
+                </div>
+                {visibleItems.map(item => (
+                  <NavLink key={item.path} to={item.path} className={navLinkStyle}>
+                    <i className={`${item.icon} w-4 text-slate-400`}></i> {item.name}
+                  </NavLink>
+                ))}
+              </React.Fragment>
+            );
+          })}
+        </nav>
+      </aside>
+
+      {/* CONTENU PRINCIPAL */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-x-hidden">
+        
+        {/* HEADER FIXE EN HAUT */}
+        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 z-10 shrink-0">
+          <div className="flex items-center gap-4 min-w-0">
+            <button 
+              className="md:hidden p-2 text-slate-600 hover:text-slate-900 focus:outline-none"
+              onClick={() => setIsSidebarOpen(true)}
+              aria-label="Ouvrir le menu"
+            >
+              <i className="fas fa-bars text-xl"></i>
+            </button>
+            {/* Titre dynamique possible ici avec Outlet context ou matches */}
+            <div className="text-sm text-slate-500 whitespace-nowrap overflow-hidden text-ellipsis">
+              SYGIM <span className="mx-2">/</span> <span className="text-slate-900 font-medium">Administration</span>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-5">
+            <span className="text-sm text-slate-500 hidden sm:inline">Dernière synchro : il y a 2 min</span>
+            <button className="text-slate-500 hover:text-slate-900 p-2" title="Actualiser">
+              <i className="fas fa-sync-alt"></i>
+            </button>
+            
+            <div className="relative">
+              <button 
+                className="text-slate-500 hover:text-slate-900 text-lg relative focus:outline-none mr-2"
+                onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
+              >
+                <i className="fas fa-bell"></i>
+                {overdueAlerts.length > 0 && (
+                  <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-danger text-[10px] font-bold text-white ring-2 ring-white">
+                    {overdueAlerts.length}
+                  </span>
+                )}
+              </button>
+
+              {isNotificationsOpen && (
+                <div className="absolute right-0 mt-3 w-80 bg-white rounded-xl shadow-lg border border-slate-200 z-50 overflow-hidden">
+                  <div className="px-4 py-3 border-b border-slate-100 bg-slate-50">
+                    <h3 className="text-sm font-bold text-slate-800">Notifications</h3>
+                  </div>
+                  <div className="max-h-[320px] overflow-y-auto divide-y divide-slate-100">
+                    {overdueAlerts.length > 0 ? overdueAlerts.map(alert => {
+                      const clientName = (alert.first_name || alert.last_name) 
+                        ? `${alert.first_name || ''} ${alert.last_name || ''}`.trim()
+                        : alert.client_name || alert.clientName || alert.tenant_name || 'Client inconnu';
+                      const propertyName = alert.property_name || alert.propertyName || alert.property || 'Propriété';
+                      return (
+                      <div key={alert.id || Math.random()} 
+                           onClick={() => handleNotificationClick('/admin/transactions')}
+                           className="px-4 py-3 hover:bg-slate-50 cursor-pointer transition-colors">
+                        <p className="text-sm text-slate-800 font-medium">Loyer en retard</p>
+                        <p className="text-xs text-slate-500 mt-1">{clientName} - {propertyName}</p>
+                      </div>
+                      );
+                    }) : (
+                      <div className="px-4 py-6 text-center text-slate-500 text-sm">
+                        Aucune notification pour le moment.
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-2 bg-slate-50 border-t border-slate-100">
+                    <button onClick={() => handleNotificationClick('/admin/transactions')} className="w-full py-2 text-sm font-medium text-primary hover:bg-slate-100 rounded-lg transition-colors cursor-pointer">
+                      Voir toutes les alertes
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center gap-4">
+              <div className="h-8 w-px bg-slate-200 hidden md:block"></div>
+
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-full bg-primary text-white flex items-center justify-center font-bold text-sm shadow-sm">
+                  {user ? ((user.firstName?.[0] || '') + (user.lastName?.[0] || '')).toUpperCase() || user.username?.slice(0, 2).toUpperCase() : 'SA'}
+                </div>
+                <div className="hidden md:block text-left">
+                  <p className="font-semibold text-slate-700 text-sm leading-none">{user?.firstName || user?.username} {user?.lastName}</p>
+                  <p className="text-slate-500 text-xs mt-1 capitalize">{user?.role?.replace('_', ' ')}</p>
+                </div>
+              </div>
+
+              <button 
+                onClick={handleLogout} 
+                className="ml-2 w-9 h-9 flex items-center justify-center text-slate-400 hover:text-danger hover:bg-red-50 rounded-full transition-colors"
+                title="Se déconnecter"
+              >
+                <i className="fas fa-sign-out-alt text-lg"></i>
+              </button>
+            </div>
+          </div>
+        </header>
+
+        {/* ZONE DE DONNÉES */}
+        <main className={`flex-1 overflow-y-auto overflow-x-hidden p-3.5 sm:p-6 md:p-8 bg-slate-50 ${userRole === 'collector' ? 'pb-20 md:pb-8' : ''}`}>
+           <Outlet />
+        </main>
+
+        {/* BARRE DE NAVIGATION MOBILE BAS D'ÉCRAN (Spécifique Collecteur Terrain) */}
+        {userRole === 'collector' && (
+          <nav className="md:hidden fixed bottom-0 inset-x-0 bg-white/95 backdrop-blur-md border-t border-slate-200 z-40 flex items-center justify-around h-16 px-1 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
+            <NavLink 
+              to="/admin/collector" 
+              className={({ isActive }) => `flex flex-col items-center justify-center flex-1 py-1 text-[11px] font-semibold transition-colors ${isActive ? 'text-primary' : 'text-slate-400 hover:text-slate-600'}`}
+            >
+              <i className="fas fa-route text-lg mb-0.5"></i>
+              <span>Tournée</span>
+            </NavLink>
+            <NavLink 
+              to="/admin/transactions" 
+              className={({ isActive }) => `flex flex-col items-center justify-center flex-1 py-1 text-[11px] font-semibold transition-colors ${isActive ? 'text-primary' : 'text-slate-400 hover:text-slate-600'}`}
+            >
+              <i className="fas fa-receipt text-lg mb-0.5"></i>
+              <span>Paiements</span>
+            </NavLink>
+            <NavLink 
+              to="/admin/profile" 
+              className={({ isActive }) => `flex flex-col items-center justify-center flex-1 py-1 text-[11px] font-semibold transition-colors ${isActive ? 'text-primary' : 'text-slate-400 hover:text-slate-600'}`}
+            >
+              <i className="fas fa-user text-lg mb-0.5"></i>
+              <span>Profil</span>
+            </NavLink>
+            <button 
+              onClick={handleLogout} 
+              className="flex flex-col items-center justify-center flex-1 py-1 text-[11px] font-semibold text-rose-500 hover:text-rose-600 transition-colors"
+            >
+              <i className="fas fa-sign-out-alt text-lg mb-0.5"></i>
+              <span>Quitter</span>
+            </button>
+          </nav>
+        )}
+      </div>
+    </div>
+  );
 }

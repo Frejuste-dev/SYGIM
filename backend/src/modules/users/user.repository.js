@@ -4,7 +4,7 @@
  * date: 2026-06-16
  */
 
-const BaseRepository = require('../../repositories/BaseRepository');
+const BaseRepository = require('../../core/BaseRepository');
 const { pool: db } = require('../../../config/db');
 
 class UserRepository extends BaseRepository {
@@ -13,21 +13,29 @@ class UserRepository extends BaseRepository {
   }
 
   /**
-   * Surcharge de findAll pour exclure les utilisateurs supprimés
+   * Surcharge de findAll pour exclure les utilisateurs supprimés et le mot de passe
    */
   async findAll(filters = {}, limit = 100, offset = 0) {
     const activeFilters = { ...filters, deletedAt: null };
-    return super.findAll(activeFilters, limit, offset);
+    const users = await super.findAll(activeFilters, limit, offset);
+    return users.map(u => {
+      const { password_hash, ...safeUser } = u;
+      return safeUser;
+    });
   }
 
   /**
-   * Surcharge de findById pour vérifier que l'utilisateur n'est pas supprimé
+   * Surcharge de findById pour vérifier que l'utilisateur n'est pas supprimé et retirer le mot de passe
    */
   async findById(id) {
     const user = await super.findById(id);
     if (user && user.deletedAt) {
       const AppError = require('../../utils/errors/AppError');
       throw AppError.notFound('Utilisateur');
+    }
+    if (user) {
+      const { password_hash, ...safeUser } = user;
+      return safeUser;
     }
     return user;
   }

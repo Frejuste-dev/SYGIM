@@ -11,21 +11,38 @@ const AppError = require('../utils/errors/AppError');
  * Middleware d'authentification JWT pour la V2
  */
 const authenticate = (req, res, next) => {
+  let token = null;
+
+  // 1. Priorité au cookie (sécurité maximale)
+  if (req.cookies && req.cookies.accessToken) {
+    token = req.cookies.accessToken;
+    
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      req.user = decoded;
+      return next();
+    } catch (error) {
+      // Rejet immédiat si le cookie est présent mais invalide/expiré (PAS DE FALLBACK)
+      return next(new AppError('Token invalide ou expiré.', 401));
+    }
+  }
+
+  // 2. Fallback sur le header Authorization (compatibilité legacy)
   const authHeader = req.headers.authorization;
-
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return next(new AppError('Authentification requise. Token manquant.', 401));
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    token = authHeader.split(' ')[1];
+    
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      req.user = decoded;
+      return next();
+    } catch (error) {
+      return next(new AppError('Token invalide ou expiré.', 401));
+    }
   }
 
-  const token = authHeader.split(' ')[1];
-
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded;
-    next();
-  } catch (error) {
-    return next(new AppError('Token invalide ou expiré.', 401));
-  }
+  // 3. Aucun token trouvé
+  return next(new AppError('Authentification requise. Token manquant.', 401));
 };
 
 /**

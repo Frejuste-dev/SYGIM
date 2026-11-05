@@ -7,7 +7,7 @@
 
 const express = require('express');
 const collectorController = require('./collector.controller');
-const collectorValidator = require('./collector.validator');
+const { collectorValidator } = require('./collector.validator');
 const { authenticate } = require('../../middleware/auth.middleware');
 const { checkRole } = require('../../middleware/role.middleware');
 
@@ -19,12 +19,12 @@ router.use(authenticate);
 /**
  * @route   GET /api/collectors
  */
-router.get('/', collectorController.getAll);
+router.get('/', checkRole(['admin', 'director', 'accounting', 'collector_manager', 'collector']), collectorController.getAll);
 
 /**
  * @route   GET /api/collectors/:id
  */
-router.get('/:id', collectorController.getById);
+router.get('/:id', checkRole(['admin', 'director', 'accounting', 'collector_manager', 'collector']), collectorController.getById);
 
 /**
  * @route   GET /api/collectors/:id/stats
@@ -33,9 +33,9 @@ router.get('/:id', collectorController.getById);
 router.get('/:id/stats', checkRole(['admin', 'director', 'collector_manager']), collectorController.getStats);
 
 /**
- * @route   GET /api/owners/:ownerId/collectors
+ * @route   GET /api/collectors/owner/:ownerId
  */
-router.get('/owner/:ownerId', collectorController.getByOwner);
+router.get('/owner/:ownerId', checkRole(['admin', 'director', 'accounting', 'collector_manager', 'collector']), collectorController.getByOwner);
 
 /**
  * @route   POST /api/collectors
@@ -51,5 +51,10 @@ router.put('/:id', checkRole(['admin', 'director', 'collector_manager']), collec
  * @route   DELETE /api/collectors/:id
  */
 router.delete('/:id', checkRole(['admin', 'director', 'collector_manager']), collectorController.delete);
+
+/**
+ * @route   POST /api/collectors/:id/assign-properties
+ */
+router.post('/:id/assign-properties', checkRole(['admin', 'director', 'collector_manager']), collectorController.assignProperties);
 
 module.exports = router;

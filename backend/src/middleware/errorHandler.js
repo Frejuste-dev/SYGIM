@@ -9,7 +9,7 @@ const AppError = require('../utils/errors/AppError');
 
 function errorHandler(err, req, res, next) {
   const requestId = req.id || 'unknown';
-  
+
   // Convertir erreurs non-AppError en AppError
   let error = err;
   if (!(err instanceof AppError)) {

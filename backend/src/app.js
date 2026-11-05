@@ -12,6 +12,7 @@ const cors = require('cors');
 const path = require('path');
 const helmet = require('helmet');
 const compression = require('compression');
+const cookieParser = require('cookie-parser');
 
 // Import des middlewares et utilitaires
 const errorHandler = require('./middleware/errorHandler');
@@ -38,27 +39,28 @@ app.use('/api/', apiLimiter);
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      imgSrc: ["'self'", "data:"],
-      connectSrc: ["'self'"],
-      fontSrc: ["'self'"],
-      objectSrc: ["'none'"],
-      frameSrc: ["'none'"],
-    },
+      defaultSrc: ['\'self\''],
+      scriptSrc: ['\'self\''],
+      styleSrc: ['\'self\'', '\'unsafe-inline\''],
+      imgSrc: ['\'self\'', 'data:'],
+      connectSrc: ['\'self\''],
+      fontSrc: ['\'self\''],
+      objectSrc: ['\'none\''],
+      frameSrc: ['\'none\'']
+    }
   },
   hsts: {
     maxAge: 31536000,
     includeSubDomains: true,
-    preload: true,
+    preload: true
   },
-  frameguard: { action: 'deny' },
+  frameguard: { action: 'deny' }
 }));
 
 // CORS configurable selon l'environnement
+const allowedOrigins = process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',') : [process.env.FRONTEND_URL || 'http://localhost:5173'];
 app.use(cors({
-  origin: process.env.CORS_ORIGINS?.split(',') || 'http://localhost:5000',
+  origin: allowedOrigins,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
@@ -69,14 +71,29 @@ app.use(cors({
 app.use(compression({ level: 6 }));
 
 // Parsing des requêtes
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
 // Logging des requêtes
 app.use(requestLogger);
 
 // ═══════════════════════════════════════════════════════════════════════
-// 3. ROUTES DE SANTÉ
+// 3. DOCUMENTATION API (Swagger)
+// ═══════════════════════════════════════════════════════════════════════
+
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpec = require('./config/swagger');
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  customSiteTitle: 'SYGIM API Documentation',
+  customfavIcon: '/favicon.ico',
+  swaggerOptions: {
+    persistAuthorization: true,
+    displayRequestDuration: true
+  }
+}));
+
+// ═══════════════════════════════════════════════════════════════════════
+// 4. ROUTES DE SANTÉ
 // ═══════════════════════════════════════════════════════════════════════
 
 app.use('/health', require('./routes/health.routes'));
@@ -85,23 +102,27 @@ app.use('/health', require('./routes/health.routes'));
 // 4. ROUTES API
 // ═══════════════════════════════════════════════════════════════════════
 
+app.use(cookieParser());
+
 app.use('/api/auth',         require('./modules/auth/auth.routes'));
-app.use('/api/users',        require('./routes/user.routes'));
+app.use('/api/users',        require('./modules/users/user.routes'));
 app.use('/api/collectors',   require('./modules/collectors/collector.routes'));
 app.use('/api/reports',      require('./modules/reports/report.routes'));
-app.use('/api/clients',      require('./routes/client.routes'));
-app.use('/api/properties',   require('./routes/property.routes'));
-app.use('/api/owners',       require('./routes/owner.routes'));
-app.use('/api/transactions', require('./routes/transaction.routes'));
-app.use('/api/alerts',       require('../routes/alerts.routes'));
+app.use('/api/clients',      require('./modules/clients/client.routes'));
+app.use('/api/properties',   require('./modules/properties/property.routes'));
+app.use('/api/owners',       require('./modules/owners/owner.routes'));
+app.use('/api/transactions', require('./modules/transactions/transaction.routes'));
+app.use('/api/financial',    require('./modules/financial/financial.routes'));
+app.use('/api/alerts',       require('./modules/alerts/alert.routes'));
+app.use('/api/rgpd',         require('./modules/rgpd/rgpd.routes'));
 
 // ═══════════════════════════════════════════════════════════════════════
 // 5. SERVIR LES FICHIERS FRONTEND
 // ═══════════════════════════════════════════════════════════════════════
 
 const fs = require('fs');
-const reactDistPath = path.join(__dirname, '..', 'frontend', 'react-app', 'dist');
-const legacyFrontendPath = path.join(__dirname, '..', 'frontend');
+const reactDistPath = path.join(__dirname, '..', '..', 'frontend', 'react-app', 'dist');
+const legacyFrontendPath = path.join(__dirname, '..', '..', 'frontend');
 const frontendPath = fs.existsSync(reactDistPath) ? reactDistPath : legacyFrontendPath;
 
 app.use(express.static(frontendPath, {
@@ -130,51 +151,5 @@ app.use('*', (req, res, next) => {
 // ═══════════════════════════════════════════════════════════════════════
 
 app.use(errorHandler);
-
-// ═══════════════════════════════════════════════════════════════════════
-// 8. DÉMARRAGE DU SERVEUR
-// ═══════════════════════════════════════════════════════════════════════
-
-const server = app.listen(PORT, () => {
-  Logger.info(`🚀 Serveur SYGIM démarré avec succès`, {
-    port: PORT,
-    environment: process.env.NODE_ENV || 'development',
-    nodeVersion: process.version
-  });
-});
-
-// ═══════════════════════════════════════════════════════════════════════
-// 9. GESTION GRACEFUL SHUTDOWN
-// ═══════════════════════════════════════════════════════════════════════
-
-process.on('SIGTERM', () => {
-  Logger.warn('Signal SIGTERM reçu, arrêt gracieux en cours...');
-  server.close(() => {
-    Logger.info('Serveur arrêté proprement');
-    process.exit(0);
-  });
-});
-
-process.on('SIGINT', () => {
-  Logger.warn('Signal SIGINT reçu, arrêt gracieux en cours...');
-  server.close(() => {
-    Logger.info('Serveur arrêté proprement');
-    process.exit(0);
-  });
-});
-
-// ═══════════════════════════════════════════════════════════════════════
-// 10. GESTION DES ERREURS NON CAPTURÉES
-// ═══════════════════════════════════════════════════════════════════════
-
-process.on('unhandledRejection', (reason, promise) => {
-  Logger.error('Rejection non gérée', reason, { promise });
-  server.close(() => process.exit(1));
-});
-
-process.on('uncaughtException', (error) => {
-  Logger.error('Exception non capturée', error);
-  server.close(() => process.exit(1));
-});
 
 module.exports = app;
