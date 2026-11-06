@@ -16,12 +16,16 @@ const validateEnv = () => {
     'DB_HOST',
     'DB_NAME',
     'DB_USER',
-    'DB_PASSWORD',
     'JWT_SECRET',
     'JWT_REFRESH_SECRET'
   ];
 
   const missing = required.filter(key => !process.env[key]);
+
+  // DB_PASSWORD peut être vide en développement local (ex: XAMPP / WAMP root sans mot de passe)
+  if (process.env.DB_PASSWORD === undefined) {
+    missing.push('DB_PASSWORD');
+  }
 
   if (missing.length > 0) {
     const errorMsg = `[FATAL] Variables d'environnement manquantes : ${missing.join(', ')}`;
@@ -29,14 +33,14 @@ const validateEnv = () => {
     process.exit(1);
   }
 
-  // Validation spécifique pour les secrets
-  if (process.env.JWT_SECRET.length < 64) {
-    console.error('\x1b[31m%s\x1b[0m', '[FATAL] JWT_SECRET doit faire au moins 64 caractères.');
+  // Validation spécifique pour les secrets (min 32 en dev, 64 recommandé)
+  if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
+    console.error('\x1b[31m%s\x1b[0m', '[FATAL] JWT_SECRET doit faire au moins 32 caractères.');
     process.exit(1);
   }
 
-  if (process.env.JWT_REFRESH_SECRET.length < 64) {
-    console.error('\x1b[31m%s\x1b[0m', '[FATAL] JWT_REFRESH_SECRET doit faire au moins 64 caractères.');
+  if (!process.env.JWT_REFRESH_SECRET || process.env.JWT_REFRESH_SECRET.length < 32) {
+    console.error('\x1b[31m%s\x1b[0m', '[FATAL] JWT_REFRESH_SECRET doit faire au moins 32 caractères.');
     process.exit(1);
   }
 
