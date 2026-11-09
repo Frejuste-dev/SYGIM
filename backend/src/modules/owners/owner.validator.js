@@ -6,7 +6,8 @@ const handleValidationErrors = (req, res, next) => {
     const firstError = errors.array()[0];
     return res.status(400).json({
       success: false,
-      error: firstError.msg
+      error: firstError.msg,
+      message: firstError.msg
     });
   }
   next();
@@ -14,7 +15,7 @@ const handleValidationErrors = (req, res, next) => {
 
 const ownerValidator = [
   body('first_name')
-    .notEmpty().withMessage('Le prénom est requis')
+    .optional({ checkFalsy: true })
     .isString().withMessage('Le prénom doit être une chaîne de caractères')
     .trim(),
   
@@ -24,7 +25,7 @@ const ownerValidator = [
     .trim(),
     
   body('phone')
-    .notEmpty().withMessage('Le numéro de téléphone est requis')
+    .optional({ checkFalsy: true })
     .isString().withMessage('Le format du téléphone est invalide')
     .trim(),
 
@@ -38,9 +39,28 @@ const ownerValidator = [
     .isString().withMessage('L\'adresse doit être une chaîne de caractères')
     .trim(),
 
-  body('commissionRate')
+  body('preferred_payment_method')
+    .optional({ checkFalsy: true })
+    .isString()
+    .trim(),
+
+  body('payout_schedule')
+    .optional({ checkFalsy: true })
+    .isString()
+    .trim(),
+
+  body('preferred_payout_day')
+    .optional({ checkFalsy: true })
+    .isString()
+    .trim(),
+
+  body('commission_rate')
     .optional({ checkFalsy: true })
     .isFloat({ min: 0, max: 100 }).withMessage('Le taux de commission doit être entre 0 et 100'),
+
+  body('property_ids')
+    .optional()
+    .isArray().withMessage('La liste des biens doit être un tableau'),
 
   body('active')
     .optional()
@@ -76,9 +96,28 @@ const updateOwnerValidator = [
     .isString().withMessage('L\'adresse doit être une chaîne de caractères')
     .trim(),
 
-  body('commissionRate')
+  body('preferred_payment_method')
+    .optional({ checkFalsy: true })
+    .isString()
+    .trim(),
+
+  body('payout_schedule')
+    .optional({ checkFalsy: true })
+    .isString()
+    .trim(),
+
+  body('preferred_payout_day')
+    .optional({ checkFalsy: true })
+    .isString()
+    .trim(),
+
+  body('commission_rate')
     .optional({ checkFalsy: true })
     .isFloat({ min: 0, max: 100 }).withMessage('Le taux de commission doit être entre 0 et 100'),
+
+  body('property_ids')
+    .optional()
+    .isArray().withMessage('La liste des biens doit être un tableau'),
 
   body('active')
     .optional()

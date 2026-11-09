@@ -129,7 +129,17 @@ class TransactionService extends BaseService {
     }
 
     data.collectorId = resolvedCollectorId;
-    return await this.repository.createWithClientUpdate(data);
+    const createdTx = await this.repository.createWithClientUpdate(data);
+
+    // Régularisation automatique d'un éventuel préfinancement propriétaire dès que le locataire paie
+    try {
+      const ownerSettlementService = require('../financial/services/OwnerSettlementService');
+      await ownerSettlementService.reconcilePrefinancingForTenantPayment(data.clientId, data.amount);
+    } catch (e) {
+      // non-bloquant
+    }
+
+    return createdTx;
   }
 }
 

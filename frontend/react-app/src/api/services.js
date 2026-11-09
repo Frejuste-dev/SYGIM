@@ -19,7 +19,6 @@ export const API = {
         logout: () => {
             return httpClient.post('/auth/logout')
                 .then(() => {
-                    // Nettoyer uniquement les données utilisateur du localStorage
                     if (typeof window !== 'undefined') {
                         localStorage.removeItem(CONFIG.STORAGE.CURRENT_USER);
                     }
@@ -30,7 +29,7 @@ export const API = {
                     if (typeof window !== 'undefined') {
                         localStorage.removeItem(CONFIG.STORAGE.CURRENT_USER);
                     }
-                    return { success: true }; // Considérer comme succès pour l'UX
+                    return { success: true };
                 });
         },
 
@@ -139,10 +138,13 @@ export const API = {
         getDocuments: (propertyId) => 
             httpClient.get(`/properties/${propertyId}/documents`),
         
-        uploadDocument: (propertyId, formData) => 
-            httpClient.post(`/properties/${propertyId}/documents`, formData, { 
-                headers: { 'Content-Type': 'multipart/form-data' } 
-            })
+        uploadDocument: (propertyId, file) => {
+            const formData = new FormData();
+            formData.append('document', file);
+            return httpClient.post(`/properties/${propertyId}/documents`, formData, {
+                headers: {}
+            });
+        }
     },
 
     /**
@@ -288,7 +290,7 @@ export const API = {
     },
 
     /**
-     * Moteur Financier (Phase 7 - Grand Livre, FIFO, Avances & Extournes)
+     * Moteur Financier (Grand Livre, Reversements Propriétaires, Préfinancements, FIFO & Extournes)
      */
     Financial: {
         registerPayment: (paymentData) =>
@@ -304,6 +306,21 @@ export const API = {
             httpClient.post('/financial/settlements/generate', settlementData),
 
         getTenantStatement: (clientId) =>
-            httpClient.get(`/financial/tenants/${clientId}/statement`)
+            httpClient.get(`/financial/tenants/${clientId}/statement`),
+
+        getSettlements: (filters = {}) =>
+            httpClient.get('/financial/settlements', { params: filters }),
+
+        recordOwnerPayment: (paymentData) =>
+            httpClient.post('/financial/settlements', paymentData),
+
+        paySettlement: (settlementId, data) =>
+            httpClient.put(`/financial/settlements/${settlementId}/pay`, data),
+
+        getOwnersSummary: () =>
+            httpClient.get('/financial/owners-summary'),
+
+        getGeneralLedger: (filters = {}) =>
+            httpClient.get('/financial/ledger', { params: filters })
     }
 };

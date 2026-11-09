@@ -105,6 +105,73 @@ class FinancialController {
   }
 
   /**
+   * GET /api/financial/settlements
+   * Liste des paiements, reversements et préfinancements propriétaires
+   */
+  async getSettlements(req, res, next) {
+    try {
+      const { owner_id, payout_mode, status, search } = req.query;
+      const result = await ownerSettlementService.getSettlementsWithStats({
+        owner_id,
+        payout_mode,
+        status,
+        search
+      });
+      return res.json(ApiResponse.success(result));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/financial/owners-summary
+   * Situation locative et financière de chaque propriétaire (loyers attendus, encaissés, impayés pour préfinancement)
+   */
+  async getOwnersFinancialSummary(req, res, next) {
+    try {
+      const data = await ownerSettlementService.getOwnersFinancialSummary();
+      return res.json(ApiResponse.success(data));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /api/financial/settlements
+   * Enregistrer un paiement propriétaire (Intégral, Échelonné, ou Préfinancement)
+   */
+  async recordOwnerPayment(req, res, next) {
+    try {
+      const settlement = await ownerSettlementService.recordOwnerPayment(req.body, req.user?.id);
+      return res.status(201).json(ApiResponse.created(settlement, 'Paiement propriétaire enregistré avec succès.'));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * PUT /api/financial/settlements/:id/pay
+   * Compléter ou solder un paiement propriétaire échelonné (nouvelle tranche)
+   */
+  async paySettlement(req, res, next) {
+    try {
+      const settlementId = parseInt(req.params.id, 10);
+      const { payout_reference, additional_amount, payment_method, notes } = req.body;
+      const result = await ownerSettlementService.approveAndPaySettlement({
+        settlementId,
+        payoutReference: payout_reference,
+        additionalAmount: additional_amount !== undefined && additional_amount !== null ? parseFloat(additional_amount) : null,
+        paymentMethod: payment_method || null,
+        notes: notes || null,
+        userId: req.user?.id || null
+      });
+      return res.json(ApiResponse.success(result, 'Tranche / versement propriétaire enregistré avec succès.'));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * POST /api/financial/settlements/generate
    * Génération de la reddition de compte propriétaire pour la période M
    */
@@ -122,8 +189,9 @@ class FinancialController {
         ownerId: parseInt(ownerId, 10),
         periodStart,
         periodEnd,
-        commissionRate: commissionRate ? parseFloat(commissionRate) : 8.00,
-        maintenanceDeductions: maintenanceDeductions ? parseFloat(maintenanceDeductions) : 0.00
+        commissionRate: commissionRate ? parseFloat(commissionRate) : 10.00,
+        maintenanceDeductions: maintenanceDeductions ? parseFloat(maintenanceDeductions) : 0.00,
+        createdBy: req.user?.id
       });
 
       return res.status(201).json(ApiResponse.created(settlement, 'Décompte propriétaire calculé avec succès.'));
@@ -133,22 +201,32 @@ class FinancialController {
   }
 
   /**
+   * GET /api/financial/ledger
+   * Grand Livre Comptable Général (Encaissements Locataires + Reversements & Préfinancements Propriétaires)
+   */
+  async getGeneralLedger(req, res, next) {
+    try {
+      const result = await ownerSettlementService.getGeneralLedger(req.query);
+      return res.json(ApiResponse.success(result));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * GET /api/financial/tenants/:id/statement
-   * Relevé de compte locataire complet (Grand Livre) :
-   * Historique des factures, paiements, extournes et solde d'avance en temps réel.
+   * Relevé de compte locataire complet (Grand Livre)
    */
   async getTenantStatement(req, res, next) {
     try {
       const clientId = parseInt(req.params.id, 10);
 
-      // 1. Récupération des informations locataire
       const [clientRows] = await pool.query('SELECT * FROM clients WHERE id = ?', [clientId]);
       if (clientRows.length === 0) {
         throw AppError.notFound('Locataire introuvable.');
       }
       const client = clientRows[0];
 
-      // 2. Factures émises
       const [invoices] = await pool.query(`
         SELECT id, uuid, invoice_number, invoice_type, billing_period_start, billing_period_end,
                total_amount, paid_amount, balance_due, status, due_date, created_at
@@ -157,7 +235,6 @@ class FinancialController {
         ORDER BY due_date DESC, id DESC
       `, [clientId]);
 
-      // 3. Paiements reçus et ventilations
       const [payments] = await pool.query(`
         SELECT p.id, p.uuid, p.transaction_reference, p.receipt_number, p.amount_received,
                p.payment_method, p.payment_date, p.status, p.is_reversed, p.reversal_reason, p.reversed_at
@@ -166,7 +243,6 @@ class FinancialController {
         ORDER BY p.payment_date DESC
       `, [clientId]);
 
-      // 4. Mouvements du grand livre des avances
       const [ledgerEntries] = await pool.query(`
         SELECT id, uuid, transaction_type, amount, running_balance, source_payment_id, consumed_invoice_id, created_at
         FROM tenant_credit_ledger
@@ -174,7 +250,6 @@ class FinancialController {
         ORDER BY id DESC
       `, [clientId]);
 
-      // 5. Synthèse financière globale
       const currentAdvanceBalance = await tenantCreditLedgerRepository.getLatestRunningBalance(clientId);
       const totalDue = invoices
         .filter(inv => inv.status !== 'CANCELLED')

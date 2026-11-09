@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Modal from './Modal';
 import { API } from '../api/services';
 import { formatXOF, formatDate, formatMethod } from '../utils/formatters';
+import { exportToExcel, exportToPDF } from '../utils/exportUtils';
 
 export default function TenantStatementModal({ client, onClose }) {
   const [statement, setStatement] = useState(null);
@@ -245,7 +246,72 @@ export default function TenantStatementModal({ client, onClose }) {
             </div>
           )}
 
-          <div className="pt-4 border-t border-slate-200 flex justify-end">
+          <div className="pt-4 border-t border-slate-200 flex flex-wrap justify-between items-center gap-2">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const tenantName = client.name || `${client.first_name || ''} ${client.last_name || ''}`.trim();
+                  const rows = (statement.invoices || []).map(inv => ({
+                    invoice_number: inv.invoice_number,
+                    period: `${formatDate(inv.billing_period_start)} au ${formatDate(inv.billing_period_end)}`,
+                    due_date: formatDate(inv.due_date),
+                    total_amount: `${Number(inv.total_amount || 0).toLocaleString('fr-FR')} FCFA`,
+                    paid_amount: `${Number(inv.paid_amount || 0).toLocaleString('fr-FR')} FCFA`,
+                    balance_due: `${Number(inv.balance_due || 0).toLocaleString('fr-FR')} FCFA`,
+                    status: inv.status
+                  }));
+                  const cols = {
+                    invoice_number: 'N° Facture',
+                    period: 'Période',
+                    due_date: 'Échéance',
+                    total_amount: 'Total Dû',
+                    paid_amount: 'Réglé',
+                    balance_due: 'Solde',
+                    status: 'Statut'
+                  };
+                  exportToExcel(rows, `grand_livre_locataire_${client.id}.xls`, cols, `Grand Livre Locataire — ${tenantName}`);
+                }}
+                className="px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-lg text-xs font-semibold flex items-center gap-1.5"
+              >
+                <i className="fas fa-file-excel"></i> Exporter Excel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const tenantName = client.name || `${client.first_name || ''} ${client.last_name || ''}`.trim();
+                  const rows = (statement.invoices || []).map(inv => ({
+                    invoice_number: inv.invoice_number,
+                    period: `${formatDate(inv.billing_period_start)} au ${formatDate(inv.billing_period_end)}`,
+                    due_date: formatDate(inv.due_date),
+                    total_amount: `${Number(inv.total_amount || 0).toLocaleString('fr-FR')} FCFA`,
+                    paid_amount: `${Number(inv.paid_amount || 0).toLocaleString('fr-FR')} FCFA`,
+                    balance_due: `${Number(inv.balance_due || 0).toLocaleString('fr-FR')} FCFA`,
+                    status: inv.status
+                  }));
+                  const cols = {
+                    invoice_number: 'N° Facture',
+                    period: 'Période',
+                    due_date: 'Échéance',
+                    total_amount: 'Total Dû',
+                    paid_amount: 'Réglé',
+                    balance_due: 'Solde',
+                    status: 'Statut'
+                  };
+                  exportToPDF(rows, `grand_livre_locataire_${client.id}.pdf`, cols, {
+                    title: `Grand Livre & Relevé Locataire — ${tenantName}`,
+                    subtitle: `Historique des factures, paiements et solde locatif`,
+                    summaryItems: [
+                      { label: 'Total Dettes Restantes', value: formatXOF(statement.summary?.totalDebtRemaining || 0, { compact: false }) },
+                      { label: 'Avance Séquestrée', value: formatXOF(statement.summary?.creditAdvanceBalance || 0, { compact: false }) }
+                    ]
+                  });
+                }}
+                className="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-xs font-semibold flex items-center gap-1.5"
+              >
+                <i className="fas fa-file-pdf"></i> Exporter PDF
+              </button>
+            </div>
             <button
               type="button"
               onClick={onClose}

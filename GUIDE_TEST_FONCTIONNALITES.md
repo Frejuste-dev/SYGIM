@@ -182,3 +182,4 @@ Suivez chaque test dans l'ordre pour vérifier l'ensemble des fonctionnalités a
   1. Déconnectez-vous via le bouton rouge **Quitter** (ou menu déconnexion).
   2. Tentez d'accéder manuellement à `http://localhost:5173/admin/dashboard` dans l'URL.
 * **Résultat attendu :** Redirection immédiate vers `/login` sans fuite de données en cache (protection des routes privées).
+

@@ -3,6 +3,7 @@ const invoiceRepository = require('../repositories/invoice.repository');
 const paymentRepository = require('../repositories/payment.repository');
 const paymentAllocationRepository = require('../repositories/payment-allocation.repository');
 const tenantCreditLedgerRepository = require('../repositories/tenant-credit-ledger.repository');
+const ownerSettlementService = require('./OwnerSettlementService');
 const AppError = require('../../../utils/errors/AppError');
 const Logger = require('../../../utils/logger/Logger');
 
@@ -141,6 +142,9 @@ class PaymentService {
       } catch (txErr) {
         Logger.warn('Erreur non-bloquante lors de la synchronisation de transactions', { error: txErr.message });
       }
+
+      // 7. Régularisation / Remboursement automatique d'un préfinancement propriétaire éventuel
+      await ownerSettlementService.reconcilePrefinancingForTenantPayment(clientId, amountReceived, connection);
 
       await connection.commit();
 

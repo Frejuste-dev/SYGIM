@@ -9,6 +9,7 @@ import StatsCard from '../components/StatsCard';
 import FilterBar from '../components/FilterBar';
 import Modal from '../components/Modal';
 import { formatXOF, formatStatus } from '../utils/formatters';
+import { exportToExcel, exportToPDF } from '../utils/exportUtils';
 
 const TYPE_ICONS = { appartement: 'fa-building', maison: 'fa-home', terrain: 'fa-map', commercial: 'fa-store' };
 
@@ -139,17 +140,87 @@ export default function Properties() {
     }
   };
 
+  const handleExportPropertiesExcel = () => {
+    const today = new Date().toISOString().slice(0, 10);
+    const rows = filteredProperties.map(p => {
+      const ownerObj = owners.find(o => Number(o.id) === Number(p.owner_id));
+      const ownerName = ownerObj ? (ownerObj.display_name || `${ownerObj.first_name || ''} ${ownerObj.last_name || ''}`.trim()) : (p.owner_name || 'Non attribué');
+      return {
+        name: p.name || '-',
+        type: p.type || '-',
+        address: p.address || '-',
+        owner: ownerName,
+        status: formatStatus(p.status)?.label || p.status || '-',
+        rent: `${Number(p.rent || 0).toLocaleString('fr-FR')} FCFA`,
+        value: `${Number(p.value || 0).toLocaleString('fr-FR')} FCFA`
+      };
+    });
+    const cols = {
+      name: 'Bien Immobilier',
+      type: 'Type',
+      address: 'Adresse',
+      owner: 'Propriétaire',
+      status: 'Statut',
+      rent: 'Loyer Mensuel',
+      value: 'Valeur Estimée'
+    };
+    exportToExcel(rows, `proprietes_biens_${today}.xls`, cols, ' Inventaire du Parc Immobilier — SYGIM');
+  };
+
+  const handleExportPropertiesPDF = () => {
+    const today = new Date().toISOString().slice(0, 10);
+    const rows = filteredProperties.map(p => {
+      const ownerObj = owners.find(o => Number(o.id) === Number(p.owner_id));
+      const ownerName = ownerObj ? (ownerObj.display_name || `${ownerObj.first_name || ''} ${ownerObj.last_name || ''}`.trim()) : (p.owner_name || 'Non attribué');
+      return {
+        name: p.name || '-',
+        type: p.type || '-',
+        address: p.address || '-',
+        owner: ownerName,
+        status: formatStatus(p.status)?.label || p.status || '-',
+        rent: `${Number(p.rent || 0).toLocaleString('fr-FR')} FCFA`,
+        value: `${Number(p.value || 0).toLocaleString('fr-FR')} FCFA`
+      };
+    });
+    const cols = {
+      name: 'Bien Immobilier',
+      type: 'Type',
+      address: 'Adresse',
+      owner: 'Propriétaire',
+      status: 'Statut',
+      rent: 'Loyer Mensuel',
+      value: 'Valeur Estimée'
+    };
+    exportToPDF(rows, `proprietes_biens_${today}.pdf`, cols, {
+      title: 'Inventaire Officiel des Propriétés & Biens Immobiliers',
+      subtitle: 'Portefeuille immobilier géré par SYGIM',
+      summaryItems: [
+        { label: 'Total Biens', value: String(statsData.total || filteredProperties.length) },
+        { label: 'Biens Loués', value: String(statsData.loue || 0) },
+        { label: 'Biens Vacants', value: String(statsData.vacant || 0) }
+      ]
+    });
+  };
+
   return (
     <div className="space-y-6 min-w-0 overflow-x-hidden">
       {/* 1. L'EN-TÊTE (Header) */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-900">Gestion des Biens</h2>
-          <p className="text-sm text-slate-500">Administrer les biens et leur statut</p>
+          <p className="text-sm text-slate-500">Administrer les biens, leurs propriétaires et leur statut</p>
         </div>
-        <button className="bg-primary text-white rounded-lg px-4 py-2 hover:bg-primary-dark transition-colors font-medium text-sm shadow-sm flex items-center gap-2" onClick={openCreateModal}>
-          <i className="fas fa-plus"></i> Nouveau bien
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button onClick={handleExportPropertiesExcel} className="px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-lg text-sm font-semibold flex items-center gap-1.5 transition-colors">
+            <i className="fas fa-file-excel"></i> Excel
+          </button>
+          <button onClick={handleExportPropertiesPDF} className="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-sm font-semibold flex items-center gap-1.5 transition-colors">
+            <i className="fas fa-file-pdf"></i> PDF
+          </button>
+          <button className="bg-primary text-white rounded-lg px-4 py-2 hover:bg-primary-dark transition-colors font-medium text-sm shadow-sm flex items-center gap-2" onClick={openCreateModal}>
+            <i className="fas fa-plus"></i> Nouveau bien
+          </button>
+        </div>
       </div>
 
       {/* 3. CARDS DE STATISTIQUES (KPIs) */}
@@ -208,6 +279,7 @@ export default function Properties() {
               <tr className="bg-slate-50 border-y border-slate-200 text-slate-500 text-xs uppercase tracking-wider">
                 <th className="py-3 px-6 font-semibold">Bien</th>
                 <th className="py-3 px-6 font-semibold">Type</th>
+                <th className="py-3 px-6 font-semibold">Propriétaire</th>
                 <th className="py-3 px-6 font-semibold">Adresse</th>
                 <th className="py-3 px-6 font-semibold">Statut</th>
                 <th className="py-3 px-6 font-semibold">Valeur</th>
@@ -218,6 +290,10 @@ export default function Properties() {
             <tbody className="divide-y divide-slate-100">
               {filteredProperties.length > 0 ? filteredProperties.map(p => {
                 const pStatus = formatStatus(p.status);
+                const ownerObj = owners.find(o => Number(o.id) === Number(p.owner_id));
+                const ownerName = ownerObj
+                  ? (`${ownerObj.first_name || ''} ${ownerObj.last_name || ''}`.trim() || ownerObj.display_name)
+                  : (p.owner_name || null);
 
                 return (
                   <tr key={p.id} className="group hover:bg-slate-50/80 transition-colors">
@@ -230,6 +306,16 @@ export default function Properties() {
                       </div>
                     </td>
                     <td className="py-4 px-6 text-sm text-slate-600 capitalize">{p.type}</td>
+                    <td className="py-4 px-6 text-sm">
+                      {ownerName ? (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 font-medium text-xs border border-indigo-100">
+                          <i className="fas fa-user-tie text-[10px]"></i>
+                          {ownerName}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-slate-400 italic">Non attribué</span>
+                      )}
+                    </td>
                     <td className="py-4 px-6 text-sm text-slate-600 max-w-[200px] truncate" title={p.address}>{p.address}</td>
                     <td className="py-4 px-6">
                       <span className={`px-2.5 py-1 rounded-full text-xs font-medium border ${pStatus.twClass}`}>

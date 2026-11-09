@@ -10,6 +10,7 @@ import StatsCard from '../components/StatsCard';
 import Modal from '../components/Modal';
 import TenantStatementModal from '../components/TenantStatementModal';
 import { formatXOF, formatStatus } from '../utils/formatters';
+import { exportToExcel, exportToPDF } from '../utils/exportUtils';
 
 const STATUS_OPTIONS = [
   { value: '', label: 'Tous les statuts' },
@@ -151,6 +152,63 @@ export default function Clients() {
     background: 'var(--bg)', color: 'inherit', boxSizing: 'border-box'
   };
 
+  const handleExportClientsExcel = () => {
+    const today = new Date().toISOString().slice(0, 10);
+    const rows = clients.map(c => ({
+      name: `${c.first_name || ''} ${c.last_name || ''}`.trim() || '-',
+      phone: c.phone || '-',
+      email: c.email || '-',
+      property: c.property_name || 'Aucun bien assigné',
+      rent: `${Number(c.amount_due || 0).toLocaleString('fr-FR')} FCFA`,
+      paid: `${Number(c.amount_paid || 0).toLocaleString('fr-FR')} FCFA`,
+      remaining: `${Math.max(0, Number(c.amount_due || 0) - Number(c.amount_paid || 0)).toLocaleString('fr-FR')} FCFA`,
+      status: formatStatus(c.status)?.label || c.status || '-'
+    }));
+    const cols = {
+      name: 'Locataire',
+      phone: 'Téléphone',
+      email: 'Email',
+      property: 'Bien Occupé',
+      rent: 'Loyer Mensuel',
+      paid: 'Montant Payé',
+      remaining: 'Reste Dû',
+      status: 'Statut'
+    };
+    exportToExcel(rows, `locataires_${today}.xls`, cols, 'Liste Officielle des Locataires — SYGIM');
+  };
+
+  const handleExportClientsPDF = () => {
+    const today = new Date().toISOString().slice(0, 10);
+    const rows = clients.map(c => ({
+      name: `${c.first_name || ''} ${c.last_name || ''}`.trim() || '-',
+      phone: c.phone || '-',
+      property: c.property_name || 'Non assigné',
+      rent: `${Number(c.amount_due || 0).toLocaleString('fr-FR')} FCFA`,
+      paid: `${Number(c.amount_paid || 0).toLocaleString('fr-FR')} FCFA`,
+      remaining: `${Math.max(0, Number(c.amount_due || 0) - Number(c.amount_paid || 0)).toLocaleString('fr-FR')} FCFA`,
+      status: formatStatus(c.status)?.label || c.status || '-'
+    }));
+    const cols = {
+      name: 'Locataire',
+      phone: 'Téléphone',
+      property: 'Bien Occupé',
+      rent: 'Loyer Mensuel',
+      paid: 'Payé',
+      remaining: 'Reste Dû',
+      status: 'Statut'
+    };
+    exportToPDF(rows, `locataires_${today}.pdf`, cols, {
+      title: 'Répertoire des Locataires & Situation Locative',
+      subtitle: 'État des loyers, paiements et arriérés locataires',
+      summaryItems: [
+        { label: 'Total Locataires', value: String(stats.totalClients || clients.length) },
+        { label: 'Locataires à jour', value: String(paidCount) },
+        { label: 'En retard / Attente', value: String(overdueCount) },
+        { label: 'Créance Totale', value: formatXOF(totalOwed, { compact: false }) }
+      ]
+    });
+  };
+
   return (
     <div className="space-y-6">
       {/* HEADER */}
@@ -159,9 +217,17 @@ export default function Clients() {
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Locataires</h1>
           <p className="text-slate-500 text-sm mt-1">Suivez les locataires, leurs informations de contact et leurs statuts de paiement.</p>
         </div>
-        <button onClick={openCreateModal} className="bg-primary text-white rounded-lg px-4 py-2 hover:bg-primary-dark transition-colors font-medium text-sm flex items-center shadow-sm">
-          <i className="fas fa-plus mr-2"></i> Ajouter un locataire
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button onClick={handleExportClientsExcel} className="px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-lg text-sm font-semibold flex items-center gap-1.5 transition-colors">
+            <i className="fas fa-file-excel"></i> Excel
+          </button>
+          <button onClick={handleExportClientsPDF} className="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-sm font-semibold flex items-center gap-1.5 transition-colors">
+            <i className="fas fa-file-pdf"></i> PDF
+          </button>
+          <button onClick={openCreateModal} className="bg-primary text-white rounded-lg px-4 py-2 hover:bg-primary-dark transition-colors font-medium text-sm flex items-center shadow-sm">
+            <i className="fas fa-plus mr-2"></i> Ajouter un locataire
+          </button>
+        </div>
       </div>
 
       {/* STATS */}
