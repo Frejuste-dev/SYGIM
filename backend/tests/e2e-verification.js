@@ -208,8 +208,9 @@ async function runE2E() {
   const repairsList = await request('/api/repairs', { cookie: collectorCookie });
   assert(repairsList.status === 200 && Array.isArray(repairsList.data?.data), 'GET /api/repairs renvoie la liste des réparations');
 
-  // Trouver un locataire actif pour lui imputer une réparation
-  const activeClient = clientsList.data?.data?.find(c => c.status === 'active' || c.status === 'pending');
+  // Trouver un locataire actif de la tournée du collecteur
+  const myClients = await request('/api/clients', { cookie: collectorCookie });
+  const activeClient = myClients.data?.data?.find(c => c.status !== 'departed') || clientsList.data?.data?.[0];
   if (activeClient) {
     const repCreate = await request('/api/repairs', {
       method: 'POST',

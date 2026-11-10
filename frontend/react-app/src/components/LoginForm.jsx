@@ -120,17 +120,24 @@ export default function LoginForm({ onLogin, loading, error, remembered }) {
           </button>
           <button
             type="button"
-            onClick={() => { setUsername('leonce'); setPassword('Leonce2026!'); }}
-            className="px-2.5 py-1 text-xs rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 font-semibold border border-amber-200 transition-colors cursor-pointer"
-          >
-            📱 Collecteur Léonce
-          </button>
-          <button
-            type="button"
             onClick={() => { setUsername('korede'); setPassword('Korede2026!'); }}
             className="px-2.5 py-1 text-xs rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 font-medium transition-colors cursor-pointer"
           >
-            📱 Collecteur Korédé
+            📱 Korédé (Nord)
+          </button>
+          <button
+            type="button"
+            onClick={() => { setUsername('leonce'); setPassword('Leonce2026!'); }}
+            className="px-2.5 py-1 text-xs rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 font-medium transition-colors cursor-pointer"
+          >
+            📱 Léonce (Sud)
+          </button>
+          <button
+            type="button"
+            onClick={() => { setUsername('diabate'); setPassword('Diabate2026!'); }}
+            className="px-2.5 py-1 text-xs rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 font-medium transition-colors cursor-pointer"
+          >
+            📱 Diabaté (Ouest)
           </button>
           <button
             type="button"

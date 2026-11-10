@@ -12,7 +12,7 @@
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
     "dev:debug": "node --inspect-brk src/index.js",
-    "seed": "node database/seed.js",
+    "seed": "node database/comprehensive_seed.js",
     "test": "jest --coverage --runInBand",
     "test:watch": "jest --watch --runInBand",
     "test:unit": "jest tests/unit",
