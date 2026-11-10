@@ -355,43 +355,90 @@ export default function Clients() {
       </div>
 
       {showModal && (
-        <Modal title={editingClient ? 'Modifier le locataire' : 'Nouveau locataire'} onClose={() => setShowModal(false)} maxWidth="600px">
-          <div className="mb-6">
-            <h2 className="text-xl font-bold text-slate-900">{editingClient ? 'Modifier le locataire' : 'Nouveau locataire'}</h2>
-          </div>
-          {formError && <div className="bg-rose-50 text-rose-700 p-3 rounded-lg text-sm mb-6 flex items-center gap-2"><i className="fas fa-exclamation-circle"></i>{formError}</div>}
-          <form onSubmit={handleSubmit}>
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="firstName" className="block text-sm font-medium text-slate-700 mb-1.5">Prénom</label>
-                  <input id="firstName" type="text" value={form.firstName} onChange={e => setForm({ ...form, firstName: e.target.value })}
-                    className="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 shadow-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all" />
+        <Modal
+          title={editingClient ? 'Modifier le locataire' : 'Nouveau locataire'}
+          subtitle="Identité du locataire, coordonnées et rattachement au bien loué"
+          icon="fa-user-check"
+          onClose={() => setShowModal(false)}
+          maxWidth="640px"
+        >
+          {formError && (
+            <div className="bg-rose-50 border border-rose-200 text-rose-700 p-3.5 rounded-xl text-sm mb-5 flex items-center gap-2 font-medium">
+              <i className="fas fa-exclamation-circle shrink-0"></i>
+              <span>{formError}</span>
+            </div>
+          )}
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="firstName" className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Prénom</label>
+                <input
+                  id="firstName"
+                  type="text"
+                  placeholder="Ex : Awa"
+                  value={form.firstName}
+                  onChange={e => setForm({ ...form, firstName: e.target.value })}
+                  className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+                />
+              </div>
+              <div>
+                <label htmlFor="lastName" className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+                  Nom de famille <span className="text-rose-600">*</span>
+                </label>
+                <input
+                  id="lastName"
+                  type="text"
+                  required
+                  placeholder="Ex : Koné"
+                  value={form.lastName}
+                  onChange={e => setForm({ ...form, lastName: e.target.value })}
+                  className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="phone" className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+                  Téléphone <span className="text-rose-600">*</span>
+                </label>
+                <input
+                  id="phone"
+                  type="tel"
+                  required
+                  placeholder="Ex : +225 07 00 00 00 00"
+                  value={form.phone}
+                  onChange={e => setForm({ ...form, phone: e.target.value })}
+                  className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+                />
+              </div>
+              <div>
+                <label htmlFor="email" className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Email</label>
+                <input
+                  id="email"
+                  type="email"
+                  placeholder="Ex : locataire@email.com"
+                  value={form.email}
+                  onChange={e => setForm({ ...form, email: e.target.value })}
+                  className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+                />
+              </div>
+            </div>
+
+            <div className="bg-slate-50/90 p-4 rounded-2xl border border-slate-200/90 space-y-4">
+              <div className="flex items-center gap-2 border-b border-slate-200/80 pb-2">
+                <div className="w-7 h-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                  <i className="fas fa-home text-xs"></i>
                 </div>
-                <div>
-                  <label htmlFor="lastName" className="block text-sm font-medium text-slate-700 mb-1.5">Nom <span className="text-rose-600">*</span></label>
-                  <input id="lastName" type="text" required value={form.lastName} onChange={e => setForm({ ...form, lastName: e.target.value })}
-                    className="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 shadow-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all" />
-                </div>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800">
+                  Affectation Immobilière & Loyer
+                </h4>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label htmlFor="phone" className="block text-sm font-medium text-slate-700 mb-1.5">Téléphone <span className="text-rose-600">*</span></label>
-                  <input id="phone" type="tel" required value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })}
-                    className="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 shadow-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all" />
-                </div>
-                <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-1.5">Email</label>
-                  <input id="email" type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })}
-                    className="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 shadow-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all" />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="propertyId" className="block text-sm font-medium text-slate-700 mb-1.5">
-                    Bien immobilier / Propriété
+                  <label htmlFor="propertyId" className="block text-xs font-semibold text-slate-700 mb-1.5">
+                    Bien immobilier occupé
                   </label>
                   <select
                     id="propertyId"
@@ -406,30 +453,56 @@ export default function Clients() {
                         amountDue: prop ? (prop.rent ? String(prop.rent) : prop.amount_due ? String(prop.amount_due) : form.amountDue) : form.amountDue
                       });
                     }}
-                    className="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 shadow-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer"
+                    className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-medium text-slate-900 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer"
                   >
                     <option value="">-- Sélectionner un bien immobilier --</option>
                     {properties.map(p => (
                       <option key={p.id} value={p.id}>
-                        {p.name} {p.address ? `(${p.address})` : ''} {p.rent ? `— ${Number(p.rent).toLocaleString()} XOF` : ''} {p.status === 'disponible' ? '🟢' : p.status === 'loue' ? '🟠' : ''}
+                        {p.name} {p.address ? `(${p.address})` : ''} {p.rent ? `— ${Number(p.rent).toLocaleString()} XOF` : ''}
                       </option>
                     ))}
                   </select>
                 </div>
                 <div>
-                  <label htmlFor="amountDue" className="block text-sm font-medium text-slate-700 mb-1.5">Loyer mensuel (XOF)</label>
-                  <input id="amountDue" type="number" value={form.amountDue} onChange={e => setForm({ ...form, amountDue: e.target.value })}
-                    className="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 shadow-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all" />
+                  <label htmlFor="amountDue" className="block text-xs font-semibold text-slate-700 mb-1.5">
+                    Loyer mensuel (XOF)
+                  </label>
+                  <input
+                    id="amountDue"
+                    type="number"
+                    placeholder="Ex : 150000"
+                    value={form.amountDue}
+                    onChange={e => setForm({ ...form, amountDue: e.target.value })}
+                    className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+                  />
                 </div>
               </div>
             </div>
 
-            <div className="mt-8 flex justify-end gap-3 border-t border-slate-100 pt-6">
-              <button type="button" className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors" onClick={() => setShowModal(false)}>
+            <div className="pt-4 flex justify-end gap-3 border-t border-slate-100">
+              <button
+                type="button"
+                className="px-4 py-2.5 text-sm font-semibold text-slate-700 bg-white border border-slate-300 rounded-xl hover:bg-slate-50 transition-colors"
+                onClick={() => setShowModal(false)}
+              >
                 Annuler
               </button>
-              <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary-dark transition-colors flex items-center justify-center min-w-[120px]" disabled={formSubmitting}>
-                {formSubmitting ? <><i className="fas fa-spinner fa-spin mr-2"></i> Chargement...</> : (editingClient ? 'Enregistrer' : 'Créer')}
+              <button
+                type="submit"
+                className="px-5 py-2.5 text-sm font-bold text-white bg-primary rounded-xl hover:bg-primary-dark transition-colors shadow-sm shadow-primary/20 flex items-center justify-center gap-2 min-w-[140px]"
+                disabled={formSubmitting}
+              >
+                {formSubmitting ? (
+                  <>
+                    <i className="fas fa-spinner fa-spin"></i>
+                    <span>Enregistrement...</span>
+                  </>
+                ) : (
+                  <>
+                    <i className={`fas ${editingClient ? 'fa-save' : 'fa-check-circle'}`}></i>
+                    <span>{editingClient ? 'Enregistrer' : 'Créer le locataire'}</span>
+                  </>
+                )}
               </button>
             </div>
           </form>

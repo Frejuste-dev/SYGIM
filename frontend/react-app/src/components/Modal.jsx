@@ -1,23 +1,57 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 
-export default function Modal({ title, onClose, children, maxWidth, variant }) {
+export default function Modal({ title, subtitle, icon = 'fa-layer-group', onClose, children, maxWidth, variant }) {
   const isCollector = variant === 'collector';
 
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && onClose) onClose();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
   return (
-    <div className={`app-modal-overlay fixed inset-0 bg-black/50 flex justify-center items-center z-[1000] ${isCollector ? 'collector-modal-overlay p-4' : 'p-0'}`}>
-      <div className={`app-modal-panel bg-white text-slate-900 border border-slate-200 shadow-lg ${isCollector ? 'collector-modal-panel p-0 rounded-lg w-full overflow-hidden flex flex-col' : 'p-[30px] rounded-xl w-[90%] overflow-auto block'}`} style={{
-        maxWidth: maxWidth || '500px',
-        maxHeight: isCollector ? 'calc(100dvh - 32px)' : '90vh'
-      }}>
-        <div className={`app-modal-header flex justify-between items-center shrink-0 ${isCollector ? 'collector-modal-header mb-0 py-3.5 px-4 border-b border-slate-200' : 'mb-5 p-0 border-none'}`}>
-          <h3 className="m-0">{title}</h3>
-          <button onClick={onClose} type="button"
-            className={`app-modal-close bg-transparent border-none cursor-pointer text-xl text-slate-500 ${isCollector ? 'collector-modal-close' : ''}`}
-            aria-label="Fermer la fenêtre">
-            <i className="fas fa-times" aria-hidden="true"></i>
+    <div
+      className={`app-modal-overlay fixed inset-0 bg-slate-900/55 backdrop-blur-sm flex justify-center items-center z-[1000] p-3 sm:p-4 ${isCollector ? 'collector-modal-overlay' : ''}`}
+      onClick={(e) => {
+        if (e.target === e.currentTarget && onClose) onClose();
+      }}
+    >
+      <div
+        className={`app-modal-panel bg-white text-slate-900 border border-slate-200 shadow-2xl rounded-2xl w-full overflow-hidden flex flex-col ${isCollector ? 'collector-modal-panel' : ''}`}
+        style={{
+          maxWidth: maxWidth || '680px',
+          maxHeight: isCollector ? 'calc(100dvh - 24px)' : '90dvh'
+        }}
+      >
+        {/* En-tête fixe de la modale */}
+        <div className={`app-modal-header flex justify-between items-center shrink-0 px-6 py-4 border-b border-slate-100 bg-slate-50/80 ${isCollector ? 'collector-modal-header' : ''}`}>
+          <div className="flex items-center gap-3 min-w-0">
+            {icon && (
+              <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0 border border-primary/15">
+                <i className={`fas ${icon} text-base`} aria-hidden="true"></i>
+              </div>
+            )}
+            <div className="min-w-0">
+              <h3 className="m-0 text-lg font-bold text-slate-900 truncate">{title}</h3>
+              {subtitle && <p className="text-xs text-slate-500 mt-0.5 truncate">{subtitle}</p>}
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            type="button"
+            className={`app-modal-close w-8 h-8 rounded-xl flex items-center justify-center bg-transparent border-none cursor-pointer text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition-colors shrink-0 ${isCollector ? 'collector-modal-close' : ''}`}
+            aria-label="Fermer la fenêtre"
+          >
+            <i className="fas fa-times text-base" aria-hidden="true"></i>
           </button>
         </div>
-        {isCollector ? <div className="app-modal-body collector-modal-body">{children}</div> : children}
+
+        {/* Corps défilant unique */}
+        <div className={`app-modal-body p-6 overflow-y-auto flex-1 ${isCollector ? 'collector-modal-body' : ''}`}>
+          {children}
+        </div>
       </div>
     </div>
   );

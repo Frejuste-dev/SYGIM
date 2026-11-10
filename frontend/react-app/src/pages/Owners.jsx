@@ -465,134 +465,128 @@ export default function Owners() {
           isOpen={true}
           onClose={() => setShowModal(false)}
           title={editingOwner ? 'Modifier le propriétaire & ses biens' : 'Nouveau propriétaire'}
+          subtitle="Identité, préférences de reversement et attribution multi-biens"
+          icon="fa-user-tie"
+          maxWidth="700px"
         >
-          <form onSubmit={handleSubmit}>
-            <div className="space-y-4 max-h-[72vh] overflow-y-auto pr-1">
-              {formError && (
-                <div className="p-3 bg-rose-50 border border-rose-200 text-rose-600 rounded-lg text-sm font-medium">
-                  <i className="fas fa-exclamation-circle mr-2"></i>{formError}
-                </div>
-              )}
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {formError && (
+              <div className="p-3.5 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-sm font-medium flex items-center gap-2">
+                <i className="fas fa-exclamation-circle shrink-0"></i>
+                <span>{formError}</span>
+              </div>
+            )}
 
-              {/* Identité */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* 1. Identité & Coordonnées */}
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Prénom</label>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Prénom</label>
                   <input
                     type="text"
+                    placeholder="Ex : Jean-Marc"
                     value={form.first_name}
                     onChange={(e) => setForm({ ...form, first_name: e.target.value })}
-                    className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 focus:outline-none focus:border-primary"
+                    className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Nom <span className="text-rose-600">*</span></label>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+                    Nom de famille <span className="text-rose-600">*</span>
+                  </label>
                   <input
                     type="text"
                     required
+                    placeholder="Ex : Kouassi"
                     value={form.last_name}
                     onChange={(e) => setForm({ ...form, last_name: e.target.value })}
-                    className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 focus:outline-none focus:border-primary"
+                    className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Téléphone</label>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Téléphone</label>
                   <input
                     type="tel"
+                    placeholder="Ex : +225 07 00 00 00 00"
                     value={form.phone}
                     onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                    className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 focus:outline-none focus:border-primary"
+                    className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Email</label>
                   <input
                     type="email"
+                    placeholder="Ex : proprietaire@email.com"
                     value={form.email}
                     onChange={(e) => setForm({ ...form, email: e.target.value })}
-                    className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 focus:outline-none focus:border-primary"
+                    className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
                   />
                 </div>
               </div>
+            </div>
 
-              {/* Modalités & Préférences de Paiement du Propriétaire */}
-              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-2">
-                  <i className="fas fa-money-check-dollar"></i>
+            {/* 2. Modalités & Préférences de Paiement du Propriétaire (Grille 2 colonnes spacieuse) */}
+            <div className="bg-slate-50/90 p-4 sm:p-5 rounded-2xl border border-slate-200/90 space-y-4">
+              <div className="flex items-center gap-2 border-b border-slate-200/80 pb-2.5">
+                <div className="w-7 h-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                  <i className="fas fa-money-check-dollar text-xs"></i>
+                </div>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800">
                   Modalités & Préférences de Paiement du Propriétaire
                 </h4>
+              </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1">Moyen de paiement souhaité</label>
-                    <select
-                      value={form.preferred_payment_method}
-                      onChange={(e) => setForm({ ...form, preferred_payment_method: e.target.value })}
-                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-900"
-                    >
-                      <option value="bank_transfer">Virement bancaire</option>
-                      <option value="mobile_money">Mobile Money (Wave/OM)</option>
-                      <option value="cheque">Chèque bancaire</option>
-                      <option value="cash">Espèces</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1">Méthode de règlement</label>
-                    <select
-                      value={form.payout_schedule}
-                      onChange={(e) => setForm({ ...form, payout_schedule: e.target.value })}
-                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-900"
-                    >
-                      <option value="monthly_full">Mensuel intégral</option>
-                      <option value="installment">Paiement échelonné (Tranches)</option>
-                      <option value="quarterly">Trimestriel</option>
-                      <option value="on_demand">À la demande</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1">Période / Date souhaitée</label>
-                    <select
-                      value={form.preferred_payout_day}
-                      onChange={(e) => setForm({ ...form, preferred_payout_day: e.target.value })}
-                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-900"
-                    >
-                      <option value="5">Le 5 du mois</option>
-                      <option value="10">Le 10 du mois</option>
-                      <option value="15">Le 15 du mois</option>
-                      <option value="25">Le 25 du mois</option>
-                      <option value="fin_de_mois">Fin de mois (le 30)</option>
-                    </select>
-                  </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">Moyen de paiement souhaité</label>
+                  <select
+                    value={form.preferred_payment_method}
+                    onChange={(e) => setForm({ ...form, preferred_payment_method: e.target.value })}
+                    className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-medium text-slate-900 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 cursor-pointer"
+                  >
+                    <option value="bank_transfer">Virement bancaire</option>
+                    <option value="mobile_money">Mobile Money (Wave / OM / MTN)</option>
+                    <option value="cheque">Chèque bancaire</option>
+                    <option value="cash">Espèces (Caisse agence)</option>
+                  </select>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1">Banque / Opérateur</label>
-                    <input
-                      type="text"
-                      placeholder="Ex: SGBCI, NSIA, Wave..."
-                      value={form.bank_name}
-                      onChange={(e) => setForm({ ...form, bank_name: e.target.value })}
-                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-900"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1">N° Compte / RIB / Mobile</label>
-                    <input
-                      type="text"
-                      placeholder="Ex: CI008 01111..."
-                      value={form.bank_account}
-                      onChange={(e) => setForm({ ...form, bank_account: e.target.value })}
-                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-900"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1">Commission Agence (%)</label>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">Méthode de règlement</label>
+                  <select
+                    value={form.payout_schedule}
+                    onChange={(e) => setForm({ ...form, payout_schedule: e.target.value })}
+                    className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-medium text-slate-900 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 cursor-pointer"
+                  >
+                    <option value="monthly_full">Mensuel intégral (100%)</option>
+                    <option value="installment">Paiement échelonné (Par tranches)</option>
+                    <option value="quarterly">Trimestriel</option>
+                    <option value="on_demand">À la demande</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">Période / Date souhaitée</label>
+                  <select
+                    value={form.preferred_payout_day}
+                    onChange={(e) => setForm({ ...form, preferred_payout_day: e.target.value })}
+                    className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-medium text-slate-900 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 cursor-pointer"
+                  >
+                    <option value="5">Le 5 du mois</option>
+                    <option value="10">Le 10 du mois</option>
+                    <option value="15">Le 15 du mois</option>
+                    <option value="25">Le 25 du mois</option>
+                    <option value="fin_de_mois">Fin de mois (le 30)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">Commission Agence (%)</label>
+                  <div className="relative">
                     <input
                       type="number"
                       min="0"
@@ -600,92 +594,144 @@ export default function Owners() {
                       step="0.5"
                       value={form.commission_rate}
                       onChange={(e) => setForm({ ...form, commission_rate: e.target.value })}
-                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-900"
+                      className="w-full pl-3.5 pr-10 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-semibold text-slate-900 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
                     />
+                    <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">%</span>
                   </div>
                 </div>
-              </div>
 
-              {/* Attribution Multi-Biens Immobiliers */}
-              <div className="bg-indigo-50/40 p-4 rounded-xl border border-indigo-200/80 space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold uppercase tracking-wider text-indigo-900 flex items-center gap-2">
-                    <i className="fas fa-building text-indigo-600"></i>
-                    Attribuer un ou plusieurs biens à ce propriétaire
-                  </label>
-                  <span className="px-2 py-0.5 bg-indigo-600 text-white rounded-full text-xs font-bold">
-                    {form.property_ids.length} sélectionné(s)
-                  </span>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">Banque / Opérateur Mobile</label>
+                  <input
+                    type="text"
+                    placeholder="Ex : SGBCI, NSIA, Wave, Orange..."
+                    value={form.bank_name}
+                    onChange={(e) => setForm({ ...form, bank_name: e.target.value })}
+                    className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                  />
                 </div>
-                <p className="text-xs text-slate-500">
-                  Cochez tous les biens immobiliers appartenant à ce propriétaire :
-                </p>
 
-                <div className="max-h-44 overflow-y-auto border border-slate-200 rounded-lg bg-white divide-y divide-slate-100">
-                  {allProperties.length === 0 ? (
-                    <div className="p-3 text-xs text-slate-400 text-center">Aucun bien disponible dans la base.</div>
-                  ) : (
-                    allProperties.map(prop => {
-                      const isChecked = form.property_ids.includes(Number(prop.id));
-                      const otherOwner = prop.owner_id && (!editingOwner || Number(prop.owner_id) !== Number(editingOwner.id));
-                      return (
-                        <label
-                          key={prop.id}
-                          className={`flex items-center justify-between px-3 py-2 text-xs cursor-pointer transition-colors ${
-                            isChecked ? 'bg-indigo-50/80 font-semibold text-indigo-950' : 'hover:bg-slate-50 text-slate-700'
-                          }`}
-                        >
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <input
-                              type="checkbox"
-                              checked={isChecked}
-                              onChange={() => togglePropertySelection(prop.id)}
-                              className="rounded border-slate-300 text-primary focus:ring-primary h-4 w-4"
-                            />
-                            <div className="truncate">
-                              <span className="font-semibold">{prop.name}</span>
-                              <span className="text-slate-400 ml-1.5">({prop.address})</span>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2 shrink-0 ml-2">
-                            <span className="font-bold text-emerald-700">{formatXOF(prop.rent || 0)}</span>
-                            {otherOwner && !isChecked && (
-                              <span className="text-[10px] px-1.5 py-0.5 bg-amber-100 text-amber-800 rounded">Déjà attribué</span>
-                            )}
-                          </div>
-                        </label>
-                      );
-                    })
-                  )}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">N° Compte / RIB / Mobile</label>
+                  <input
+                    type="text"
+                    placeholder="Ex : CI008 01111... ou 07 00 00 00"
+                    value={form.bank_account}
+                    onChange={(e) => setForm({ ...form, bank_account: e.target.value })}
+                    className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                  />
                 </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Adresse postale & Notes</label>
-                <input
-                  type="text"
-                  placeholder="Adresse ou observations particulières..."
-                  value={form.address}
-                  onChange={(e) => setForm({ ...form, address: e.target.value })}
-                  className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-900"
-                />
               </div>
             </div>
 
-            <div className="mt-6 flex justify-end gap-3 border-t border-slate-100 pt-4">
+            {/* 3. Attribution Multi-Biens Immobiliers */}
+            <div className="bg-indigo-50/40 p-4 sm:p-5 rounded-2xl border border-indigo-200/80 space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0">
+                    <i className="fas fa-building text-xs"></i>
+                  </div>
+                  <label className="text-xs font-bold uppercase tracking-wider text-indigo-950">
+                    Attribuer un ou plusieurs biens à ce propriétaire
+                  </label>
+                </div>
+                <span className="shrink-0 whitespace-nowrap px-3 py-1 bg-indigo-600 text-white rounded-full text-xs font-bold shadow-xs">
+                  {form.property_ids.length} sélectionné{form.property_ids.length > 1 ? 's' : ''}
+                </span>
+              </div>
+
+              <p className="text-xs text-slate-500">
+                Cochez tous les biens immobiliers appartenant à ce propriétaire :
+              </p>
+
+              <div className="custom-scrollbar max-h-48 overflow-y-auto border border-slate-200 rounded-xl bg-white divide-y divide-slate-100 shadow-2xs">
+                {allProperties.length === 0 ? (
+                  <div className="p-4 text-xs text-slate-400 text-center">Aucun bien disponible dans la base.</div>
+                ) : (
+                  allProperties.map(prop => {
+                    const isChecked = form.property_ids.includes(Number(prop.id));
+                    const otherOwner = prop.owner_id && (!editingOwner || Number(prop.owner_id) !== Number(editingOwner.id));
+                    return (
+                      <label
+                        key={prop.id}
+                        className={`flex items-center justify-between gap-3 px-3.5 py-2.5 text-xs cursor-pointer transition-colors ${
+                          isChecked ? 'bg-indigo-50/90 text-indigo-950' : 'hover:bg-slate-50 text-slate-700'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => togglePropertySelection(prop.id)}
+                            className="rounded border-slate-300 text-primary focus:ring-primary h-4 w-4 shrink-0 cursor-pointer"
+                          />
+                          <div className="min-w-0">
+                            <div className="font-bold text-slate-900 truncate">{prop.name}</div>
+                            {prop.address && (
+                              <div className="text-[11px] text-slate-500 truncate">{prop.address}</div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/70 px-2 py-0.5 rounded-md whitespace-nowrap">
+                            {formatXOF(prop.rent || 0)}
+                          </span>
+                          {otherOwner && !isChecked ? (
+                            <span className="text-[10px] font-semibold px-2 py-0.5 bg-amber-100 text-amber-800 rounded-md whitespace-nowrap">
+                              Déjà attribué
+                            </span>
+                          ) : isChecked ? (
+                            <span className="text-[10px] font-semibold px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-md whitespace-nowrap">
+                              Sélectionné
+                            </span>
+                          ) : null}
+                        </div>
+                      </label>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+
+            {/* 4. Adresse postale & Notes */}
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+                Adresse postale & Observations
+              </label>
+              <input
+                type="text"
+                placeholder="Adresse de résidence ou note particulière sur ce propriétaire..."
+                value={form.address}
+                onChange={(e) => setForm({ ...form, address: e.target.value })}
+                className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+              />
+            </div>
+
+            {/* 5. Boutons d'action */}
+            <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
               <button
                 type="button"
-                className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50"
+                className="px-4 py-2.5 text-sm font-semibold text-slate-700 bg-white border border-slate-300 rounded-xl hover:bg-slate-50 transition-colors"
                 onClick={() => setShowModal(false)}
               >
                 Annuler
               </button>
               <button
                 type="submit"
-                className="px-5 py-2 text-sm font-semibold text-white bg-primary rounded-lg hover:bg-primary-dark transition-colors flex items-center justify-center min-w-[130px]"
+                className="px-5 py-2.5 text-sm font-bold text-white bg-primary rounded-xl hover:bg-primary-dark transition-colors shadow-sm shadow-primary/20 flex items-center justify-center gap-2 min-w-[160px]"
                 disabled={formSubmitting}
               >
-                {formSubmitting ? <><i className="fas fa-spinner fa-spin mr-2"></i> Enregistrement...</> : (editingOwner ? 'Enregistrer' : 'Créer le propriétaire')}
+                {formSubmitting ? (
+                  <>
+                    <i className="fas fa-spinner fa-spin"></i>
+                    <span>Enregistrement...</span>
+                  </>
+                ) : (
+                  <>
+                    <i className={`fas ${editingOwner ? 'fa-save' : 'fa-check-circle'}`}></i>
+                    <span>{editingOwner ? 'Enregistrer les modifications' : 'Créer le propriétaire'}</span>
+                  </>
+                )}
               </button>
             </div>
           </form>

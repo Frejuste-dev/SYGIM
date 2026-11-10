@@ -234,7 +234,7 @@ export default function OwnerPayoutModal({ isOpen, onClose, preselectedOwner = n
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-5 overflow-y-auto flex-1">
+        <form onSubmit={handleSubmit} className="custom-scrollbar p-6 space-y-5 overflow-y-auto flex-1">
           {error && (
             <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-sm flex items-center gap-2">
               <i className="fas fa-exclamation-circle"></i>

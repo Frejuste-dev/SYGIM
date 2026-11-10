@@ -85,7 +85,7 @@ export default function InstallmentHistoryModal({ settlement, onClose, onSuccess
         </div>
 
         {/* Body */}
-        <div className="p-6 overflow-y-auto space-y-6 flex-1">
+        <div className="custom-scrollbar p-6 overflow-y-auto space-y-6 flex-1">
           {/* Synthèse des montants */}
           <div className="grid grid-cols-3 gap-3 text-center">
             <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl">

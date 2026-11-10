@@ -377,101 +377,208 @@ export default function Properties() {
       </div>
 
       {showModal && (
-        <Modal title={editingProperty ? 'Modifier le bien' : 'Nouveau bien immobilier'} onClose={() => setShowModal(false)} maxWidth="600px">
-          <div className="mb-6">
-            <h2 className="text-xl font-bold text-slate-900">{editingProperty ? 'Modifier le bien' : 'Nouveau bien immobilier'}</h2>
-          </div>
-          {formError && <div className="bg-rose-50 text-rose-700 p-3 rounded-lg text-sm mb-6 flex items-center gap-2"><i className="fas fa-exclamation-circle"></i>{formError}</div>}
-          <form onSubmit={handleSubmit}>
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="name" className="block text-sm font-medium text-slate-700 mb-1.5">Nom <span className="text-rose-600">*</span></label>
-                  <input id="name" type="text" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    className="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 shadow-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all" />
-                </div>
-                <div>
-                  <label htmlFor="type" className="block text-sm font-medium text-slate-700 mb-1.5">Type</label>
-                  <select id="type" value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}
-                    className="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 shadow-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
-                    <option value="appartement">Appartement</option>
-                    <option value="maison">Maison</option>
-                    <option value="terrain">Terrain</option>
-                    <option value="commercial">Commercial</option>
-                  </select>
-                </div>
-              </div>
-
+        <Modal
+          title={editingProperty ? 'Modifier le bien immobilier' : 'Nouveau bien immobilier'}
+          subtitle="Caractéristiques, valorisation locative et rattachement au propriétaire"
+          icon="fa-building"
+          onClose={() => setShowModal(false)}
+          maxWidth="680px"
+        >
+          {formError && (
+            <div className="bg-rose-50 border border-rose-200 text-rose-700 p-3.5 rounded-xl text-sm mb-5 flex items-center gap-2 font-medium">
+              <i className="fas fa-exclamation-circle shrink-0"></i>
+              <span>{formError}</span>
+            </div>
+          )}
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {/* 1. Identification & Localisation */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label htmlFor="address" className="block text-sm font-medium text-slate-700 mb-1.5">Adresse <span className="text-rose-600">*</span></label>
-                <textarea id="address" required value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })}
-                  className="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 shadow-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all min-h-[80px]"></textarea>
+                <label htmlFor="name" className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+                  Nom / Désignation du bien <span className="text-rose-600">*</span>
+                </label>
+                <input
+                  id="name"
+                  type="text"
+                  required
+                  placeholder="Ex : Villa Cocody Ambassades"
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+                />
               </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="value" className="block text-sm font-medium text-slate-700 mb-1.5">Valeur (F CFA)</label>
-                  <input id="value" type="number" value={form.value} onChange={(e) => setForm({ ...form, value: e.target.value })}
-                    className="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 shadow-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all" />
-                </div>
-                <div>
-                  <label htmlFor="rent" className="block text-sm font-medium text-slate-700 mb-1.5">Loyer mensuel (F CFA)</label>
-                  <input id="rent" type="number" value={form.rent} onChange={(e) => setForm({ ...form, rent: e.target.value })}
-                    className="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 shadow-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all" />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="area" className="block text-sm font-medium text-slate-700 mb-1.5">Surface (m²)</label>
-                  <input id="area" type="number" value={form.area} onChange={(e) => setForm({ ...form, area: e.target.value })}
-                    className="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 shadow-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all" />
-                </div>
-                <div>
-                  <label htmlFor="rooms" className="block text-sm font-medium text-slate-700 mb-1.5">Pièces</label>
-                  <input id="rooms" type="number" value={form.rooms} onChange={(e) => setForm({ ...form, rooms: e.target.value })}
-                    className="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 shadow-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all" />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="status" className="block text-sm font-medium text-slate-700 mb-1.5">Statut</label>
-                  <select id="status" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}
-                    className="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 shadow-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
-                    <option value="vacant">Vacant</option>
-                    <option value="loue">Loué</option>
-                    <option value="en_renovation">En rénovation</option>
-                    <option value="vendu">Vendu</option>
-                  </select>
-                </div>
-                <div>
-                  <label htmlFor="owner_id" className="block text-sm font-medium text-slate-700 mb-1.5">Propriétaire</label>
-                  <select id="owner_id" value={form.owner_id} onChange={(e) => setForm({ ...form, owner_id: e.target.value })}
-                    className="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 shadow-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer">
-                    <option value="">-- Aucun propriétaire --</option>
-                    {owners.map(o => (
-                      <option key={o.id} value={o.id}>
-                        {o.display_name || `${o.first_name || ''} ${o.last_name || ''}`.trim() || `Propriétaire #${o.id}`} {o.phone ? `(${o.phone})` : ''}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
               <div>
-                <label htmlFor="description" className="block text-sm font-medium text-slate-700 mb-1.5">Description</label>
-                <textarea id="description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })}
-                  className="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 shadow-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all min-h-[80px]"></textarea>
+                <label htmlFor="type" className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+                  Type de bien
+                </label>
+                <select
+                  id="type"
+                  value={form.type}
+                  onChange={(e) => setForm({ ...form, type: e.target.value })}
+                  className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-medium text-slate-900 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer"
+                >
+                  <option value="appartement">Appartement</option>
+                  <option value="maison">Maison / Villa</option>
+                  <option value="terrain">Terrain</option>
+                  <option value="commercial">Local Commercial / Bureau</option>
+                </select>
               </div>
             </div>
 
-            <div className="mt-8 flex justify-end gap-3 border-t border-slate-100 pt-6">
-              <button type="button" className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors" onClick={() => setShowModal(false)}>
+            <div>
+              <label htmlFor="address" className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+                Adresse géographique <span className="text-rose-600">*</span>
+              </label>
+              <input
+                id="address"
+                type="text"
+                required
+                placeholder="Ex : Cocody Riviera 3, Rue des Jardins, Lot 42"
+                value={form.address}
+                onChange={(e) => setForm({ ...form, address: e.target.value })}
+                className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+              />
+            </div>
+
+            {/* 2. Données Financières & Techniques */}
+            <div className="bg-slate-50/90 p-4 rounded-2xl border border-slate-200/90 space-y-4">
+              <div className="flex items-center gap-2 border-b border-slate-200/80 pb-2">
+                <div className="w-7 h-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                  <i className="fas fa-coins text-xs"></i>
+                </div>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800">
+                  Valorisation & Caractéristiques Physiques
+                </h4>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="rent" className="block text-xs font-semibold text-slate-700 mb-1.5">
+                    Loyer mensuel (F CFA)
+                  </label>
+                  <input
+                    id="rent"
+                    type="number"
+                    placeholder="Ex : 250000"
+                    value={form.rent}
+                    onChange={(e) => setForm({ ...form, rent: e.target.value })}
+                    className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-bold text-emerald-700 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="value" className="block text-xs font-semibold text-slate-700 mb-1.5">
+                    Valeur estimée du bien (F CFA)
+                  </label>
+                  <input
+                    id="value"
+                    type="number"
+                    placeholder="Ex : 45000000"
+                    value={form.value}
+                    onChange={(e) => setForm({ ...form, value: e.target.value })}
+                    className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-medium text-slate-900 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="area" className="block text-xs font-semibold text-slate-700 mb-1.5">Surface (m²)</label>
+                  <input
+                    id="area"
+                    type="number"
+                    placeholder="Ex : 120"
+                    value={form.area}
+                    onChange={(e) => setForm({ ...form, area: e.target.value })}
+                    className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="rooms" className="block text-xs font-semibold text-slate-700 mb-1.5">Nombre de pièces</label>
+                  <input
+                    id="rooms"
+                    type="number"
+                    placeholder="Ex : 4"
+                    value={form.rooms}
+                    onChange={(e) => setForm({ ...form, rooms: e.target.value })}
+                    className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* 3. Statut & Propriétaire */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="status" className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+                  Statut d'occupation
+                </label>
+                <select
+                  id="status"
+                  value={form.status}
+                  onChange={(e) => setForm({ ...form, status: e.target.value })}
+                  className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-medium text-slate-900 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer"
+                >
+                  <option value="vacant">Vacant (Disponible)</option>
+                  <option value="loue">Loué (Occupé)</option>
+                  <option value="en_renovation">En rénovation</option>
+                  <option value="vendu">Vendu</option>
+                </select>
+              </div>
+              <div>
+                <label htmlFor="owner_id" className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+                  Propriétaire rattaché
+                </label>
+                <select
+                  id="owner_id"
+                  value={form.owner_id}
+                  onChange={(e) => setForm({ ...form, owner_id: e.target.value })}
+                  className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-medium text-slate-900 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer"
+                >
+                  <option value="">-- Aucun propriétaire --</option>
+                  {owners.map(o => (
+                    <option key={o.id} value={o.id}>
+                      {o.display_name || `${o.first_name || ''} ${o.last_name || ''}`.trim() || `Propriétaire #${o.id}`} {o.phone ? `(${o.phone})` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="description" className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+                Description & Équipements
+              </label>
+              <textarea
+                id="description"
+                rows="2"
+                placeholder="Détails complémentaires sur le bien..."
+                value={form.description}
+                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+              ></textarea>
+            </div>
+
+            <div className="pt-4 flex justify-end gap-3 border-t border-slate-100">
+              <button
+                type="button"
+                className="px-4 py-2.5 text-sm font-semibold text-slate-700 bg-white border border-slate-300 rounded-xl hover:bg-slate-50 transition-colors"
+                onClick={() => setShowModal(false)}
+              >
                 Annuler
               </button>
-              <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary-dark transition-colors flex items-center justify-center min-w-[120px]" disabled={formSubmitting}>
-                {formSubmitting ? <><i className="fas fa-spinner fa-spin mr-2"></i> Chargement...</> : (editingProperty ? 'Enregistrer' : 'Créer')}
+              <button
+                type="submit"
+                className="px-5 py-2.5 text-sm font-bold text-white bg-primary rounded-xl hover:bg-primary-dark transition-colors shadow-sm shadow-primary/20 flex items-center justify-center gap-2 min-w-[140px]"
+                disabled={formSubmitting}
+              >
+                {formSubmitting ? (
+                  <>
+                    <i className="fas fa-spinner fa-spin"></i>
+                    <span>Enregistrement...</span>
+                  </>
+                ) : (
+                  <>
+                    <i className={`fas ${editingProperty ? 'fa-save' : 'fa-check-circle'}`}></i>
+                    <span>{editingProperty ? 'Enregistrer' : 'Créer le bien'}</span>
+                  </>
+                )}
               </button>
             </div>
           </form>
