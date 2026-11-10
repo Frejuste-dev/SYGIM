@@ -466,13 +466,6 @@ export default function Reports() {
           >
             <i className="fas fa-file-pdf"></i> Exporter PDF
           </button>
-          <button
-            type="button"
-            onClick={() => handleOpenPrefinanceForCase(null)}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-xl text-sm font-bold hover:bg-amber-700 transition-colors shadow-xs"
-          >
-            <i className="fas fa-bolt"></i> + Préfinancer un Propriétaire
-          </button>
         </div>
       </div>
 
