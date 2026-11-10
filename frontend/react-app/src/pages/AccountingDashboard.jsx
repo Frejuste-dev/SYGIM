@@ -46,19 +46,26 @@ export default function AccountingDashboard() {
   const loadFinancialData = useCallback(async () => {
     setLoadingFinancial(true);
     try {
-      const [stlRes, ldgRes] = await Promise.all([
+      const [stlResult, ldgResult] = await Promise.allSettled([
         API.Financial.getSettlements(),
         API.Financial.getGeneralLedger()
       ]);
-      const stlPayload = stlRes?.data || stlRes || {};
-      setSettlements(stlPayload.settlements || []);
-      setSettlementStats(stlPayload.stats || {});
 
-      const ldgPayload = ldgRes?.data || ldgRes || {};
-      setLedgerData({
-        entries: ldgPayload.entries || [],
-        summary: ldgPayload.summary || {}
-      });
+      if (stlResult.status === 'fulfilled') {
+        const stlRes = stlResult.value;
+        const stlPayload = stlRes?.data || stlRes || {};
+        setSettlements(stlPayload.settlements || stlPayload.data || []);
+        setSettlementStats(stlPayload.stats || {});
+      }
+
+      if (ldgResult.status === 'fulfilled') {
+        const ldgRes = ldgResult.value;
+        const ldgPayload = ldgRes?.data || ldgRes || {};
+        setLedgerData({
+          entries: ldgPayload.entries || [],
+          summary: ldgPayload.summary || {}
+        });
+      }
     } catch (err) {
       console.error('Erreur chargement données comptables:', err);
     } finally {
@@ -269,29 +276,32 @@ export default function AccountingDashboard() {
   }
 
   return (
-    <div className="space-y-6 w-full max-w-full overflow-hidden box-border">
+    <div className="space-y-6 w-full max-w-full overflow-x-hidden box-border">
       {/* EN-TÊTE COMPTABLE + ACTIONS RAPIDES */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2.5">
-            <i className="fas fa-calculator text-primary"></i> Espace Comptabilité & Trésorerie
+      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 flex items-center gap-2.5">
+            <span className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+              <i className="fas fa-calculator text-lg"></i>
+            </span>
+            <span>Espace Comptabilité & Trésorerie</span>
           </h1>
-          <p className="text-sm text-slate-500 mt-1">
+          <p className="text-sm text-slate-500 mt-1.5">
             Gérez les encaissements locataires, les paiements propriétaires (intégraux, échelonnés, préfinancements) et le Grand Livre.
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <button
-            onClick={() => { setSelectedOwnerForPayout(null); setShowPayoutModal(true); }}
-            className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold shadow-sm transition-colors flex items-center gap-2"
-          >
-            <i className="fas fa-hand-holding-usd"></i> + Payer / Préfinancer un Propriétaire
-          </button>
+        <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 shrink-0">
           <button
             onClick={() => navigate('/admin/owners')}
-            className="px-4 py-2.5 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-xl text-sm font-medium transition-colors flex items-center gap-2"
+            className="px-4 py-2.5 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-xl text-sm font-semibold transition-colors flex items-center gap-2 whitespace-nowrap shadow-xs"
           >
             <i className="fas fa-user-tie text-primary"></i> Gérer Propriétaires & Biens
+          </button>
+          <button
+            onClick={() => { setSelectedOwnerForPayout(null); setShowPayoutModal(true); }}
+            className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold shadow-sm transition-colors flex items-center gap-2 whitespace-nowrap"
+          >
+            <i className="fas fa-hand-holding-usd"></i> + Payer / Préfinancer un Propriétaire
           </button>
         </div>
       </div>

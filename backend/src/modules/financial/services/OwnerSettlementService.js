@@ -248,17 +248,17 @@ class OwnerSettlementService {
              t.reference,
              t.date AS entry_date,
              t.amount,
-             t.payment_method,
+             t.method AS payment_method,
              t.status,
              t.description,
-             CONCAT(COALESCE(c.first_name, ''), ' ', COALESCE(c.last_name, '')) AS third_party,
-             p.name AS property_name,
+             COALESCE(NULLIF(TRIM(CONCAT(COALESCE(c.first_name, ''), ' ', COALESCE(c.last_name, ''))), ''), t.client_name, 'Locataire') AS third_party,
+             COALESCE(p.name, c.property_name, '—') AS property_name,
              'TENANT_PAYMENT' AS entry_type
       FROM transactions t
       LEFT JOIN clients c ON c.id = t.client_id
-      LEFT JOIN properties p ON p.id = t.property_id
+      LEFT JOIN properties p ON p.id = c.property_id
       WHERE t.status != 'cancelled'
-      ORDER BY t.date DESC
+      ORDER BY t.date DESC, t.id DESC
     `);
 
     // 2. Sorties : Reversements & Préfinancements propriétaires (table owner_settlements)

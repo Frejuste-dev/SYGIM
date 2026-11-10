@@ -102,19 +102,26 @@ export default function Transactions() {
   const loadFinancialData = useCallback(async () => {
     setLoadingFinancial(true);
     try {
-      const [stlRes, ldgRes] = await Promise.all([
+      const [stlResult, ldgResult] = await Promise.allSettled([
         API.Financial.getSettlements(),
         API.Financial.getGeneralLedger()
       ]);
-      const stlPayload = stlRes?.data || stlRes || {};
-      setSettlements(stlPayload.settlements || []);
-      setSettlementStats(stlPayload.stats || {});
 
-      const ldgPayload = ldgRes?.data || ldgRes || {};
-      setLedgerData({
-        entries: ldgPayload.entries || [],
-        summary: ldgPayload.summary || {}
-      });
+      if (stlResult.status === 'fulfilled') {
+        const stlRes = stlResult.value;
+        const stlPayload = stlRes?.data || stlRes || {};
+        setSettlements(stlPayload.settlements || stlPayload.data || []);
+        setSettlementStats(stlPayload.stats || {});
+      }
+
+      if (ldgResult.status === 'fulfilled') {
+        const ldgRes = ldgResult.value;
+        const ldgPayload = ldgRes?.data || ldgRes || {};
+        setLedgerData({
+          entries: ldgPayload.entries || [],
+          summary: ldgPayload.summary || {}
+        });
+      }
     } catch (err) {
       console.error('Erreur chargement données comptables:', err);
     } finally {
@@ -133,7 +140,7 @@ export default function Transactions() {
   const hasActiveFilters = Boolean(searchTerm || statusFilter || methodFilter || dateFrom || dateTo);
   const transactionsEmptyMessage = loading
     ? 'Chargement des transactions...'
-    : listError || (hasActiveFilters
+    : (listError?.message || (typeof listError === 'string' ? listError : '')) || (hasActiveFilters
       ? 'Aucune transaction ne correspond aux filtres.'
       : 'Aucune transaction enregistrée pour le moment.');
 

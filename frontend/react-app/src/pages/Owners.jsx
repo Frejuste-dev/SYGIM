@@ -89,7 +89,7 @@ export default function Owners() {
 
   useEffect(() => {
     loadOwnersSummary();
-  }, [owners.length]);
+  }, []);
 
   const [showModal, setShowModal] = useState(false);
   const [editingOwner, setEditingOwner] = useState(null);
@@ -693,17 +693,19 @@ export default function Owners() {
       )}
 
       {/* 6. MODALE DE PAIEMENT / PRÉFINANCEMENT PROPRIÉTAIRE */}
-      <OwnerPayoutModal
-        isOpen={payoutModalOpen}
-        onClose={() => setPayoutModalOpen(false)}
-        preselectedOwner={selectedOwnerForPayout}
-        ownersSummary={ownersSummary.length > 0 ? ownersSummary : owners}
-        onSuccess={() => {
-          showToast({ type: 'success', message: 'Paiement propriétaire enregistré avec succès.' });
-          loadOwnersSummary();
-          queryClient.invalidateQueries({ queryKey: ['owners'] });
-        }}
-      />
+      {payoutModalOpen && (
+        <OwnerPayoutModal
+          isOpen={payoutModalOpen}
+          onClose={() => setPayoutModalOpen(false)}
+          preselectedOwner={selectedOwnerForPayout}
+          ownersSummary={ownersSummary.length > 0 ? ownersSummary : owners}
+          onSuccess={() => {
+            showToast({ type: 'success', message: 'Paiement propriétaire enregistré avec succès.' });
+            loadOwnersSummary();
+            queryClient.invalidateQueries({ queryKey: ['owners'] });
+          }}
+        />
+      )}
     </div>
   );
 }

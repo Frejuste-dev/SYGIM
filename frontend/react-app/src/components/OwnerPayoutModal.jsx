@@ -15,9 +15,11 @@ const PAYOUT_MODES = [
   { id: 'prefinancing', label: 'Préfinancement',     desc: 'Avance agence (locataire impayé)', icon: 'fa-bolt', color: 'amber' },
 ];
 
-export default function OwnerPayoutModal({ isOpen, onClose, preselectedOwner = null, ownersSummary = [], onSuccess }) {
-  const [fetchedOwners, setFetchedOwners] = useState([]);
-  const effectiveOwners = ownersSummary && ownersSummary.length > 0 ? ownersSummary : fetchedOwners;
+const EMPTY_LIST = [];
+
+export default function OwnerPayoutModal({ isOpen, onClose, preselectedOwner = null, ownersSummary = null, onSuccess }) {
+  const [fetchedOwners, setFetchedOwners] = useState(EMPTY_LIST);
+  const effectiveOwners = (Array.isArray(ownersSummary) && ownersSummary.length > 0) ? ownersSummary : fetchedOwners;
   const now = new Date();
   const defaultStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
   const defaultEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10);
@@ -38,17 +40,20 @@ export default function OwnerPayoutModal({ isOpen, onClose, preselectedOwner = n
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
+  const hasPassedOwners = Array.isArray(ownersSummary) && ownersSummary.length > 0;
+
   useEffect(() => {
-    if (!isOpen) return;
-    if (!ownersSummary || ownersSummary.length === 0) {
-      API.Financial.getOwnersSummary()
-        .then(res => {
-          const list = Array.isArray(res) ? res : (res?.data || []);
-          setFetchedOwners(list);
-        })
-        .catch(() => {});
-    }
-  }, [isOpen, ownersSummary]);
+    if (!isOpen || hasPassedOwners) return;
+    let cancelled = false;
+    API.Financial.getOwnersSummary()
+      .then(res => {
+        if (cancelled) return;
+        const list = Array.isArray(res) ? res : (res?.data || EMPTY_LIST);
+        setFetchedOwners(list);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [isOpen, hasPassedOwners]);
 
   const selectedOwner = useMemo(() => {
     if (!ownerId) return null;

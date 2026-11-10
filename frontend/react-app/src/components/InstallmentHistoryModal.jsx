@@ -250,3 +250,4 @@ export default function InstallmentHistoryModal({ settlement, onClose, onSuccess
     </div>
   );
 }
+

@@ -83,7 +83,7 @@ export default function Clients() {
   const hasActiveFilters = Boolean(searchTerm || statusFilter);
   const clientsEmptyMessage = loading
     ? 'Chargement des locataires...'
-    : listError || (hasActiveFilters
+    : (listError?.message || (typeof listError === 'string' ? listError : '')) || (hasActiveFilters
       ? 'Aucun locataire ne correspond aux filtres actuels.'
       : 'Aucun locataire enregistré. Ajoutez votre premier locataire.');
 
