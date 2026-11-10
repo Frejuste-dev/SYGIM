@@ -252,6 +252,25 @@ class ClientService extends BaseService {
     const result = await this.repository.replaceTenantAtomic(oldId, data, oldClient, property);
     return { oldTenantId: oldId, newTenantId: result.newTenantId, propertyId: property.id };
   }
+
+  async departTenant(id, data, user) {
+    const existing = await this.repository.findById(id);
+    if (!existing) {
+      throw AppError.notFound('Locataire non trouvé');
+    }
+
+    const departureDate = data.departureDate || new Date().toISOString().slice(0, 10);
+    const departureReason = data.departureReason || 'Fin de bail / Départ';
+    const departureNotes = data.departureNotes || null;
+
+    await this.repository.departTenant(id, {
+      departureDate,
+      departureReason,
+      departureNotes
+    });
+
+    return { id, status: 'inactive', departureDate, departureReason };
+  }
 }
 
 module.exports = new ClientService();

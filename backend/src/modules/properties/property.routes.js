@@ -10,6 +10,7 @@ router.get('/stats', authorize('admin', 'director', 'accounting', 'collector_man
 router.get('/:id', authorize('admin', 'director', 'accounting', 'collector_manager', 'collector'), (req, res, next) => PropertyController.getById(req, res, next));
 router.post('/', authorize('admin', 'director', 'collector_manager', 'accounting'), propertyValidator, (req, res, next) => PropertyController.create(req, res, next));
 router.put('/:id', authorize('admin', 'director', 'collector_manager', 'accounting'), updatePropertyValidator, (req, res, next) => PropertyController.update(req, res, next));
+router.post('/:id/assign', authorize('admin', 'director', 'collector_manager', 'accounting', 'collector'), (req, res, next) => PropertyController.assignTenant(req, res, next));
 router.delete('/:id', authorize('admin', 'director', 'collector_manager'), (req, res, next) => PropertyController.delete(req, res, next));
 
 module.exports = router;

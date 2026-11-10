@@ -218,6 +218,31 @@ class TransactionRepository extends BaseRepository {
            WHERE id = ?`,
           [data.amount, data.method || 'cash', data.amount, data.amount, data.clientId]
         );
+
+        // Amortissement de la réparation locataire active si existante
+        try {
+          const [repRows] = await connection.query(
+            "SELECT * FROM tenant_repairs WHERE client_id = ? AND status = 'IN_PROGRESS' ORDER BY id ASC LIMIT 1",
+            [data.clientId]
+          );
+          if (repRows.length > 0) {
+            const rep = repRows[0];
+            const dedAllowed = rep.deduction_mode === 'immediate'
+              ? parseFloat(rep.remaining_amount)
+              : Math.min(parseFloat(rep.monthly_deduction || rep.remaining_amount), parseFloat(rep.remaining_amount));
+            if (dedAllowed > 0) {
+              const newReimbursed = parseFloat((parseFloat(rep.reimbursed_amount) + dedAllowed).toFixed(2));
+              const newRemaining = Math.max(0, parseFloat((parseFloat(rep.remaining_amount) - dedAllowed).toFixed(2)));
+              const newStatus = newRemaining <= 0 ? 'SETTLED' : 'IN_PROGRESS';
+              await connection.query(
+                "UPDATE tenant_repairs SET reimbursed_amount = ?, remaining_amount = ?, status = ? WHERE id = ?",
+                [newReimbursed, newRemaining, newStatus, rep.id]
+              );
+            }
+          }
+        } catch (repErr) {
+          // ignore non-blocking
+        }
       }
 
       await connection.commit();

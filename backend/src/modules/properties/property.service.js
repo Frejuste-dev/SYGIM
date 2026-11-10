@@ -98,6 +98,97 @@ class PropertyService extends BaseService {
       }
     }
   }
+
+  async assignTenant(propertyId, data, user) {
+    const { pool } = require('../../../config/db');
+    const AppError = require('../../utils/errors/AppError');
+
+    const prop = await this.repository.findById(propertyId);
+    if (!prop) throw AppError.notFound('Propriété non trouvée');
+
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
+
+      let tenantId = data.clientId;
+      const rent = parseFloat(data.rent || prop.rent || 0);
+      const deposit = parseFloat(data.deposit || 0);
+      const startDate = data.startDate || new Date().toISOString().slice(0, 10);
+
+      if (!tenantId && data.newTenant) {
+        const { firstName, lastName, phone, email, address } = data.newTenant;
+        if (!lastName || !phone) {
+          throw AppError.badRequest('Nom et téléphone du nouveau locataire sont requis');
+        }
+
+        let collectorId = data.newTenant.collectorId || prop.collector_id || null;
+        if (user?.role === 'collector' && !collectorId) {
+          const [colRows] = await conn.query('SELECT id FROM collectors WHERE user_id = ?', [user.id]);
+          if (colRows.length > 0) collectorId = colRows[0].id;
+        }
+
+        const joinDate = new Date().toLocaleDateString('fr-FR');
+        const [insertRes] = await conn.query(
+          `INSERT INTO clients 
+           (first_name, last_name, phone, email, address, property_id, property_name, property_value, 
+            amount_due, amount_paid, status, deposit, contract_start, collector_id, owner_id, join_date)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 'pending', ?, ?, ?, ?, ?)`,
+          [
+            firstName || '', lastName, phone, email || null, address || prop.address || null,
+            propertyId, prop.name, prop.value || 0,
+            rent, deposit, startDate, collectorId, prop.owner_id || null, joinDate
+          ]
+        );
+        tenantId = insertRes.insertId;
+      } else if (tenantId) {
+        const [cRows] = await conn.query('SELECT * FROM clients WHERE id = ?', [tenantId]);
+        if (cRows.length === 0) throw AppError.notFound('Locataire existant introuvable');
+
+        await conn.query(
+          `UPDATE clients 
+           SET property_id = ?, 
+               property_name = ?, 
+               amount_due = ?, 
+               status = 'pending',
+               contract_start = COALESCE(?, contract_start)
+           WHERE id = ?`,
+          [propertyId, prop.name, rent, startDate, tenantId]
+        );
+      } else {
+        throw AppError.badRequest('Veuillez sélectionner un locataire ou créer un nouveau locataire');
+      }
+
+      // Mettre à jour la propriété en statut "loue"
+      await conn.query(
+        "UPDATE properties SET status = 'loue', tenant_id = ?, rent = COALESCE(?, rent) WHERE id = ?",
+        [tenantId, rent, propertyId]
+      );
+
+      // Historique transaction
+      const [tRows] = await conn.query('SELECT first_name, last_name FROM clients WHERE id = ?', [tenantId]);
+      const tName = tRows.length > 0 ? `${tRows[0].last_name} ${tRows[0].first_name}`.trim() : 'Locataire';
+
+      await conn.query(
+        `INSERT INTO transactions (reference, date, client_id, client_name, description, amount, method, status, collector_id)
+         VALUES (?, CURDATE(), ?, ?, ?, 0, 'assignment', 'processed', ?)`,
+        [
+          `ATTR-${propertyId}-${tenantId}`,
+          tenantId,
+          tName,
+          `Attribution du bien : ${prop.name}`,
+          prop.collector_id || null
+        ]
+      );
+
+      await conn.commit();
+      return { propertyId, tenantId, status: 'loue' };
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
+  }
 }
 
 module.exports = new PropertyService();

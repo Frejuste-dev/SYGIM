@@ -12,5 +12,6 @@ router.post('/', authorize('admin', 'director', 'collector_manager', 'accounting
 router.put('/:id', authorize('admin', 'director', 'collector_manager', 'accounting', 'collector'), updateClientValidator, (req, res, next) => ClientController.update(req, res, next));
 router.delete('/:id', authorize('admin', 'director', 'collector_manager'), (req, res, next) => ClientController.delete(req, res, next));
 router.post('/:id/replace', authorize('admin', 'director', 'collector_manager', 'collector'), (req, res, next) => ClientController.replaceTenant(req, res, next));
+router.post('/:id/depart', authorize('admin', 'director', 'collector_manager', 'collector'), (req, res, next) => ClientController.departTenant(req, res, next));
 
 module.exports = router;

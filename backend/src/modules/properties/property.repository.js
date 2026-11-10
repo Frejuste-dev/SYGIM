@@ -7,9 +7,11 @@ class PropertyRepository extends BaseRepository {
   }
 
   async findAllWithDetails(filters = {}) {
-    let sql = `SELECT p.*, o.first_name AS owner_first_name, o.last_name AS owner_last_name
+    let sql = `SELECT p.*, o.first_name AS owner_first_name, o.last_name AS owner_last_name,
+                      c.first_name AS tenant_first_name, c.last_name AS tenant_last_name, c.phone AS tenant_phone
                FROM properties p
                LEFT JOIN owners o ON p.owner_id = o.id
+               LEFT JOIN clients c ON p.tenant_id = c.id
                WHERE 1=1`;
     const params = [];
 

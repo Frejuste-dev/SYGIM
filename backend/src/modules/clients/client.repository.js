@@ -7,9 +7,16 @@ class ClientRepository extends BaseRepository {
   }
 
   async findAllWithCollector(filters = {}, userRole = null, userId = null) {
-    let sql = `SELECT c.*, CONCAT(col.first_name, ' ', col.last_name) as collector_name
+    let sql = `SELECT c.*, CONCAT(col.first_name, ' ', col.last_name) as collector_name,
+                      p.name AS property_title,
+                      p.address AS property_address,
+                      (SELECT tr.description FROM tenant_repairs tr WHERE tr.client_id = c.id AND tr.status = 'IN_PROGRESS' ORDER BY tr.id DESC LIMIT 1) AS active_repair_desc,
+                      (SELECT tr.remaining_amount FROM tenant_repairs tr WHERE tr.client_id = c.id AND tr.status = 'IN_PROGRESS' ORDER BY tr.id DESC LIMIT 1) AS active_repair_remaining,
+                      (SELECT tr.monthly_deduction FROM tenant_repairs tr WHERE tr.client_id = c.id AND tr.status = 'IN_PROGRESS' ORDER BY tr.id DESC LIMIT 1) AS active_repair_deduction,
+                      (SELECT tr.deduction_mode FROM tenant_repairs tr WHERE tr.client_id = c.id AND tr.status = 'IN_PROGRESS' ORDER BY tr.id DESC LIMIT 1) AS active_repair_mode
                FROM clients c
                LEFT JOIN collectors col ON c.collector_id = col.id
+               LEFT JOIN properties p ON c.property_id = p.id
                WHERE 1=1`;
     const params = [];
 
@@ -254,6 +261,63 @@ class ClientRepository extends BaseRepository {
 
       await conn.commit();
       return { newTenantId };
+    } catch (error) {
+      await conn.rollback();
+      throw error;
+    } finally {
+      conn.release();
+    }
+  }
+
+  async departTenant(id, { departureDate, departureReason, departureNotes }) {
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
+
+      const [clientRows] = await conn.query('SELECT property_id, first_name, last_name, collector_id FROM clients WHERE id = ?', [id]);
+      if (clientRows.length === 0) throw new Error('NOT_FOUND');
+      const client = clientRows[0];
+
+      await conn.query(
+        `UPDATE clients 
+         SET status = 'inactive', 
+             contract_end = ?, 
+             departure_date = ?, 
+             departure_reason = ?, 
+             departure_notes = ?,
+             property_id = NULL
+         WHERE id = ?`,
+        [departureDate, departureDate, departureReason, departureNotes || null, id]
+      );
+
+      // Libérer le bien associé (mettre le statut en vacant et supprimer l'association)
+      if (client.property_id) {
+        await conn.query(
+          "UPDATE properties SET status = 'vacant', tenant_id = NULL WHERE id = ? OR tenant_id = ?",
+          [client.property_id, id]
+        );
+      } else {
+        await conn.query(
+          "UPDATE properties SET status = 'vacant', tenant_id = NULL WHERE tenant_id = ?",
+          [id]
+        );
+      }
+
+      // Historiser dans les transactions
+      await conn.query(
+        `INSERT INTO transactions (reference, date, client_id, client_name, description, amount, method, status, collector_id)
+         VALUES (?, CURDATE(), ?, ?, ?, 0, 'departure', 'processed', ?)`,
+        [
+          `DEP-${id}-${Date.now().toString().slice(-4)}`,
+          id,
+          `${client.last_name} ${client.first_name}`.trim(),
+          `Départ locataire : ${departureReason}`,
+          client.collector_id || null
+        ]
+      );
+
+      await conn.commit();
+      return true;
     } catch (error) {
       await conn.rollback();
       throw error;

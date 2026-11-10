@@ -38,6 +38,15 @@ class PropertyController extends BaseController {
       next(error);
     }
   }
+
+  async assignTenant(req, res, next) {
+    try {
+      const data = await this.service.assignTenant(req.params.id, req.body, req.user);
+      res.json(ApiResponse.success(data, 'Bien attribué avec succès au locataire'));
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 module.exports = new PropertyController();

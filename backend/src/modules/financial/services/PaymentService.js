@@ -146,6 +146,45 @@ class PaymentService {
       // 7. Régularisation / Remboursement automatique d'un préfinancement propriétaire éventuel
       await ownerSettlementService.reconcilePrefinancingForTenantPayment(clientId, amountReceived, connection);
 
+      // 8. Épongement / Amortissement automatique d'une réparation active prise en charge
+      try {
+        const [repairs] = await connection.query(`
+          SELECT * FROM tenant_repairs 
+          WHERE client_id = ? AND status = 'IN_PROGRESS' 
+          ORDER BY id ASC LIMIT 1 FOR UPDATE
+        `, [clientId]);
+
+        if (repairs.length > 0) {
+          const repair = repairs[0];
+          const deductionAllowed = repair.deduction_mode === 'immediate'
+            ? parseFloat(repair.remaining_amount)
+            : Math.min(parseFloat(repair.monthly_deduction || repair.remaining_amount), parseFloat(repair.remaining_amount));
+
+          if (deductionAllowed > 0) {
+            const newReimbursed = parseFloat((parseFloat(repair.reimbursed_amount) + deductionAllowed).toFixed(2));
+            const newRemaining = Math.max(0, parseFloat((parseFloat(repair.remaining_amount) - deductionAllowed).toFixed(2)));
+            const newStatus = newRemaining <= 0 ? 'SETTLED' : 'IN_PROGRESS';
+
+            await connection.query(`
+              UPDATE tenant_repairs 
+              SET reimbursed_amount = ?, 
+                  remaining_amount = ?, 
+                  status = ?
+              WHERE id = ?
+            `, [newReimbursed, newRemaining, newStatus, repair.id]);
+
+            Logger.info('Amortissement réparation locataire appliqué', {
+              repairId: repair.id,
+              deductionApplied: deductionAllowed,
+              newRemaining,
+              newStatus
+            });
+          }
+        }
+      } catch (repErr) {
+        Logger.warn('Erreur non-bloquante lors de la déduction de réparation', { error: repErr.message });
+      }
+
       await connection.commit();
 
       Logger.info('Payment registered successfully with FIFO allocations', {

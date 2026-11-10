@@ -114,6 +114,7 @@ app.use('/api/owners',       require('./modules/owners/owner.routes'));
 app.use('/api/transactions', require('./modules/transactions/transaction.routes'));
 app.use('/api/financial',    require('./modules/financial/financial.routes'));
 app.use('/api/alerts',       require('./modules/alerts/alert.routes'));
+app.use('/api/repairs',      require('./modules/repairs/repair.routes'));
 app.use('/api/rgpd',         require('./modules/rgpd/rgpd.routes'));
 
 // ═══════════════════════════════════════════════════════════════════════

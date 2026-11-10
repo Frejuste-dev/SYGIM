@@ -107,7 +107,13 @@ export const API = {
             httpClient.get(`/clients/${clientId}/transactions`),
         
         getProperties: (clientId) => 
-            httpClient.get(`/clients/${clientId}/properties`)
+            httpClient.get(`/clients/${clientId}/properties`),
+
+        depart: (clientId, data) =>
+            httpClient.post(`/clients/${clientId}/depart`, data),
+
+        replace: (clientId, data) =>
+            httpClient.post(`/clients/${clientId}/replace`, data)
     },
 
     /**
@@ -144,7 +150,10 @@ export const API = {
             return httpClient.post(`/properties/${propertyId}/documents`, formData, {
                 headers: {}
             });
-        }
+        },
+
+        assignTenant: (propertyId, data) =>
+            httpClient.post(`/properties/${propertyId}/assign`, data)
     },
 
     /**
@@ -325,5 +334,17 @@ export const API = {
 
         getGeneralLedger: (filters = {}) =>
             httpClient.get('/financial/ledger', { params: filters })
+    },
+
+    /**
+     * Réparations & Déductions Travaux
+     */
+    Repairs: {
+        getAll: (filters = {}) =>
+            httpClient.get('/repairs', { params: filters }),
+        create: (data) =>
+            httpClient.post('/repairs', data),
+        settle: (id, data = {}) =>
+            httpClient.post(`/repairs/${id}/settle`, data)
     }
 };

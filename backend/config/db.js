@@ -81,6 +81,51 @@ async function ensureSchemaUpgrades() {
         await safeAlter("ALTER TABLE owner_settlements ADD COLUMN notes TEXT NULL");
         await safeAlter("ALTER TABLE owner_settlements ADD COLUMN created_by INT NULL");
 
+        // 3. Colonnes de départ sur clients
+        await safeAlter("ALTER TABLE clients ADD COLUMN departure_date DATE NULL");
+        await safeAlter("ALTER TABLE clients ADD COLUMN departure_reason VARCHAR(255) NULL");
+        await safeAlter("ALTER TABLE clients ADD COLUMN departure_notes TEXT NULL");
+
+        // 4. Table des réparations & travaux pris en charge par le locataire
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS tenant_repairs (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                client_id INT NOT NULL,
+                property_id INT NULL,
+                collector_id INT NULL,
+                description VARCHAR(255) NOT NULL,
+                total_cost DECIMAL(12, 2) NOT NULL,
+                deduction_mode VARCHAR(30) NOT NULL DEFAULT 'monthly',
+                monthly_deduction DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
+                reimbursed_amount DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
+                remaining_amount DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
+                repair_date DATE NOT NULL,
+                receipt_ref VARCHAR(100) NULL,
+                status VARCHAR(30) NOT NULL DEFAULT 'IN_PROGRESS',
+                notes TEXT NULL,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                INDEX idx_client_repairs (client_id, status)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        `);
+
+        // Exemples de réparations si la table est vide
+        const [[{ repairCnt }]] = await pool.query("SELECT COUNT(*) AS repairCnt FROM tenant_repairs");
+        if (repairCnt === 0) {
+            const [clients] = await pool.query("SELECT id, property_id, collector_id, amount_due FROM clients WHERE status IN ('active', 'pending') LIMIT 2");
+            if (clients.length > 0) {
+                const c1 = clients[0];
+                const totalCost1 = 60000;
+                const monthlyDed1 = 20000;
+                await pool.query(
+                    `INSERT INTO tenant_repairs 
+                     (client_id, property_id, collector_id, description, total_cost, deduction_mode, monthly_deduction, reimbursed_amount, remaining_amount, repair_date, receipt_ref, status, notes)
+                     VALUES (?, ?, ?, 'Réfection plomberie et tuyauterie salle de bain', ?, 'monthly', ?, 0, ?, CURDATE(), 'FAC-PLOMB-01', 'IN_PROGRESS', 'Réparation validée par le collecteur - déduction de 20 000 FCFA/mois sur 3 mois')`,
+                    [c1.id, c1.property_id || null, c1.collector_id || null, totalCost1, monthlyDed1, totalCost1]
+                );
+            }
+        }
+
         // Table d'historique détaillé des tranches / versements partiels propriétaires
         await pool.query(`
             CREATE TABLE IF NOT EXISTS owner_settlement_installments (

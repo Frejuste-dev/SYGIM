@@ -37,15 +37,19 @@ const transports = [
   })
 ];
 
-// N'instancier la rotation sur fichier que hors environnement de test
-// afin d'éviter l'ouverture prématurée de descripteurs de fichiers / conflits EPERM sous Jest
-if (process.env.NODE_ENV !== 'test') {
+// N'instancier la rotation sur fichier qu'en production ou si explicitement demandé,
+// afin d'éviter les verrous de fichiers EPERM de Windows en développement
+if (process.env.NODE_ENV === 'production' || process.env.ENABLE_FILE_LOGGING === 'true') {
   const fileTransport = new winston.transports.DailyRotateFile({
     filename: path.join(logDir, 'sygim-%DATE%.log'),
     datePattern: 'YYYY-MM-DD',
-    zippedArchive: true,
+    zippedArchive: false,
     maxSize: '20m',
     maxFiles: '14d'
+  });
+  fileTransport.on('error', (err) => {
+    // Éviter qu'une erreur de verrouillage fichier sous Windows ne crash le processus
+    console.warn('File logger non-bloquant:', err.message);
   });
   transports.push(fileTransport);
 }

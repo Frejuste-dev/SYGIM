@@ -17,11 +17,34 @@ export default function PaymentModal({ isOpen, onClose, client, onProceedToSigna
   const [reference, setReference] = useState('');
   const [validationError, setValidationError] = useState('');
 
+  const due = client?.amount_due ?? client?.amountDue ?? 0;
+  const paid = client?.amount_paid ?? client?.amountPaid ?? 0;
+  const remaining = Math.max(0, due - paid);
+  const activeRepairRemaining = parseFloat(client?.active_repair_remaining || 0);
+  const activeRepairDeduction = parseFloat(client?.active_repair_deduction || 0);
+  const isRepairImmediate = client?.active_repair_mode === 'immediate';
+
+  const repairDeduction = activeRepairRemaining > 0
+    ? (isRepairImmediate
+        ? Math.min(remaining, activeRepairRemaining)
+        : Math.min(remaining, activeRepairDeduction > 0 ? activeRepairDeduction : activeRepairRemaining))
+    : 0;
+
+  const netCollectible = Math.max(0, remaining - repairDeduction);
+
   useEffect(() => {
     if (!isOpen || !client) return;
-    const due = client.amount_due ?? client.amountDue ?? 0;
-    const paid = client.amount_paid ?? client.amountPaid ?? 0;
-    setAmount(Math.max(0, due - paid));
+    const clientDue = client.amount_due ?? client.amountDue ?? 0;
+    const clientPaid = client.amount_paid ?? client.amountPaid ?? 0;
+    const clientRem = Math.max(0, clientDue - clientPaid);
+
+    const remRepair = parseFloat(client.active_repair_remaining || 0);
+    const dedRepair = parseFloat(client.active_repair_deduction || 0);
+    const isImm = client.active_repair_mode === 'immediate';
+    const repDed = remRepair > 0 ? (isImm ? Math.min(clientRem, remRepair) : Math.min(clientRem, dedRepair > 0 ? dedRepair : remRepair)) : 0;
+    const net = Math.max(0, clientRem - repDed);
+
+    setAmount(net > 0 ? net : clientRem);
     setMethod('mobile_money'); // Défaut terrain Côte d'Ivoire
     setReference('');
     setValidationError('');
@@ -37,9 +60,6 @@ export default function PaymentModal({ isOpen, onClose, client, onProceedToSigna
 
   if (!isOpen || !client) return null;
 
-  const due = client.amount_due ?? client.amountDue ?? 0;
-  const paid = client.amount_paid ?? client.amountPaid ?? 0;
-  const remaining = Math.max(0, due - paid);
   const lastName = client.last_name ?? client.lastName ?? '';
   const firstName = client.first_name ?? client.firstName ?? '';
   const property = client.property ?? client.propertyName ?? client.property_title ?? client.address ?? 'Bien non renseigné';
@@ -99,12 +119,34 @@ export default function PaymentModal({ isOpen, onClose, client, onProceedToSigna
               <span className="font-medium text-slate-700 text-right max-w-[65%] truncate" title={property}>{property}</span>
             </div>
             <div className="flex items-center justify-between pt-2 border-t border-slate-200">
-              <span className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Reste à payer</span>
+              <span className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Loyer contractuel dû</span>
               <span className={`text-base font-extrabold ${remaining > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
                 {formatXOF(remaining, { compact: false })}
               </span>
             </div>
           </div>
+
+          {/* Bannière déduction réparation si active */}
+          {repairDeduction > 0 && (
+            <div className="bg-amber-50/90 rounded-2xl border border-amber-200 p-3.5 space-y-2">
+              <div className="flex items-center justify-between text-xs font-bold text-amber-900">
+                <span className="flex items-center gap-1.5">
+                  <i className="fas fa-wrench text-amber-600"></i>
+                  Réparation imputée au loyer
+                </span>
+                <span className="text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200">
+                  -{formatXOF(repairDeduction, { compact: false })}
+                </span>
+              </div>
+              <p className="text-[11px] text-amber-800 leading-tight">
+                {client.active_repair_desc || 'Travaux locataire'} &bull; Reste à éponger : <span className="font-semibold">{formatXOF(activeRepairRemaining)}</span>
+              </p>
+              <div className="flex items-center justify-between pt-1.5 border-t border-amber-200/80 font-bold text-xs">
+                <span className="text-slate-700">Loyer net à percevoir :</span>
+                <span className="text-emerald-700 text-sm font-black">{formatXOF(netCollectible, { compact: false })}</span>
+              </div>
+            </div>
+          )}
 
           {/* Saisie montant avec touches rapides */}
           <div>
@@ -129,6 +171,15 @@ export default function PaymentModal({ isOpen, onClose, client, onProceedToSigna
             {/* Raccourcis rapides pour écran tactile smartphone */}
             {remaining > 0 && (
               <div className="flex items-center gap-1.5 mt-2 overflow-x-auto pb-1">
+                {repairDeduction > 0 && netCollectible > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => { setAmount(netCollectible); setValidationError(''); }}
+                    className="px-3 py-1.5 text-xs font-bold bg-amber-500 text-white shadow-sm rounded-xl hover:bg-amber-600 active:scale-95 transition whitespace-nowrap"
+                  >
+                    <i className="fas fa-wrench text-[10px] mr-1"></i> Loyer net ({formatXOF(netCollectible)})
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => { setAmount(remaining); setValidationError(''); }}

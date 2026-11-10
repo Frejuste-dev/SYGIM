@@ -61,6 +61,15 @@ class ClientController extends BaseController {
       next(error);
     }
   }
+
+  async departTenant(req, res, next) {
+    try {
+      const data = await this.service.departTenant(req.params.id, req.body, req.user);
+      res.json(ApiResponse.success(data, 'Départ du locataire enregistré et bien libéré'));
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 module.exports = new ClientController();
