@@ -292,3 +292,4 @@ export default function AssignPropertyModal({ isOpen, onClose, property, clients
     </Modal>
   );
 }
+

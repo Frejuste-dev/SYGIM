@@ -296,3 +296,4 @@ export default function TenantRepairModal({ isOpen, onClose, client, onSuccess }
     </Modal>
   );
 }
+

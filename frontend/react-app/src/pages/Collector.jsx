@@ -263,47 +263,49 @@ export default function Collector() {
     return rem > 0;
   }).length;
 
+  const activeRepairsCount = repairsList.filter(r => r.status === 'IN_PROGRESS').length;
+
   return (
-    <div className="p-3.5 sm:p-6 md:p-8 space-y-4 sm:space-y-6 min-h-full pb-24 md:pb-8 max-w-7xl mx-auto">
-      {/* En-tête simplifié & direct */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5">
-        <div>
+    <div className="space-y-3 sm:space-y-5 pb-28 md:pb-8 max-w-7xl mx-auto overflow-x-hidden w-full">
+      {/* En-tête compact & PWA-ready */}
+      <div className="flex items-center justify-between gap-2 bg-white rounded-2xl border border-slate-200/90 shadow-sm p-3 sm:p-4">
+        <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <span className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse"></span>
-            <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">Espace Collecteur Terrain</h1>
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
+            <h1 className="text-base sm:text-xl font-black text-slate-900 tracking-tight truncate">
+              Espace Collecteur
+            </h1>
           </div>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Agent : <span className="font-bold text-slate-700">{user?.displayName || user?.collectorName || 'Collecteur'}</span>
-            {' '}&bull; {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+          <p className="text-[11px] sm:text-xs text-slate-500 truncate mt-0.5">
+            Agent : <strong className="text-slate-700">{user?.displayName || user?.collectorName || 'Collecteur'}</strong> &bull; {new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleRefresh}
-            disabled={isRefreshing}
-            className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs sm:text-sm font-bold rounded-xl transition disabled:opacity-60"
-          >
-            <i className={`fas fa-sync text-xs ${isRefreshing ? 'fa-spin' : ''}`}></i>
-            <span>{isRefreshing ? 'Actualisation...' : 'Synchroniser'}</span>
-          </button>
-        </div>
+        <button
+          onClick={handleRefresh}
+          disabled={isRefreshing}
+          className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 text-xs font-bold rounded-xl transition disabled:opacity-60 shrink-0"
+          title="Actualiser les données"
+        >
+          <i className={`fas fa-sync text-xs ${isRefreshing ? 'fa-spin text-primary' : ''}`}></i>
+          <span className="hidden sm:inline">{isRefreshing ? 'Sync...' : 'Synchroniser'}</span>
+        </button>
       </div>
 
-      {/* Barre d'onglets opérationnels (Sans Dashboard / KPI lourd) */}
-      <div className="flex rounded-2xl border border-slate-200 bg-white shadow-sm p-1.5 overflow-x-auto gap-1">
+      {/* Barre d'onglets opérationnels (3 colonnes sans débordement) */}
+      <div className="grid grid-cols-3 rounded-2xl border border-slate-200 bg-white shadow-sm p-1 gap-1 w-full">
         <button
           onClick={() => setActiveTab('collect')}
-          className={`flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs sm:text-sm font-bold transition flex-1 whitespace-nowrap ${
+          className={`flex items-center justify-center gap-1 sm:gap-2 py-2.5 px-1 rounded-xl text-xs sm:text-sm font-bold transition text-center ${
             activeTab === 'collect'
               ? 'bg-primary text-white shadow-sm'
               : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
           }`}
         >
-          <i className="fas fa-hand-holding-dollar"></i>
-          <span>Tournée & Encaissements</span>
+          <i className="fas fa-hand-holding-dollar text-xs shrink-0"></i>
+          <span className="truncate">Tournée</span>
           {pendingClientsCount > 0 && (
-            <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+            <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-black shrink-0 ${
               activeTab === 'collect' ? 'bg-white text-primary' : 'bg-rose-100 text-rose-700'
             }`}>
               {pendingClientsCount}
@@ -313,128 +315,126 @@ export default function Collector() {
 
         <button
           onClick={() => setActiveTab('properties')}
-          className={`flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs sm:text-sm font-bold transition flex-1 whitespace-nowrap ${
+          className={`flex items-center justify-center gap-1 sm:gap-2 py-2.5 px-1 rounded-xl text-xs sm:text-sm font-bold transition text-center ${
             activeTab === 'properties'
               ? 'bg-primary text-white shadow-sm'
               : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
           }`}
         >
-          <i className="fas fa-city"></i>
-          <span>Logements & Biens</span>
+          <i className="fas fa-city text-xs shrink-0"></i>
+          <span className="truncate">Logements</span>
           {vacantPropertiesCount > 0 && (
-            <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+            <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-black shrink-0 ${
               activeTab === 'properties' ? 'bg-white text-primary' : 'bg-emerald-100 text-emerald-700'
             }`}>
-              {vacantPropertiesCount} vacants
+              {vacantPropertiesCount}
             </span>
           )}
         </button>
 
         <button
           onClick={() => setActiveTab('repairs')}
-          className={`flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs sm:text-sm font-bold transition flex-1 whitespace-nowrap ${
+          className={`flex items-center justify-center gap-1 sm:gap-2 py-2.5 px-1 rounded-xl text-xs sm:text-sm font-bold transition text-center ${
             activeTab === 'repairs'
               ? 'bg-primary text-white shadow-sm'
               : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
           }`}
         >
-          <i className="fas fa-wrench"></i>
-          <span>Réparations & Déductions</span>
-          {repairsList.filter(r => r.status === 'IN_PROGRESS').length > 0 && (
-            <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+          <i className="fas fa-wrench text-xs shrink-0"></i>
+          <span className="truncate">Travaux</span>
+          {activeRepairsCount > 0 && (
+            <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-black shrink-0 ${
               activeTab === 'repairs' ? 'bg-white text-primary' : 'bg-amber-100 text-amber-800'
             }`}>
-              {repairsList.filter(r => r.status === 'IN_PROGRESS').length}
+              {activeRepairsCount}
             </span>
           )}
         </button>
       </div>
 
-      {/* Barre de recherche contextuelle */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-3 sm:p-4">
-        <div className="flex flex-col sm:flex-row gap-2.5">
-          <div className="relative flex-1">
-            <i className="fas fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none"></i>
-            <input
-              type="text"
-              placeholder={
-                activeTab === 'collect'
-                  ? 'Rechercher un locataire, tél, logement...'
-                  : activeTab === 'properties'
-                    ? 'Rechercher un logement, adresse...'
-                    : 'Rechercher une réparation, locataire...'
-              }
-              value={searchTerm}
-              onChange={(e) => {
-                const p = new URLSearchParams(searchParams);
-                if (e.target.value) p.set('search', e.target.value);
-                else p.delete('search');
-                setSearchParams(p);
-              }}
-              className="w-full pl-9 pr-4 py-2.5 text-sm border border-slate-200 rounded-xl bg-slate-50 text-slate-900 placeholder-slate-400 focus:outline-none focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/20 transition"
-            />
-          </div>
-
-          {activeTab === 'collect' && (
-            <div className="flex rounded-xl border border-slate-200 overflow-hidden shrink-0">
-              <button
-                onClick={() => setClientFilter('all')}
-                className={`px-3 py-2 text-xs font-bold transition ${clientFilter === 'all' ? 'bg-slate-800 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
-              >
-                Tous ({displayedClients.length})
-              </button>
-              <button
-                onClick={() => setClientFilter('pending')}
-                className={`px-3 py-2 text-xs font-bold transition border-l border-slate-200 ${clientFilter === 'pending' ? 'bg-rose-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
-              >
-                À encaisser ({displayedClients.filter(c => (c.amount_due ?? 0) - (c.amount_paid ?? 0) > 0).length})
-              </button>
-              <button
-                onClick={() => setClientFilter('settled')}
-                className={`px-3 py-2 text-xs font-bold transition border-l border-slate-200 ${clientFilter === 'settled' ? 'bg-emerald-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
-              >
-                Soldés
-              </button>
-            </div>
-          )}
-
-          {activeTab === 'properties' && (
-            <div className="flex rounded-xl border border-slate-200 overflow-hidden shrink-0">
-              <button
-                onClick={() => setPropertyStatusFilter('all')}
-                className={`px-3 py-2 text-xs font-bold transition ${propertyStatusFilter === 'all' ? 'bg-slate-800 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
-              >
-                Tous ({properties.length})
-              </button>
-              <button
-                onClick={() => setPropertyStatusFilter('vacant')}
-                className={`px-3 py-2 text-xs font-bold transition border-l border-slate-200 ${propertyStatusFilter === 'vacant' ? 'bg-emerald-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
-              >
-                Vacants ({vacantPropertiesCount})
-              </button>
-              <button
-                onClick={() => setPropertyStatusFilter('loue')}
-                className={`px-3 py-2 text-xs font-bold transition border-l border-slate-200 ${propertyStatusFilter === 'loue' ? 'bg-primary text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
-              >
-                Loués
-              </button>
-            </div>
-          )}
+      {/* Barre de recherche & filtres segmentés */}
+      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-2.5 sm:p-4 space-y-2">
+        <div className="relative">
+          <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
+          <input
+            type="text"
+            placeholder={
+              activeTab === 'collect'
+                ? 'Rechercher locataire, tél, bien...'
+                : activeTab === 'properties'
+                  ? 'Rechercher logement, adresse...'
+                  : 'Rechercher travaux, locataire...'
+            }
+            value={searchTerm}
+            onChange={(e) => {
+              const p = new URLSearchParams(searchParams);
+              if (e.target.value) p.set('search', e.target.value);
+              else p.delete('search');
+              setSearchParams(p);
+            }}
+            className="w-full pl-8 pr-3 py-2 text-xs sm:text-sm border border-slate-200 rounded-xl bg-slate-50 text-slate-900 placeholder-slate-400 focus:outline-none focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/20 transition"
+          />
         </div>
+
+        {activeTab === 'collect' && (
+          <div className="grid grid-cols-3 rounded-xl border border-slate-200 overflow-hidden bg-slate-100 p-0.5 gap-0.5">
+            <button
+              onClick={() => setClientFilter('all')}
+              className={`py-1.5 text-[11px] font-bold rounded-lg transition text-center truncate ${clientFilter === 'all' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-600 hover:bg-white'}`}
+            >
+              Tous ({displayedClients.length})
+            </button>
+            <button
+              onClick={() => setClientFilter('pending')}
+              className={`py-1.5 text-[11px] font-bold rounded-lg transition text-center truncate ${clientFilter === 'pending' ? 'bg-rose-600 text-white shadow-sm' : 'text-slate-600 hover:bg-white'}`}
+            >
+              À encaisser ({displayedClients.filter(c => (c.amount_due ?? 0) - (c.amount_paid ?? 0) > 0).length})
+            </button>
+            <button
+              onClick={() => setClientFilter('settled')}
+              className={`py-1.5 text-[11px] font-bold rounded-lg transition text-center truncate ${clientFilter === 'settled' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-600 hover:bg-white'}`}
+            >
+              Soldés
+            </button>
+          </div>
+        )}
+
+        {activeTab === 'properties' && (
+          <div className="grid grid-cols-3 rounded-xl border border-slate-200 overflow-hidden bg-slate-100 p-0.5 gap-0.5">
+            <button
+              onClick={() => setPropertyStatusFilter('all')}
+              className={`py-1.5 text-[11px] font-bold rounded-lg transition text-center truncate ${propertyStatusFilter === 'all' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-600 hover:bg-white'}`}
+            >
+              Tous ({properties.length})
+            </button>
+            <button
+              onClick={() => setPropertyStatusFilter('vacant')}
+              className={`py-1.5 text-[11px] font-bold rounded-lg transition text-center truncate ${propertyStatusFilter === 'vacant' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-600 hover:bg-white'}`}
+            >
+              Vacants ({vacantPropertiesCount})
+            </button>
+            <button
+              onClick={() => setPropertyStatusFilter('loue')}
+              className={`py-1.5 text-[11px] font-bold rounded-lg transition text-center truncate ${propertyStatusFilter === 'loue' ? 'bg-primary text-white shadow-sm' : 'text-slate-600 hover:bg-white'}`}
+            >
+              Loués
+            </button>
+          </div>
+        )}
       </div>
 
       {/* ========================================================================= */}
       {/* CONTENU ONGLET 1 : TOURNÉE & ENCAISSEMENTS                                */}
       {/* ========================================================================= */}
       {activeTab === 'collect' && (
-        <div className="space-y-4">
+        <div className="space-y-3 sm:space-y-4 w-full">
           {clientsLoading ? (
-            <div className="bg-white rounded-2xl border border-slate-200 p-12 flex flex-col items-center justify-center gap-3">
+            <div className="bg-white rounded-2xl border border-slate-200 p-8 sm:p-12 flex flex-col items-center justify-center gap-3">
               <i className="fas fa-spinner fa-spin text-primary text-2xl"></i>
               <span className="text-sm text-slate-500">Chargement de votre tournée...</span>
             </div>
           ) : displayedClients.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 w-full">
               {displayedClients.map((client) => {
                 const due = client.amount_due ?? client.amountDue ?? 0;
                 const paid = client.amount_paid ?? client.amountPaid ?? 0;
@@ -456,13 +456,13 @@ export default function Collector() {
                 return (
                   <div
                     key={client.id}
-                    className="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-4 flex flex-col justify-between gap-3.5 hover:border-primary/40 transition-all"
+                    className="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-3.5 sm:p-4 flex flex-col justify-between gap-3 hover:border-primary/40 transition-all w-full min-w-0 overflow-hidden"
                   >
                     {/* Entête Carte */}
-                    <div>
+                    <div className="min-w-0">
                       <div className="flex items-start justify-between gap-2">
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className="w-11 h-11 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm shrink-0 border border-primary/20">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm shrink-0 border border-primary/20">
                             {(client.last_name ?? client.lastName ?? '?').slice(0, 1).toUpperCase()}
                           </div>
                           <div className="min-w-0">
@@ -487,13 +487,13 @@ export default function Collector() {
 
                       {/* Encart Déduction Réparation si active */}
                       {activeRepairRemaining > 0 && !isSettled && (
-                        <div className="mt-3 bg-amber-50 rounded-xl border border-amber-200/80 p-2.5 text-xs space-y-1">
+                        <div className="mt-2.5 bg-amber-50 rounded-xl border border-amber-200/80 p-2 text-xs space-y-0.5">
                           <div className="flex items-center justify-between font-bold text-amber-900">
-                            <span className="flex items-center gap-1 text-[11px]">
+                            <span className="flex items-center gap-1 text-[11px] truncate">
                               <i className="fas fa-wrench text-amber-600"></i>
                               Déduction réparation :
                             </span>
-                            <span className="text-rose-600 font-extrabold">-{formatXOF(repairDeduction)}</span>
+                            <span className="text-rose-600 font-extrabold shrink-0">-{formatXOF(repairDeduction)}</span>
                           </div>
                           <p className="text-[10px] text-amber-800 truncate">
                             {client.active_repair_desc || 'Travaux locataire'} (Reste : {formatXOF(activeRepairRemaining)})
@@ -502,7 +502,7 @@ export default function Collector() {
                       )}
 
                       {/* Synthèse Financière Loyer */}
-                      <div className="mt-3 grid grid-cols-2 gap-2 bg-slate-50 rounded-xl p-2.5 border border-slate-100 text-xs">
+                      <div className="mt-2.5 grid grid-cols-2 gap-2 bg-slate-50 rounded-xl p-2.5 border border-slate-100 text-xs">
                         <div>
                           <span className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold block">Loyer dû</span>
                           <span className="font-semibold text-slate-700">{formatXOF(due)}</span>
@@ -529,7 +529,7 @@ export default function Collector() {
                       {!isSettled ? (
                         <button
                           onClick={() => handleOpenPayment(client)}
-                          className="w-full py-2.5 px-4 bg-primary text-white text-xs sm:text-sm font-bold rounded-xl shadow-sm shadow-primary/20 hover:bg-primary-dark active:scale-[0.98] transition flex items-center justify-center gap-2"
+                          className="w-full py-2.5 px-3 min-h-[44px] bg-primary text-white text-xs sm:text-sm font-bold rounded-xl shadow-sm shadow-primary/20 hover:bg-primary-dark active:scale-[0.98] transition flex items-center justify-center gap-2 touch-manipulation"
                         >
                           <i className="fas fa-hand-holding-dollar"></i>
                           <span>Encaisser {repairDeduction > 0 ? formatXOF(netCollectible) : formatXOF(remaining)}</span>
@@ -544,20 +544,20 @@ export default function Collector() {
                       <div className="grid grid-cols-2 gap-2">
                         <button
                           onClick={() => handleOpenRepair(client)}
-                          className="py-1.5 px-2.5 bg-slate-100 hover:bg-amber-50 hover:text-amber-800 text-slate-600 text-[11px] font-semibold rounded-lg transition border border-slate-200 flex items-center justify-center gap-1.5"
+                          className="py-2 px-2 bg-slate-100 hover:bg-amber-50 hover:text-amber-800 text-slate-600 text-[11px] font-semibold rounded-lg transition border border-slate-200 flex items-center justify-center gap-1 active:scale-95 touch-manipulation"
                           title="Enregistrer des travaux de réparation engagés par le locataire"
                         >
                           <i className="fas fa-wrench text-amber-600 text-[10px]"></i>
-                          Réparation
+                          <span className="truncate">Réparation</span>
                         </button>
 
                         <button
                           onClick={() => handleOpenDeparture(client)}
-                          className="py-1.5 px-2.5 bg-slate-100 hover:bg-rose-50 hover:text-rose-700 text-slate-600 text-[11px] font-semibold rounded-lg transition border border-slate-200 flex items-center justify-center gap-1.5"
+                          className="py-2 px-2 bg-slate-100 hover:bg-rose-50 hover:text-rose-700 text-slate-600 text-[11px] font-semibold rounded-lg transition border border-slate-200 flex items-center justify-center gap-1 active:scale-95 touch-manipulation"
                           title="Signaler le départ du locataire et libérer le logement"
                         >
                           <i className="fas fa-door-open text-rose-600 text-[10px]"></i>
-                          Départ / Libérer
+                          <span className="truncate">Départ / Libérer</span>
                         </button>
                       </div>
                     </div>
@@ -566,7 +566,7 @@ export default function Collector() {
               })}
             </div>
           ) : (
-            <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center space-y-2">
+            <div className="bg-white rounded-2xl border border-slate-200 p-8 sm:p-12 text-center space-y-2">
               <i className="fas fa-users text-slate-300 text-3xl"></i>
               <p className="font-bold text-slate-700">Aucun locataire ne correspond à vos critères</p>
               <p className="text-xs text-slate-400">Modifiez les filtres de recherche ou actualisez.</p>
@@ -644,7 +644,7 @@ export default function Collector() {
                       {isVacant ? (
                         <button
                           onClick={() => handleOpenAssign(prop)}
-                          className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-bold rounded-xl shadow-sm transition flex items-center justify-center gap-2"
+                          className="w-full py-2.5 px-3 min-h-[44px] bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white text-xs sm:text-sm font-bold rounded-xl shadow-sm transition flex items-center justify-center gap-2 touch-manipulation"
                         >
                           <i className="fas fa-key"></i>
                           <span>Attribuer ce logement</span>
@@ -661,7 +661,7 @@ export default function Collector() {
               })}
             </div>
           ) : (
-            <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center space-y-2">
+            <div className="bg-white rounded-2xl border border-slate-200 p-8 sm:p-12 text-center space-y-2">
               <i className="fas fa-city text-slate-300 text-3xl"></i>
               <p className="font-bold text-slate-700">Aucun logement trouvé</p>
             </div>
@@ -673,25 +673,25 @@ export default function Collector() {
       {/* CONTENU ONGLET 3 : RÉPARATIONS & DÉDUCTIONS                                */}
       {/* ========================================================================= */}
       {activeTab === 'repairs' && (
-        <div className="space-y-4">
-          <div className="bg-amber-50 rounded-2xl border border-amber-200/90 p-4 flex items-start gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
-              <i className="fas fa-info-circle text-base"></i>
+        <div className="space-y-3 sm:space-y-4 w-full">
+          <div className="bg-amber-50 rounded-2xl border border-amber-200/90 p-3 sm:p-4 flex items-start gap-2.5 sm:gap-3">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+              <i className="fas fa-info-circle text-sm sm:text-base"></i>
             </div>
-            <div className="text-xs text-amber-900 leading-relaxed">
-              <span className="font-bold block text-sm mb-0.5">Fonctionnement des réparations locataire :</span>
+            <div className="text-[11px] sm:text-xs text-amber-900 leading-relaxed">
+              <span className="font-bold block text-xs sm:text-sm mb-0.5">Fonctionnement des réparations locataire :</span>
               Lorsqu'un locataire engage des dépenses pour des réparations (plomberie, toiture, électricité...), elles sont enregistrées ici.
-              Le loyer du locataire est automatiquement réduit chaque mois à concurrence de la déduction convenue jusqu'à remboursement / épongement total du montant.
+              Le loyer du locataire est automatiquement réduit chaque mois jusqu'à amortissement / remboursement total.
             </div>
           </div>
 
           {repairsLoading ? (
-            <div className="bg-white rounded-2xl border border-slate-200 p-12 flex flex-col items-center justify-center gap-3">
+            <div className="bg-white rounded-2xl border border-slate-200 p-8 sm:p-12 flex flex-col items-center justify-center gap-3">
               <i className="fas fa-spinner fa-spin text-primary text-2xl"></i>
               <span className="text-sm text-slate-500">Chargement des réparations...</span>
             </div>
           ) : repairsList.length > 0 ? (
-            <div className="space-y-3">
+            <div className="space-y-2.5 sm:space-y-3 w-full">
               {repairsList.map((rep) => {
                 const totalCost = parseFloat(rep.total_cost || 0);
                 const reimbursed = parseFloat(rep.reimbursed_amount || 0);
@@ -702,12 +702,12 @@ export default function Collector() {
                 return (
                   <div
                     key={rep.id}
-                    className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                    className="bg-white rounded-2xl border border-slate-200 p-3.5 sm:p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 w-full min-w-0"
                   >
                     <div className="space-y-1.5 flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-bold text-slate-900 text-sm">{rep.description}</span>
-                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black border ${
+                        <span className="font-bold text-slate-900 text-sm truncate">{rep.description}</span>
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-black border ${
                           isSettled
                             ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
                             : 'bg-amber-100 text-amber-800 border-amber-200'
@@ -721,26 +721,26 @@ export default function Collector() {
                         )}
                       </div>
 
-                      <p className="text-xs text-slate-500 flex items-center gap-2 flex-wrap">
+                      <p className="text-xs text-slate-500 flex items-center gap-1.5 flex-wrap">
                         <span>Locataire : <strong className="text-slate-700">{clientName}</strong></span>
                         {rep.property_name && (
                           <span>&bull; Logement : <strong className="text-slate-700">{rep.property_name}</strong></span>
                         )}
-                        <span>&bull; Date : {new Date(rep.repair_date).toLocaleDateString('fr-FR')}</span>
+                        <span>&bull; {new Date(rep.repair_date).toLocaleDateString('fr-FR')}</span>
                       </p>
 
-                      <div className="flex items-center gap-4 text-xs pt-1">
+                      <div className="grid grid-cols-3 gap-2 bg-slate-50 rounded-xl p-2 border border-slate-100 text-xs mt-2">
                         <div>
-                          <span className="text-slate-400 block text-[10px] uppercase">Coût total travaux</span>
-                          <span className="font-bold text-slate-800">{formatXOF(totalCost)}</span>
+                          <span className="text-slate-400 block text-[9px] uppercase font-semibold">Total travaux</span>
+                          <span className="font-bold text-slate-800 text-[11px] sm:text-xs">{formatXOF(totalCost)}</span>
                         </div>
                         <div>
-                          <span className="text-slate-400 block text-[10px] uppercase">Déjà déduit sur loyers</span>
-                          <span className="font-bold text-emerald-600">{formatXOF(reimbursed)}</span>
+                          <span className="text-slate-400 block text-[9px] uppercase font-semibold">Déjà déduit</span>
+                          <span className="font-bold text-emerald-600 text-[11px] sm:text-xs">{formatXOF(reimbursed)}</span>
                         </div>
-                        <div>
-                          <span className="text-slate-400 block text-[10px] uppercase">Reste à éponger</span>
-                          <span className={`font-black ${remaining > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
+                        <div className="text-right">
+                          <span className="text-slate-400 block text-[9px] uppercase font-semibold">Reste</span>
+                          <span className={`font-black text-[11px] sm:text-xs ${remaining > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
                             {formatXOF(remaining)}
                           </span>
                         </div>
@@ -751,7 +751,7 @@ export default function Collector() {
                       {!isSettled && (
                         <button
                           onClick={() => handleSettleRepair(rep)}
-                          className="px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-bold transition flex items-center gap-1.5"
+                          className="w-full sm:w-auto px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 active:scale-95 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 touch-manipulation"
                           title="Solder manuellement cette réparation"
                         >
                           <i className="fas fa-check-double text-xs"></i>
@@ -764,11 +764,11 @@ export default function Collector() {
               })}
             </div>
           ) : (
-            <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center space-y-2">
+            <div className="bg-white rounded-2xl border border-slate-200 p-8 sm:p-12 text-center space-y-2">
               <i className="fas fa-wrench text-slate-300 text-3xl"></i>
               <p className="font-bold text-slate-700">Aucune réparation enregistrée</p>
               <p className="text-xs text-slate-400">
-                Vous pouvez ajouter une réparation pour un locataire directement depuis l'onglet "Tournée & Encaissements".
+                Vous pouvez ajouter une réparation pour un locataire directement depuis l'onglet "Tournée".
               </p>
             </div>
           )}

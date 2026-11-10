@@ -99,22 +99,33 @@ export default function Transactions() {
 
   const { data: stats = {} } = useTransactionStats(filters);
 
+  const canViewSettlements = user?.role && ['admin', 'director', 'accounting', 'collector_manager'].includes(user.role);
+  const canViewLedger = user?.role && ['admin', 'director', 'accounting'].includes(user.role);
+
   const loadFinancialData = useCallback(async () => {
+    if (!canViewSettlements && !canViewLedger) {
+      return;
+    }
+
     setLoadingFinancial(true);
     try {
-      const [stlResult, ldgResult] = await Promise.allSettled([
-        API.Financial.getSettlements(),
-        API.Financial.getGeneralLedger()
-      ]);
+      const promises = [];
+      if (canViewSettlements) promises.push(API.Financial.getSettlements());
+      else promises.push(Promise.resolve(null));
 
-      if (stlResult.status === 'fulfilled') {
+      if (canViewLedger) promises.push(API.Financial.getGeneralLedger());
+      else promises.push(Promise.resolve(null));
+
+      const [stlResult, ldgResult] = await Promise.allSettled(promises);
+
+      if (stlResult.status === 'fulfilled' && stlResult.value) {
         const stlRes = stlResult.value;
         const stlPayload = stlRes?.data || stlRes || {};
         setSettlements(stlPayload.settlements || stlPayload.data || []);
         setSettlementStats(stlPayload.stats || {});
       }
 
-      if (ldgResult.status === 'fulfilled') {
+      if (ldgResult.status === 'fulfilled' && ldgResult.value) {
         const ldgRes = ldgResult.value;
         const ldgPayload = ldgRes?.data || ldgRes || {};
         setLedgerData({
@@ -127,11 +138,13 @@ export default function Transactions() {
     } finally {
       setLoadingFinancial(false);
     }
-  }, []);
+  }, [canViewSettlements, canViewLedger]);
 
   useEffect(() => {
-    loadFinancialData();
-  }, [loadFinancialData]);
+    if (canViewSettlements || canViewLedger) {
+      loadFinancialData();
+    }
+  }, [loadFinancialData, canViewSettlements, canViewLedger]);
 
   const totalCollected = stats.totalCollected || 0;
   const totalPending = stats.totalPending || 0;
@@ -339,44 +352,50 @@ export default function Transactions() {
       </div>
 
       {/* ONGLETS */}
-      <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 pb-2">
-        <button
-          onClick={() => setActiveTab('transactions')}
-          className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 ${
-            activeTab === 'transactions'
-              ? 'bg-primary text-white shadow-sm'
-              : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
-          }`}
-        >
-          <i className="fas fa-receipt"></i> Encaissements Locataires (Transactions)
-        </button>
-        <button
-          onClick={() => setActiveTab('settlements')}
-          className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 ${
-            activeTab === 'settlements'
-              ? 'bg-primary text-white shadow-sm'
-              : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
-          }`}
-        >
-          <i className="fas fa-hand-holding-usd"></i> Paiements & Préfinancements Propriétaires
-          <span className={`px-2 py-0.5 rounded-full text-xs ${activeTab === 'settlements' ? 'bg-white/20 text-white' : 'bg-emerald-100 text-emerald-800'}`}>
-            {settlements.length}
-          </span>
-        </button>
-        <button
-          onClick={() => setActiveTab('ledger')}
-          className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 ${
-            activeTab === 'ledger'
-              ? 'bg-primary text-white shadow-sm'
-              : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
-          }`}
-        >
-          <i className="fas fa-book"></i> Grand Livre Général
-          <span className={`px-2 py-0.5 rounded-full text-xs ${activeTab === 'ledger' ? 'bg-white/20 text-white' : 'bg-indigo-100 text-indigo-800'}`}>
-            {ledgerData.entries?.length || 0}
-          </span>
-        </button>
-      </div>
+      {(canViewSettlements || canViewLedger) && (
+        <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 pb-2">
+          <button
+            onClick={() => setActiveTab('transactions')}
+            className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 ${
+              activeTab === 'transactions'
+                ? 'bg-primary text-white shadow-sm'
+                : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+            }`}
+          >
+            <i className="fas fa-receipt"></i> Encaissements Locataires (Transactions)
+          </button>
+          {canViewSettlements && (
+            <button
+              onClick={() => setActiveTab('settlements')}
+              className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 ${
+                activeTab === 'settlements'
+                  ? 'bg-primary text-white shadow-sm'
+                  : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+              }`}
+            >
+              <i className="fas fa-hand-holding-usd"></i> Paiements & Préfinancements Propriétaires
+              <span className={`px-2 py-0.5 rounded-full text-xs ${activeTab === 'settlements' ? 'bg-white/20 text-white' : 'bg-emerald-100 text-emerald-800'}`}>
+                {settlements.length}
+              </span>
+            </button>
+          )}
+          {canViewLedger && (
+            <button
+              onClick={() => setActiveTab('ledger')}
+              className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 ${
+                activeTab === 'ledger'
+                  ? 'bg-primary text-white shadow-sm'
+                  : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+              }`}
+            >
+              <i className="fas fa-book"></i> Grand Livre Général
+              <span className={`px-2 py-0.5 rounded-full text-xs ${activeTab === 'ledger' ? 'bg-white/20 text-white' : 'bg-indigo-100 text-indigo-800'}`}>
+                {ledgerData.entries?.length || 0}
+              </span>
+            </button>
+          )}
+        </div>
+      )}
 
       {/* ONGLET 1 : TRANSACTIONS LOCATAIRES */}
       {activeTab === 'transactions' && (

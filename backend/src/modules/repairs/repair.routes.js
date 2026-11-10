@@ -10,3 +10,4 @@ router.post('/', authorize('admin', 'director', 'accounting', 'collector_manager
 router.post('/:id/settle', authorize('admin', 'director', 'accounting', 'collector_manager', 'collector'), (req, res, next) => RepairController.settle(req, res, next));
 
 module.exports = router;
+

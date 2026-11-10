@@ -146,3 +146,4 @@ export default function TenantDepartureModal({ isOpen, onClose, client, onSucces
     </Modal>
   );
 }
+

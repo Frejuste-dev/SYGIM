@@ -128,8 +128,8 @@ export default function Admin() {
       <div className="flex-1 flex flex-col min-w-0 overflow-x-hidden">
         
         {/* HEADER FIXE EN HAUT */}
-        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 z-10 shrink-0">
-          <div className="flex items-center gap-4 min-w-0">
+        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-3 sm:px-6 z-10 shrink-0">
+          <div className="flex items-center gap-2 sm:gap-4 min-w-0">
             <button 
               className="md:hidden p-2 text-slate-600 hover:text-slate-900 focus:outline-none"
               onClick={() => setIsSidebarOpen(true)}
@@ -221,7 +221,7 @@ export default function Admin() {
         </header>
 
         {/* ZONE DE DONNÉES */}
-        <main className={`flex-1 overflow-y-auto overflow-x-hidden p-3.5 sm:p-6 md:p-8 bg-slate-50 ${userRole === 'collector' ? 'pb-20 md:pb-8' : ''}`}>
+        <main className={`flex-1 overflow-y-auto overflow-x-hidden p-2 sm:p-6 md:p-8 bg-slate-50 ${userRole === 'collector' ? 'pb-24 md:pb-8' : ''}`}>
            <Outlet />
         </main>
 
