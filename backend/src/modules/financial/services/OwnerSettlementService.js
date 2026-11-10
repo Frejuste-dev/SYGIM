@@ -151,23 +151,21 @@ class OwnerSettlementService {
    * Enregistre un paiement au propriétaire (Intégral, Échelonné, ou Préfinancement)
    */
   async recordOwnerPayment(payload, userId = null) {
-    const {
-      owner_id,
-      property_id = null,
-      period_start,
-      period_end,
-      expected_rent = 0,
-      total_collected = 0,
-      commission_rate = 10,
-      maintenance_deductions = 0,
-      amount_paid,
-      payment_method = 'bank_transfer',
-      payout_mode = 'full', // 'full' | 'installment' | 'prefinancing'
-      is_prefinanced = false,
-      scheduled_date = null,
-      payout_reference = '',
-      notes = ''
-    } = payload;
+    const owner_id = payload.owner_id || payload.ownerId;
+    const property_id = payload.property_id || payload.propertyId || null;
+    const period_start = payload.period_start || payload.periodStart;
+    const period_end = payload.period_end || payload.periodEnd;
+    const expected_rent = payload.expected_rent ?? payload.expectedRent ?? 0;
+    const total_collected = payload.total_collected ?? payload.totalCollected ?? 0;
+    const commission_rate = payload.commission_rate ?? payload.commissionRate ?? 10;
+    const maintenance_deductions = payload.maintenance_deductions ?? payload.maintenanceDeductions ?? 0;
+    const amount_paid = payload.amount_paid ?? payload.amountPaid;
+    const payment_method = payload.payment_method || payload.paymentMethod || 'bank_transfer';
+    const payout_mode = payload.payout_mode || payload.payoutMode || 'full';
+    const is_prefinanced = Boolean(payload.is_prefinanced ?? payload.isPrefinanced ?? false);
+    const scheduled_date = payload.scheduled_date || payload.scheduledDate || null;
+    const payout_reference = payload.payout_reference || payload.payoutReference || '';
+    const notes = payload.notes || '';
 
     if (!owner_id) {
       throw AppError.badRequest('Veuillez sélectionner un propriétaire.');

@@ -1,5 +1,19 @@
 const { body, validationResult } = require('express-validator');
 
+const normalizeOwnerBody = (req, res, next) => {
+  if (req.body) {
+    if (req.body.firstName && !req.body.first_name) req.body.first_name = req.body.firstName;
+    if (req.body.lastName && !req.body.last_name) req.body.last_name = req.body.lastName;
+    if (req.body.preferredPaymentMethod && !req.body.preferred_payment_method) req.body.preferred_payment_method = req.body.preferredPaymentMethod;
+    if (req.body.payoutSchedule && !req.body.payout_schedule) req.body.payout_schedule = req.body.payoutSchedule;
+    if (req.body.preferredPayoutDay && !req.body.preferred_payout_day) req.body.preferred_payout_day = req.body.preferredPayoutDay;
+    if (req.body.bankName && !req.body.bank_name) req.body.bank_name = req.body.bankName;
+    if (req.body.accountNumber && !req.body.account_number) req.body.account_number = req.body.accountNumber;
+    if (req.body.commissionRate !== undefined && req.body.commission_rate === undefined) req.body.commission_rate = req.body.commissionRate;
+  }
+  next();
+};
+
 const handleValidationErrors = (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -14,6 +28,7 @@ const handleValidationErrors = (req, res, next) => {
 };
 
 const ownerValidator = [
+  normalizeOwnerBody,
   body('first_name')
     .optional({ checkFalsy: true })
     .isString().withMessage('Le prénom doit être une chaîne de caractères')
@@ -71,6 +86,7 @@ const ownerValidator = [
 ];
 
 const updateOwnerValidator = [
+  normalizeOwnerBody,
   body('first_name')
     .optional()
     .isString().withMessage('Le prénom doit être une chaîne de caractères')

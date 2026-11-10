@@ -35,11 +35,12 @@ const apiLimiter = rateLimit({
 
 /**
  * Limiteur strict pour les routes sensibles (Login)
- * 10 tentatives maximum par fenêtre de 15 minutes
+ * En dev : 500 tentatives (évite le blocage des suites E2E et reloads React)
+ * En production : 15 tentatives par fenêtre de 15 minutes
  */
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 10,
+  max: isDev ? 500 : 15,
   handler: (req, res) => {
     res.status(429).json(
       ApiResponse.error(

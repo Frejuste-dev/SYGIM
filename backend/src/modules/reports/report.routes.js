@@ -26,6 +26,7 @@ router.get('/kpis', reportController.getKpis);
  * @route   GET /api/reports/dashboard
  */
 router.get('/dashboard', reportValidator, reportController.getDashboard);
+router.get('/monthly', reportValidator, reportController.getDashboard);
 
 /**
  * @route   GET /api/reports/collectors

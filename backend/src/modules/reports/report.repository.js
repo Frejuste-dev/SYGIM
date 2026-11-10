@@ -475,8 +475,7 @@ class ReportRepository {
       ? Math.min(100, Math.round((reimbursedAmount / totalPrefinancedAmount) * 100))
       : 0;
 
-    return {
-      summary: {
+    const summaryData = {
         totalPrefinancedAmount,
         activePrefinancedAmount,
         reimbursedAmount,
@@ -490,7 +489,11 @@ class ReportRepository {
         eligibleCount: eligibleCases.length,
         totalEligibleArrears,
         totalSuggestedNetPrefinance
-      },
+      };
+
+    return {
+      summary: summaryData,
+      kpis: summaryData,
       prefinancings,
       eligibleCases
     };
