@@ -104,7 +104,7 @@ export default function App() {
                             <Route 
                                 path="transactions" 
                                 element={
-                                    <ProtectedRoute allowedRoles={['admin', 'super_admin', 'director', 'accounting', 'collector_manager', 'collector', 'gestionnaire']}>
+                                    <ProtectedRoute allowedRoles={['admin', 'super_admin', 'director', 'accounting', 'collector_manager', 'gestionnaire']}>
                                         <Transactions />
                                     </ProtectedRoute>
                                 } 

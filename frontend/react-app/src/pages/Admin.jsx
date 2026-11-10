@@ -49,7 +49,7 @@ export default function Admin() {
         { name: 'Propriétés', path: '/admin/properties', icon: 'fas fa-building', roles: ['admin', 'super_admin', 'gestionnaire', 'director', 'accounting', 'collector_manager'] },
         { name: 'Locataires', path: '/admin/clients', icon: 'fas fa-user-friends', roles: ['admin', 'super_admin', 'gestionnaire', 'director', 'accounting', 'collector_manager'] },
         { name: 'Propriétaires', path: '/admin/owners', icon: 'fas fa-user-tie', roles: ['admin', 'super_admin', 'gestionnaire', 'director', 'accounting', 'collector_manager'] },
-        { name: 'Transactions', path: '/admin/transactions', icon: 'fas fa-exchange-alt', roles: ['admin', 'super_admin', 'gestionnaire', 'collecteur', 'collector', 'collector_manager', 'director', 'accounting'] },
+        { name: 'Transactions', path: '/admin/transactions', icon: 'fas fa-exchange-alt', roles: ['admin', 'super_admin', 'gestionnaire', 'collector_manager', 'director', 'accounting'] },
       ]
     },
     {
@@ -173,9 +173,10 @@ export default function Admin() {
                         ? `${alert.first_name || ''} ${alert.last_name || ''}`.trim()
                         : alert.client_name || alert.clientName || alert.tenant_name || 'Client inconnu';
                       const propertyName = alert.property_name || alert.propertyName || alert.property || 'Propriété';
+                      const alertTarget = userRole === 'collector' || userRole === 'collecteur' ? '/admin/collector' : '/admin/transactions';
                       return (
                       <div key={alert.id || Math.random()} 
-                           onClick={() => handleNotificationClick('/admin/transactions')}
+                           onClick={() => handleNotificationClick(alertTarget)}
                            className="px-4 py-3 hover:bg-slate-50 cursor-pointer transition-colors">
                         <p className="text-sm text-slate-800 font-medium">Loyer en retard</p>
                         <p className="text-xs text-slate-500 mt-1">{clientName} - {propertyName}</p>
@@ -188,7 +189,10 @@ export default function Admin() {
                     )}
                   </div>
                   <div className="p-2 bg-slate-50 border-t border-slate-100">
-                    <button onClick={() => handleNotificationClick('/admin/transactions')} className="w-full py-2 text-sm font-medium text-primary hover:bg-slate-100 rounded-lg transition-colors cursor-pointer">
+                    <button 
+                      onClick={() => handleNotificationClick(userRole === 'collector' || userRole === 'collecteur' ? '/admin/collector' : '/admin/transactions')} 
+                      className="w-full py-2 text-sm font-medium text-primary hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                    >
                       Voir toutes les alertes
                     </button>
                   </div>
@@ -227,20 +231,13 @@ export default function Admin() {
 
         {/* BARRE DE NAVIGATION MOBILE BAS D'ÉCRAN (Spécifique Collecteur Terrain) */}
         {userRole === 'collector' && (
-          <nav className="md:hidden fixed bottom-0 inset-x-0 bg-white/95 backdrop-blur-md border-t border-slate-200 z-40 flex items-center justify-around h-16 px-1 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
+          <nav className="md:hidden fixed bottom-0 inset-x-0 bg-white/95 backdrop-blur-md border-t border-slate-200 z-40 flex items-center justify-around h-16 px-4 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
             <NavLink 
               to="/admin/collector" 
               className={({ isActive }) => `flex flex-col items-center justify-center flex-1 py-1 text-[11px] font-semibold transition-colors ${isActive ? 'text-primary' : 'text-slate-400 hover:text-slate-600'}`}
             >
               <i className="fas fa-route text-lg mb-0.5"></i>
               <span>Tournée</span>
-            </NavLink>
-            <NavLink 
-              to="/admin/transactions" 
-              className={({ isActive }) => `flex flex-col items-center justify-center flex-1 py-1 text-[11px] font-semibold transition-colors ${isActive ? 'text-primary' : 'text-slate-400 hover:text-slate-600'}`}
-            >
-              <i className="fas fa-receipt text-lg mb-0.5"></i>
-              <span>Paiements</span>
             </NavLink>
             <NavLink 
               to="/admin/profile" 
