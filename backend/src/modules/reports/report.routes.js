@@ -2,7 +2,7 @@
  * Module   : Reports
  * Auteur   : SYGIM Team
  * Créé le  : 2026-06-16
- * Rôle     : Routes pour la génération de rapports
+ * Rôle     : Routes pour la génération de rapports & analyses
  */
 
 const express = require('express');
@@ -36,6 +36,11 @@ router.get('/collectors', reportValidator, reportController.getCollector);
  * @route   GET /api/reports/properties
  */
 router.get('/properties', reportValidator, reportController.getProperty);
+
+/**
+ * @route   GET /api/reports/prefinancing
+ */
+router.get('/prefinancing', reportValidator, reportController.getPrefinancing);
 
 /**
  * @route   GET /api/reports/export/csv/:type

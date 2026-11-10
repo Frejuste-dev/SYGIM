@@ -22,20 +22,20 @@ const handleValidationErrors = (req, res, next) => {
 
 const reportValidator = [
   query('startDate')
-    .optional()
+    .optional({ checkFalsy: true })
     .isDate({ format: 'YYYY-MM-DD' }).withMessage('Format date invalide (YYYY-MM-DD)'),
 
   query('endDate')
-    .optional()
+    .optional({ checkFalsy: true })
     .isDate({ format: 'YYYY-MM-DD' }).withMessage('Format date invalide (YYYY-MM-DD)'),
 
   query('ownerId')
-    .optional()
+    .optional({ checkFalsy: true })
     .isInt({ min: 1 }).withMessage('ownerId doit être un entier positif'),
 
   query('type')
-    .optional()
-    .isIn(['dashboard', 'collectors', 'properties', 'transactions']).withMessage('Type de rapport invalide'),
+    .optional({ checkFalsy: true })
+    .isIn(['dashboard', 'collectors', 'properties', 'transactions', 'prefinancing', 'overdue']).withMessage('Type de rapport invalide'),
 
   handleValidationErrors
 ];
@@ -43,7 +43,7 @@ const reportValidator = [
 const exportTypeValidator = [
   param('type')
     .notEmpty().withMessage('Le type de rapport est requis')
-    .isIn(['dashboard', 'collectors', 'properties', 'transactions']).withMessage('Type de rapport invalide'),
+    .isIn(['dashboard', 'collectors', 'properties', 'transactions', 'prefinancing', 'overdue']).withMessage('Type de rapport invalide'),
 
   handleValidationErrors
 ];

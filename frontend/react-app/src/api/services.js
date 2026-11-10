@@ -258,8 +258,8 @@ export const API = {
      * Rapports & Analytics
      */
     Reports: {
-        getDashboard: () => 
-            httpClient.get('/reports/dashboard'),
+        getDashboard: (filters = {}) => 
+            httpClient.get('/reports/dashboard', { params: filters }),
 
         getKpis: () =>
             httpClient.get('/reports/kpis'),
@@ -267,11 +267,14 @@ export const API = {
         getRevenue: (dateRange) => 
             httpClient.get('/reports/revenue', { params: dateRange }),
         
-        getPropertyStats: () => 
-            httpClient.get('/reports/properties'),
+        getPropertyStats: (filters = {}) => 
+            httpClient.get('/reports/properties', { params: filters }),
         
         getClientStats: () => 
             httpClient.get('/reports/clients/stats'),
+
+        getPrefinancing: (filters = {}) =>
+            httpClient.get('/reports/prefinancing', { params: filters }),
         
         generatePdf: (reportType, filters = {}) => 
             httpClient.get(`/reports/export/pdf/${reportType}`, { params: filters }),
@@ -286,7 +289,7 @@ export const API = {
             httpClient.get('/reports/owner', { params: { ...filters, format: 'json' } }),
 
         getAgent: (filters = {}) =>
-            httpClient.get('/reports/collectors', { params: { ...filters, format: 'json' } })
+            httpClient.get('/reports/collectors', { params: { ...filters } })
     },
 
     /**

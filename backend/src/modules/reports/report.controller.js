@@ -2,12 +2,11 @@
  * Module   : Reports
  * Auteur   : SYGIM Team
  * Créé le  : 2026-06-16
- * Rôle     : Contrôleur des rapports
+ * Rôle     : Contrôleur des rapports & analyses
  */
 
 const reportService = require('./report.service');
 const ApiResponse = require('../../utils/responses/ApiResponse');
-const { validationResult } = require('express-validator');
 
 class ReportController {
   async getKpis(req, res, next) {
@@ -40,6 +39,15 @@ class ReportController {
   async getProperty(req, res, next) {
     try {
       const data = await reportService.getPropertyReport(req.query);
+      res.status(200).json(ApiResponse.success(data));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getPrefinancing(req, res, next) {
+    try {
+      const data = await reportService.getPrefinancingReport(req.query);
       res.status(200).json(ApiResponse.success(data));
     } catch (error) {
       next(error);
