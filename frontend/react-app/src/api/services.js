@@ -297,6 +297,15 @@ export const API = {
         getOwner: (filters = {}) =>
             httpClient.get('/reports/owner', { params: { ...filters, format: 'json' } }),
 
+        getOwnerStatements: (filters = {}) =>
+            httpClient.get('/reports/owner-statements', { params: filters }),
+
+        exportOwnerStatementsExcel: (filters = {}) =>
+            httpClient.get('/reports/owner-statements/export/excel', { params: filters, responseType: 'blob' }),
+
+        downloadOwnerStatementPdf: (ownerId, filters = {}) =>
+            httpClient.get(`/reports/owner-statements/${ownerId}/pdf`, { params: filters, responseType: 'blob' }),
+
         getAgent: (filters = {}) =>
             httpClient.get('/reports/collectors', { params: { ...filters } })
     },

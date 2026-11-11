@@ -294,6 +294,25 @@ async function runE2E() {
   const prefinReport = await request('/api/reports/prefinancing', { cookie: comptableCookie });
   assert(prefinReport.status === 200 && prefinReport.data?.data?.kpis, 'GET /api/reports/prefinancing validé avec KPIs de trésorerie agence');
 
+  // Tests du Décompte Bailleurs & Locataires (Master-Detail Accordion & Bordereaux)
+  const ownerStatements = await request('/api/reports/owner-statements?month=2026-11', { cookie: comptableCookie });
+  assert(
+    ownerStatements.status === 200 && Array.isArray(ownerStatements.data?.data?.statements) && ownerStatements.data.data.statements.length > 0,
+    'GET /api/reports/owner-statements renvoie les décomptes consolidés avec sous-lignes locataires'
+  );
+
+  const testOwner = ownerStatements.data?.data?.statements?.[0];
+  assert(
+    testOwner && Array.isArray(testOwner.units) && testOwner.units.length > 0 && typeof testOwner.net_owner_payout === 'number',
+    `Vérification décompte bailleur ${testOwner?.owner_name} : Loyer, Arriérés, Commission et Net Propriétaire validés`
+  );
+
+  const ownerPdfRes = await request(`/api/reports/owner-statements/${testOwner?.owner_id || 1}/pdf?month=2026-11`, { cookie: comptableCookie });
+  assert(ownerPdfRes.status === 200 && ownerPdfRes.headers['content-type'] === 'application/pdf', 'GET /api/reports/owner-statements/:id/pdf génère le Bordereau officiel A4');
+
+  const excelExportRes = await request('/api/reports/owner-statements/export/excel?month=2026-11', { cookie: comptableCookie });
+  assert(excelExportRes.status === 200 && excelExportRes.raw?.includes('ÉTAT RÉCAPITULATIF'), 'GET /api/reports/owner-statements/export/excel exporte le fichier hiérarchique');
+
   console.log('\n8️⃣  CONTRÔLE DE SÉCURITÉ & RESTRICTIONS RBAC COLLECTEUR');
   const collectorSettlements = await request('/api/financial/settlements', { cookie: collectorCookie });
   assert(collectorSettlements.status === 403, 'Collecteur bloqué en 403 Forbidden sur /api/financial/settlements');

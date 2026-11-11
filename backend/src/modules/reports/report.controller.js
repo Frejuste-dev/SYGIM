@@ -75,6 +75,52 @@ class ReportController {
       next(error);
     }
   }
+
+  /**
+   * GET /api/reports/owner-statements
+   * Décompte hiérarchique Bailleurs & Locataires
+   */
+  async getOwnerStatements(req, res, next) {
+    try {
+      const data = await reportService.getOwnerStatements(req.query);
+      res.status(200).json(ApiResponse.success(data));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/reports/owner-statements/export/excel
+   * Export Excel complet du rapport décompte bailleurs & locataires
+   */
+  async exportOwnerStatementsExcel(req, res, next) {
+    try {
+      const csv = await reportService.exportOwnerStatementsExcel(req.query);
+      const month = req.query.month || new Date().toISOString().slice(0, 7);
+      res.header('Content-Type', 'text/csv; charset=utf-8');
+      res.attachment(`decompte_bailleurs_locataires_${month}.csv`);
+      res.send(csv);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/reports/owner-statements/:ownerId/pdf
+   * Bordereau de reddition de comptes mensuel officiel pour un propriétaire
+   */
+  async exportOwnerStatementPdf(req, res, next) {
+    try {
+      const { ownerId } = req.params;
+      const { month } = req.query;
+      const pdf = await reportService.exportOwnerStatementPdf(ownerId, month);
+      res.header('Content-Type', 'application/pdf');
+      res.attachment(`bordereau_reddition_proprietaire_${ownerId}_${month || 'mois'}.pdf`);
+      res.send(pdf);
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 module.exports = new ReportController();

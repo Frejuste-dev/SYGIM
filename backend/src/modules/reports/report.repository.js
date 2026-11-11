@@ -651,6 +651,258 @@ class ReportRepository {
       occupancyRate: totalProperties > 0 ? Math.round((occupiedCount / totalProperties) * 100) : 0,
     };
   }
+
+  /**
+   * Rapport hiérarchique Décompte Bailleurs & Locataires (Master-Detail)
+   * Ligne Propriétaire: Loyer Global | Loyer Encaissé | Reste | Préfinancé | Commission | Net
+   * Sous-lignes Locataires: Locataire | Bien | Loyer Attendu | Loyer Payé | Arriéré | Préfinancé
+   */
+  async getOwnerStatements({ month, search, ownerId } = {}) {
+    const targetMonth = month || new Date().toISOString().slice(0, 7); // e.g. '2026-11'
+    const [yearStr, monthStr] = targetMonth.split('-');
+    const year = parseInt(yearStr, 10);
+    const monthNum = parseInt(monthStr, 10);
+    const startDate = `${targetMonth}-01`;
+    const lastDay = new Date(year, monthNum, 0).getDate();
+    const endDate = `${targetMonth}-${String(lastDay).padStart(2, '0')}`;
+
+    // 1. Récupérer les propriétaires
+    let ownersQuery = `
+      SELECT 
+        o.id,
+        o.first_name,
+        o.last_name,
+        o.display_name,
+        o.phone,
+        o.email,
+        o.bank_name,
+        o.bank_account,
+        o.preferred_payment_method,
+        o.preferred_payout_day,
+        COALESCE(o.commission_rate, 10) AS commission_rate
+      FROM owners o
+      WHERE o.active = 1
+    `;
+    const ownerParams = [];
+    if (ownerId) {
+      ownersQuery += ' AND o.id = ?';
+      ownerParams.push(ownerId);
+    }
+    ownersQuery += ' ORDER BY o.last_name ASC, o.first_name ASC';
+    const [ownersRows] = await db.query(ownersQuery, ownerParams);
+
+    // 2. Récupérer tous les biens et leurs locataires actifs
+    const [propertyRows] = await db.query(`
+      SELECT 
+        p.id AS property_id,
+        p.name AS property_name,
+        p.address AS property_address,
+        p.type AS property_type,
+        p.status AS property_status,
+        COALESCE(p.rent, 0) AS property_rent,
+        p.owner_id,
+        c.id AS tenant_id,
+        c.first_name AS tenant_first_name,
+        c.last_name AS tenant_last_name,
+        c.phone AS tenant_phone,
+        c.status AS tenant_status,
+        COALESCE(c.amount_due, 0) AS tenant_amount_due,
+        COALESCE(c.amount_paid, 0) AS tenant_amount_paid
+      FROM properties p
+      LEFT JOIN clients c ON (c.property_id = p.id AND c.status != 'departed')
+      ORDER BY p.name ASC
+    `);
+
+    // 3. Récupérer les factures pour ce mois précis
+    const [invoicesRows] = await db.query(`
+      SELECT 
+        property_id,
+        client_id,
+        total_amount,
+        paid_amount,
+        status
+      FROM invoices
+      WHERE DATE(billing_period_start) >= ? AND DATE(billing_period_start) <= ?
+    `, [startDate, endDate]);
+
+    const invoicesByProperty = {};
+    for (const inv of invoicesRows) {
+      invoicesByProperty[inv.property_id] = inv;
+    }
+
+    // 4. Récupérer les préfinancements pour ce mois
+    const [prefinRows] = await db.query(`
+      SELECT 
+        owner_id,
+        property_id,
+        amount_paid,
+        status,
+        payout_reference
+      FROM owner_settlements
+      WHERE (is_prefinanced = 1 OR payout_mode = 'prefinancing')
+        AND DATE(period_start) <= ? AND DATE(period_end) >= ?
+    `, [endDate, startDate]);
+
+    const prefinByProperty = {};
+    const prefinByOwnerGeneral = {};
+    for (const pref of prefinRows) {
+      if (pref.property_id) {
+        prefinByProperty[pref.property_id] = (prefinByProperty[pref.property_id] || 0) + Number(pref.amount_paid || 0);
+      } else {
+        prefinByOwnerGeneral[pref.owner_id] = (prefinByOwnerGeneral[pref.owner_id] || 0) + Number(pref.amount_paid || 0);
+      }
+    }
+
+    // 5. Indexer les biens par propriétaire
+    const propertiesByOwner = {};
+    for (const prop of propertyRows) {
+      if (!propertiesByOwner[prop.owner_id]) {
+        propertiesByOwner[prop.owner_id] = [];
+      }
+      propertiesByOwner[prop.owner_id].push(prop);
+    }
+
+    const searchLower = (search || '').trim().toLowerCase();
+
+    // 6. Construire le tableau hiérarchique
+    const statements = [];
+    let globalExpected = 0;
+    let globalCollected = 0;
+    let globalArrears = 0;
+    let globalPrefinanced = 0;
+    let globalCommission = 0;
+    let globalNetPayout = 0;
+
+    for (const o of ownersRows) {
+      const ownerProps = propertiesByOwner[o.id] || [];
+      const units = [];
+      let totalExpected = 0;
+      let totalCollected = 0;
+      let totalArrears = 0;
+      let totalPrefinanced = prefinByOwnerGeneral[o.id] || 0;
+
+      let matchedByTenant = false;
+
+      for (const p of ownerProps) {
+        const hasTenant = Boolean(p.tenant_id);
+        const inv = invoicesByProperty[p.property_id];
+        
+        let tenantName = '';
+        let expectedRent = 0;
+        let collectedRent = 0;
+        let arrears = 0;
+        let prefinancedAmount = prefinByProperty[p.property_id] || 0;
+        let isVacant = false;
+
+        if (hasTenant) {
+          tenantName = `${p.tenant_first_name || ''} ${p.tenant_last_name || ''}`.trim() || `Locataire #${p.tenant_id}`;
+          expectedRent = inv ? Number(inv.total_amount || 0) : Number(p.property_rent || p.tenant_amount_due || 0);
+          
+          if (inv) {
+            collectedRent = Number(inv.paid_amount || 0);
+          } else {
+            collectedRent = p.tenant_status === 'paid' ? expectedRent : Number(p.tenant_amount_paid || 0);
+          }
+          arrears = expectedRent - collectedRent;
+        } else {
+          // Logement vacant (inclus explicitement avec mention)
+          tenantName = '(Logement vacant - 0 XOF)';
+          expectedRent = 0;
+          collectedRent = 0;
+          arrears = 0;
+          isVacant = true;
+        }
+
+        totalExpected += expectedRent;
+        totalCollected += collectedRent;
+        totalArrears += arrears;
+        totalPrefinanced += prefinancedAmount;
+
+        const tenantMatchesSearch = searchLower && (
+          tenantName.toLowerCase().includes(searchLower) ||
+          (p.property_name || '').toLowerCase().includes(searchLower) ||
+          (p.property_address || '').toLowerCase().includes(searchLower)
+        );
+        if (tenantMatchesSearch) {
+          matchedByTenant = true;
+        }
+
+        units.push({
+          property_id: p.property_id,
+          property_name: p.property_name,
+          property_address: p.property_address,
+          property_type: p.property_type,
+          tenant_id: p.tenant_id || null,
+          tenant_name: tenantName,
+          tenant_phone: p.tenant_phone || '—',
+          tenant_status: p.tenant_status || (isVacant ? 'vacant' : 'active'),
+          expected_rent: expectedRent,
+          collected_rent: collectedRent,
+          arrears,
+          prefinanced_amount: prefinancedAmount,
+          is_vacant: isVacant,
+          matches_search: Boolean(tenantMatchesSearch)
+        });
+      }
+
+      const ownerName = `${o.first_name || ''} ${o.last_name || ''}`.trim() || o.display_name || `Propriétaire #${o.id}`;
+      const ownerMatchesSearch = searchLower && ownerName.toLowerCase().includes(searchLower);
+
+      // Si recherche active, ne garder que ceux qui correspondent au propriétaire ou à l'un de ses locataires
+      if (searchLower && !ownerMatchesSearch && !matchedByTenant) {
+        continue;
+      }
+
+      const commRate = Number(o.commission_rate || 10);
+      const agencyCommission = Math.round((totalCollected * commRate) / 100);
+      const netOwnerPayout = Math.max(0, totalCollected - agencyCommission + totalPrefinanced);
+
+      globalExpected += totalExpected;
+      globalCollected += totalCollected;
+      globalArrears += totalArrears;
+      globalPrefinanced += totalPrefinanced;
+      globalCommission += agencyCommission;
+      globalNetPayout += netOwnerPayout;
+
+      statements.push({
+        owner_id: o.id,
+        owner_name: ownerName,
+        phone: o.phone || '—',
+        email: o.email || '—',
+        bank_name: o.bank_name || '—',
+        bank_account: o.bank_account || '—',
+        preferred_payment_method: o.preferred_payment_method || 'bank_transfer',
+        preferred_payout_day: o.preferred_payout_day || '5',
+        commission_rate: commRate,
+        properties_count: ownerProps.length,
+        tenants_count: ownerProps.filter(p => p.tenant_id).length,
+        total_expected_rent: totalExpected,
+        total_collected_rent: totalCollected,
+        total_arrears: totalArrears,
+        total_prefinanced: totalPrefinanced,
+        agency_commission: agencyCommission,
+        net_owner_payout: netOwnerPayout,
+        matched_by_tenant: matchedByTenant,
+        units
+      });
+    }
+
+    return {
+      month: targetMonth,
+      period_label: new Date(`${targetMonth}-01`).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }),
+      totals: {
+        total_owners: statements.length,
+        global_expected: globalExpected,
+        global_collected: globalCollected,
+        global_arrears: globalArrears,
+        global_prefinanced: globalPrefinanced,
+        global_commission: globalCommission,
+        global_net_payout: globalNetPayout,
+        recovery_rate: globalExpected > 0 ? Math.round((globalCollected / globalExpected) * 100) : 0
+      },
+      statements
+    };
+  }
 }
 
 module.exports = new ReportRepository();

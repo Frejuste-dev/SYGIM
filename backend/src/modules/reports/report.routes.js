@@ -44,6 +44,24 @@ router.get('/properties', reportValidator, reportController.getProperty);
 router.get('/prefinancing', reportValidator, reportController.getPrefinancing);
 
 /**
+ * @route   GET /api/reports/owner-statements
+ * @desc    Rapport hiérarchique Bailleurs & Locataires (Lignes propriétaires déroulantes)
+ */
+router.get('/owner-statements', reportController.getOwnerStatements);
+
+/**
+ * @route   GET /api/reports/owner-statements/export/excel
+ * @desc    Export Excel hiérarchique de l'état des bailleurs et décompte locatif
+ */
+router.get('/owner-statements/export/excel', reportController.exportOwnerStatementsExcel);
+
+/**
+ * @route   GET /api/reports/owner-statements/:ownerId/pdf
+ * @desc    Bordereau de reddition de comptes mensuel officiel pour un propriétaire
+ */
+router.get('/owner-statements/:ownerId/pdf', reportController.exportOwnerStatementPdf);
+
+/**
  * @route   GET /api/reports/export/csv/:type
  */
 router.get('/export/csv/:type', exportTypeValidator, reportController.exportCsv);
