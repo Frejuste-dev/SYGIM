@@ -912,7 +912,7 @@ export default function Reports() {
           <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col lg:flex-row justify-between items-stretch lg:items-center gap-4">
             <div>
               <div className="flex items-center gap-2">
-                <span className="p-2 bg-amber-100 text-amber-800 rounded-xl text-base">
+                <span className="p-2 bg-primary/10 text-primary rounded-xl text-base">
                   <i className="fas fa-file-invoice-dollar"></i>
                 </span>
                 <h3 className="text-lg font-bold text-slate-900">État Récapitulatif Bailleurs & Décompte Locatif</h3>
@@ -1076,15 +1076,15 @@ export default function Reports() {
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="bg-slate-800 text-white text-[11px] font-bold uppercase tracking-wider">
-                      <th className="py-3 px-4 min-w-[260px]">Propriétaire / Locataire</th>
-                      <th className="py-3 px-3 text-right min-w-[125px]">Loyer Global</th>
-                      <th className="py-3 px-3 text-right min-w-[125px]">Loyer Encaissé</th>
-                      <th className="py-3 px-3 text-right min-w-[130px]">Reste à Recouvrer</th>
-                      <th className="py-3 px-3 text-right min-w-[130px]">Montant Préfinancé</th>
-                      <th className="py-3 px-3 text-right min-w-[130px]">Commission Agence</th>
-                      <th className="py-3 px-3 text-right min-w-[135px]">Net Propriétaire</th>
-                      <th className="py-3 px-4 text-center min-w-[110px]">Bordereau</th>
+                    <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 text-xs font-semibold uppercase tracking-wider">
+                      <th className="py-3.5 px-4 min-w-[260px]">Propriétaire / Locataire</th>
+                      <th className="py-3.5 px-3 text-right min-w-[125px]">Loyer Global</th>
+                      <th className="py-3.5 px-3 text-right min-w-[125px]">Loyer Encaissé</th>
+                      <th className="py-3.5 px-3 text-right min-w-[130px]">Reste à Recouvrer</th>
+                      <th className="py-3.5 px-3 text-right min-w-[130px]">Montant Préfinancé</th>
+                      <th className="py-3.5 px-3 text-right min-w-[130px]">Commission Agence</th>
+                      <th className="py-3.5 px-3 text-right min-w-[135px]">Net Propriétaire</th>
+                      <th className="py-3.5 px-4 text-center min-w-[110px]">Bordereau</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1094,14 +1094,14 @@ export default function Reports() {
 
                       return (
                         <React.Fragment key={s.owner_id}>
-                          {/* LIGNE MAÎTRESSE PROPRIÉTAIRE (BANDEAU JAUNE/AMBRÉ CONFORME AU MODÈLE) */}
+                          {/* LIGNE MAÎTRESSE PROPRIÉTAIRE (BANDEAU AMBRÉ SUBTIL HARMONISÉ) */}
                           <tr
                             onClick={() => toggleOwnerExpand(s.owner_id)}
-                            className="bg-amber-50/95 hover:bg-amber-100/90 transition-colors border-y-2 border-amber-300 cursor-pointer select-none"
+                            className="bg-amber-50/70 hover:bg-amber-100/60 transition-colors border-y border-amber-200/80 cursor-pointer select-none"
                           >
-                            <td className="py-3 px-4">
+                            <td className="py-3.5 px-4">
                               <div className="flex items-center gap-3">
-                                <span className="w-5 h-5 rounded-md bg-amber-200/80 text-amber-900 flex items-center justify-center text-[10px] font-bold transition-transform">
+                                <span className="w-5 h-5 rounded-md bg-primary/10 text-primary flex items-center justify-center text-[10px] font-bold transition-transform">
                                   <i className={`fas fa-chevron-${isExpanded ? 'down' : 'right'}`}></i>
                                 </span>
                                 <div>
@@ -1109,46 +1109,46 @@ export default function Reports() {
                                     <span className="font-extrabold italic text-slate-900 tracking-wide text-sm">
                                       {s.owner_name.toUpperCase()}
                                     </span>
-                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-200/80 text-amber-900">
+                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200/60">
                                       {s.properties_count} bien(s)
                                     </span>
                                   </div>
-                                  <div className="text-[11px] text-slate-600 mt-0.5">
+                                  <div className="text-[11px] text-slate-500 mt-0.5">
                                     {formatMethod(s.preferred_payment_method)} &bull; {s.bank_account || s.bank_name || 'Sans compte enregistré'} &bull; Tél: {s.phone}
                                   </div>
                                 </div>
                               </div>
                             </td>
-                            <td className="py-3 px-3 text-right font-extrabold text-slate-900 text-sm">
+                            <td className="py-3.5 px-3 text-right font-extrabold text-slate-900 text-sm">
                               {formatXOF(s.total_expected_rent)}
                             </td>
-                            <td className="py-3 px-3 text-right font-extrabold text-emerald-700 text-sm">
+                            <td className="py-3.5 px-3 text-right font-extrabold text-emerald-700 text-sm">
                               {formatXOF(s.total_collected_rent)}
                             </td>
-                            <td className="py-3 px-3 text-right font-extrabold text-sm">
+                            <td className="py-3.5 px-3 text-right font-extrabold text-sm">
                               {s.total_arrears > 0 ? (
                                 <span className="text-rose-700">{formatXOF(s.total_arrears)}</span>
                               ) : (
                                 <span className="text-slate-400 font-normal">—</span>
                               )}
                             </td>
-                            <td className="py-3 px-3 text-right font-extrabold text-sm">
+                            <td className="py-3.5 px-3 text-right font-extrabold text-sm">
                               {s.total_prefinanced > 0 ? (
-                                <span className="text-amber-800 bg-amber-100/80 px-2 py-0.5 rounded-lg border border-amber-300">
+                                <span className="text-amber-800 bg-amber-100/70 px-2 py-0.5 rounded-lg border border-amber-200">
                                   {formatXOF(s.total_prefinanced)}
                                 </span>
                               ) : (
                                 <span className="text-slate-400 font-normal">—</span>
                               )}
                             </td>
-                            <td className="py-3 px-3 text-right text-xs text-slate-700 font-bold">
+                            <td className="py-3.5 px-3 text-right text-xs text-slate-700 font-bold">
                               <div>{formatXOF(s.agency_commission)}</div>
                               <span className="text-[10px] text-slate-500 font-medium">({s.commission_rate}%)</span>
                             </td>
-                            <td className="py-3 px-3 text-right font-extrabold text-primary text-sm">
+                            <td className="py-3.5 px-3 text-right font-extrabold text-primary text-sm">
                               {formatXOF(s.net_owner_payout)}
                             </td>
-                            <td className="py-3 px-4 text-center">
+                            <td className="py-3.5 px-4 text-center">
                               <button
                                 type="button"
                                 onClick={(e) => {
@@ -1156,13 +1156,13 @@ export default function Reports() {
                                   handleDownloadOwnerPdf(s.owner_id, s.owner_name);
                                 }}
                                 disabled={isPdfLoading}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-rose-50 text-rose-700 border border-rose-300 rounded-lg text-xs font-bold transition-all shadow-xs hover:border-rose-400 cursor-pointer disabled:opacity-50"
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg text-xs font-bold transition-all shadow-2xs hover:border-indigo-300 cursor-pointer disabled:opacity-50"
                                 title="Télécharger le bordereau de reddition de comptes officiel"
                               >
                                 {isPdfLoading ? (
                                   <i className="fas fa-spinner fa-spin text-xs"></i>
                                 ) : (
-                                  <i className="fas fa-file-pdf text-rose-600"></i>
+                                  <i className="fas fa-file-pdf text-indigo-600"></i>
                                 )}
                                 <span>Reçu PDF</span>
                               </button>
@@ -1174,19 +1174,19 @@ export default function Reports() {
                             <tr
                               key={`${s.owner_id}-unit-${u.property_id}-${uIdx}`}
                               className={`border-b border-slate-100 text-xs transition-colors ${
-                                u.matches_search ? 'bg-amber-100/40' : (uIdx % 2 === 0 ? 'bg-white' : 'bg-slate-50/60')
-                              }`}
+                                u.matches_search ? 'bg-amber-50/60' : (uIdx % 2 === 0 ? 'bg-white' : 'bg-slate-50/40')
+                              } hover:bg-slate-50`}
                             >
-                              <td className="py-2.5 px-4 pl-12">
-                                <div className="flex items-center gap-2">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
+                              <td className="py-2.5 px-4 pl-10">
+                                <div className="flex items-center gap-2.5">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-300"></span>
                                   {u.is_vacant ? (
-                                    <span className="italic font-medium text-slate-500">
+                                    <span className="italic font-medium text-slate-400">
                                       {u.tenant_name}
                                     </span>
                                   ) : (
                                     <div>
-                                      <span className="font-bold text-slate-800 text-xs">
+                                      <span className="font-semibold text-slate-800 text-xs">
                                         {u.tenant_name}
                                       </span>
                                       <span className="text-[10px] text-slate-400 ml-2">
@@ -1209,9 +1209,9 @@ export default function Reports() {
                                 {u.is_vacant ? (
                                   '—'
                                 ) : u.arrears > 0 ? (
-                                  <span className="text-rose-600">{formatXOF(u.arrears)}</span>
+                                  <span className="text-rose-600 font-bold">{formatXOF(u.arrears)}</span>
                                 ) : u.arrears < 0 ? (
-                                  <span className="text-blue-600 font-medium">
+                                  <span className="text-indigo-600 font-medium">
                                     -{formatXOF(Math.abs(u.arrears))} <span className="text-[10px] font-normal">(Avance)</span>
                                   </span>
                                 ) : (
@@ -1220,7 +1220,7 @@ export default function Reports() {
                               </td>
                               <td className="py-2.5 px-3 text-right font-semibold">
                                 {u.prefinanced_amount > 0 ? (
-                                  <span className="text-amber-700 font-bold bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
+                                  <span className="text-amber-800 font-bold bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
                                     {formatXOF(u.prefinanced_amount)}
                                   </span>
                                 ) : (
@@ -1244,29 +1244,29 @@ export default function Reports() {
                   </tbody>
                   {/* LIGNE DE TOTALISATION FINALE CONSOLIDÉE */}
                   <tfoot>
-                    <tr className="bg-slate-900 text-white font-extrabold text-xs border-t-2 border-slate-900">
-                      <td className="py-3 px-4">
+                    <tr className="bg-slate-100/90 text-slate-900 font-extrabold text-xs border-t-2 border-slate-300">
+                      <td className="py-3.5 px-4">
                         TOTAL CONSOLIDÉ ({ownerStatementsData.totals.total_owners} BAILLEURS)
                       </td>
-                      <td className="py-3 px-3 text-right">
+                      <td className="py-3.5 px-3 text-right font-extrabold text-slate-900">
                         {formatXOF(ownerStatementsData.totals.global_expected || 0)}
                       </td>
-                      <td className="py-3 px-3 text-right text-emerald-400">
+                      <td className="py-3.5 px-3 text-right font-extrabold text-emerald-700">
                         {formatXOF(ownerStatementsData.totals.global_collected || 0)}
                       </td>
-                      <td className="py-3 px-3 text-right text-rose-400">
+                      <td className="py-3.5 px-3 text-right font-extrabold text-rose-700">
                         {formatXOF(ownerStatementsData.totals.global_arrears || 0)}
                       </td>
-                      <td className="py-3 px-3 text-right text-amber-400">
+                      <td className="py-3.5 px-3 text-right font-extrabold text-amber-700">
                         {formatXOF(ownerStatementsData.totals.global_prefinanced || 0)}
                       </td>
-                      <td className="py-3 px-3 text-right text-slate-300">
+                      <td className="py-3.5 px-3 text-right font-bold text-slate-700">
                         {formatXOF(ownerStatementsData.totals.global_commission || 0)}
                       </td>
-                      <td className="py-3 px-3 text-right text-emerald-300 text-sm">
+                      <td className="py-3.5 px-3 text-right font-extrabold text-primary text-sm">
                         {formatXOF(ownerStatementsData.totals.global_net_payout || 0)}
                       </td>
-                      <td className="py-3 px-4 text-center text-slate-400">
+                      <td className="py-3.5 px-4 text-center text-slate-400">
                         —
                       </td>
                     </tr>
