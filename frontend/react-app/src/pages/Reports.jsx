@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 import { API } from '../api/services';
 import StatsCard from '../components/StatsCard';
+import Modal from '../components/Modal';
 import OwnerPayoutModal from '../components/OwnerPayoutModal';
 import { useToast } from '../components/ToastContext';
 import { formatXOF, formatDate, formatStatus, formatMethod } from '../utils/formatters';
@@ -13,6 +15,13 @@ const REPORT_TABS = [
   { key: 'collectors', label: 'Performance Récolteurs', icon: 'fa-users' },
   { key: 'properties', label: 'Biens & Occupation', icon: 'fa-building' },
   { key: 'overdue', label: 'Impayés & Créances', icon: 'fa-exclamation-triangle', badgeColor: 'bg-rose-100 text-rose-800' },
+];
+
+const MANAGER_REPORT_TABS = [
+  { key: 'owner_statements', label: 'Décompte Bailleurs & Locataires', icon: 'fa-file-invoice-dollar', badgeColor: 'bg-indigo-100 text-indigo-800' },
+  { key: 'collectors', label: 'Tournées & Collecteurs', icon: 'fa-users' },
+  { key: 'overdue', label: 'Impayés & Plan de Relance', icon: 'fa-exclamation-triangle', badgeColor: 'bg-rose-100 text-rose-800' },
+  { key: 'properties', label: 'Biens, Vacance & Travaux', icon: 'fa-building' },
 ];
 
 const SEVERITY_BADGES = {
@@ -49,8 +58,10 @@ const normalizeReportList = (response) => {
 };
 
 export default function Reports() {
+  const { user } = useAuth();
+  const isManager = Boolean(user && ['collector_manager', 'gestionnaire', 'manager'].includes(user?.role));
   const { showToast } = useToast();
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState(isManager ? 'owner_statements' : 'overview');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [sectionErrors, setSectionErrors] = useState(createSectionErrors);
@@ -59,6 +70,16 @@ export default function Reports() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [severityFilter, setSeverityFilter] = useState('all');
+  const [collectorFilter, setCollectorFilter] = useState('all');
+  const [propertyFilter, setPropertyFilter] = useState('all');
+
+  // Modale de relance locataire pour le Manager
+  const [reminderModalOpen, setReminderModalOpen] = useState(false);
+  const [selectedOverdueForReminder, setSelectedOverdueForReminder] = useState(null);
+  const [reminderType, setReminderType] = useState('phone');
+  const [reminderPromiseDate, setReminderPromiseDate] = useState('');
+  const [reminderNotes, setReminderNotes] = useState('');
+  const [remindersHistory, setRemindersHistory] = useState([]);
 
   // Données des sections
   const [dashboard, setDashboard] = useState(null);
@@ -257,11 +278,54 @@ export default function Reports() {
     }
   };
 
-  // Liste filtrée des impayés selon la sévérité
+  // Liste des collecteurs uniques pour le filtrage
+  const collectorOptions = useMemo(() => {
+    const names = new Set();
+    overdue.forEach(o => {
+      const name = (o.collector_name || '').trim();
+      if (name) names.add(name);
+    });
+    return Array.from(names).sort();
+  }, [overdue]);
+
+  // Liste filtrée des impayés selon la sévérité et le récolteur assigné
   const filteredOverdue = useMemo(() => {
-    if (severityFilter === 'all') return overdue;
-    return overdue.filter(o => (o.severity || 'normale') === severityFilter);
-  }, [overdue, severityFilter]);
+    let list = overdue;
+    if (severityFilter !== 'all') {
+      list = list.filter(o => (o.severity || 'normale') === severityFilter);
+    }
+    if (collectorFilter !== 'all') {
+      list = list.filter(o => (o.collector_name || '').trim() === collectorFilter);
+    }
+    return list;
+  }, [overdue, severityFilter, collectorFilter]);
+
+  // Actions de relance pour le Manager
+  const handleOpenReminderModal = (item) => {
+    setSelectedOverdueForReminder(item);
+    setReminderType('phone');
+    setReminderPromiseDate('');
+    setReminderNotes('');
+    setReminderModalOpen(true);
+  };
+
+  const handleSaveReminder = () => {
+    if (!selectedOverdueForReminder) return;
+    const clientName = selectedOverdueForReminder.client || `${selectedOverdueForReminder.first_name || ''} ${selectedOverdueForReminder.last_name || ''}`.trim() || 'Locataire';
+    const newEntry = {
+      id: Date.now(),
+      clientName,
+      propertyName: selectedOverdueForReminder.property || selectedOverdueForReminder.property_name || '—',
+      amountOwed: Number(selectedOverdueForReminder.amount_owed ?? selectedOverdueForReminder.amount ?? 0),
+      type: reminderType,
+      promiseDate: reminderPromiseDate,
+      notes: reminderNotes,
+      date: new Date().toISOString()
+    };
+    setRemindersHistory(prev => [newEntry, ...prev]);
+    showToast({ type: 'success', message: `Action de relance enregistrée pour ${clientName}` });
+    setReminderModalOpen(false);
+  };
 
   const prefSummary = prefinancingData?.summary || {};
   const prefinancingsList = prefinancingData?.prefinancings || [];
@@ -380,6 +444,31 @@ export default function Reports() {
     });
   };
 
+  // Export spécifique Feuille de Tournée Terrain pour le Manager
+  const handleExportTourneeExcel = () => {
+    if (!collectors.length) return showToast({ type: 'warning', message: 'Aucun collecteur à exporter.' });
+    const rows = collectors.map(c => ({
+      recolteur: c.collectorName,
+      zone: c.zone || 'Toutes zones',
+      telephone: c.phone || '—',
+      biens_assignes: c.assignedPropertiesCount || 0,
+      locataires: c.assignedClientsCount || 0,
+      objectif: c.targetAmount || 0,
+      collecte: c.totalCollected || 0,
+      taux: `${c.recoveryRate || 0}%`
+    }));
+    exportToExcel(rows, `feuille_tournees_collecteurs_${today}.xls`, {
+      recolteur: 'Agent Collecteur',
+      zone: 'Secteur / Zone',
+      telephone: 'Téléphone',
+      biens_assignes: 'Biens Assignés',
+      locataires: 'Locataires',
+      objectif: 'Objectif de Recouvrement (XOF)',
+      collecte: 'Total Recouvré (XOF)',
+      taux: 'Taux de Recouvrement'
+    }, 'Feuille de Tournées & Encaissements Terrain — SYGIM');
+  };
+
   // 3. Export Biens & Occupation
   const PROPERTY_EXPORT_COLS = {
     statusLabel: 'Statut d\'occupation',
@@ -462,6 +551,33 @@ export default function Reports() {
         { label: 'Cas Critiques / Haute Priorité', value: filteredOverdue.filter(o => o.severity === 'critique' || o.severity === 'haute').length }
       ]
     });
+  };
+
+  // Export spécifique Feuille de Relances pour Collecteurs (Manager)
+  const handleExportRelancesSheet = () => {
+    const rows = filteredOverdue.map(o => ({
+      locataire: o.client || `${o.first_name || ''} ${o.last_name || ''}`.trim() || '—',
+      telephone: o.phone || '—',
+      bien: o.property || o.property_name || '—',
+      recolteur: (o.collector_name || '').trim() || 'Non assigné',
+      loyer: Number(o.rent_due ?? o.amount ?? 0),
+      impaye: Number(o.amount_owed ?? o.amount ?? 0),
+      retard: `${o.days_since_contract ?? o.daysLate ?? 0} jours`,
+      priorite: (o.severity || 'normale').toUpperCase(),
+      action_prevue: 'Visite terrain ou appel de relance'
+    }));
+    if (!rows.length) return showToast({ type: 'warning', message: 'Aucun dossier de relance à exporter.' });
+    exportToExcel(rows, `feuille_relances_terrain_${today}.xls`, {
+      locataire: 'Locataire',
+      telephone: 'Téléphone',
+      bien: 'Bien Immobilier',
+      recolteur: 'Récolteur Assigné',
+      loyer: 'Loyer Mensuel (XOF)',
+      impaye: 'Montant Impayé (XOF)',
+      retard: 'Retard Constaté',
+      priorite: 'Priorité',
+      action_prevue: 'Action Recommandée'
+    }, 'Feuille de Relances Terrain & Recouvrement — SYGIM');
   };
 
   // Export rapide contextuel selon l'onglet actif
@@ -654,7 +770,7 @@ export default function Reports() {
 
       {/* 3. NAVIGATION PAR ONGLETS */}
       <div className="flex flex-wrap gap-2 bg-slate-100/80 p-1.5 rounded-2xl border border-slate-200/80">
-        {REPORT_TABS.map(tab => {
+        {(isManager ? MANAGER_REPORT_TABS : REPORT_TABS).map(tab => {
           const isActive = activeTab === tab.key;
           const badgeCount =
             tab.key === 'owner_statements'
@@ -693,9 +809,9 @@ export default function Reports() {
       </div>
 
       {/* =====================================================================
-          ONGLET 1 : VUE D'ENSEMBLE & ANALYTICS
+          ONGLET 1 : VUE D'ENSEMBLE & ANALYTICS (Réservé Direction & Comptabilité)
          ===================================================================== */}
-      {activeTab === 'overview' && (
+      {!isManager && activeTab === 'overview' && (
         <div className="space-y-6">
           {/* Ligne 1 : KPIs Opérationnels & Encaissements */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -1012,7 +1128,7 @@ export default function Reports() {
 
           {/* KPIS DE LA PÉRIODE SÉLECTIONNÉE */}
           {ownerStatementsData?.totals && (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            <div className={`grid gap-3 ${isManager ? 'grid-cols-2 sm:grid-cols-2 lg:grid-cols-4' : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-6'}`}>
               <div className="bg-white p-4 rounded-xl border border-slate-200">
                 <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Loyer Attendu</div>
                 <div className="text-base font-bold text-slate-900 mt-1">
@@ -1040,28 +1156,34 @@ export default function Reports() {
               </div>
 
               <div className="bg-white p-4 rounded-xl border border-amber-200 bg-amber-50/30">
-                <div className="text-[11px] font-semibold text-amber-800 uppercase tracking-wider">Préfinancé (Agence)</div>
+                <div className="text-[11px] font-semibold text-amber-800 uppercase tracking-wider">
+                  {isManager ? 'Avances Accordées' : 'Préfinancé (Agence)'}
+                </div>
                 <div className="text-base font-bold text-amber-700 mt-1">
                   {formatXOF(ownerStatementsData.totals.global_prefinanced || 0)}
                 </div>
-                <div className="text-[10px] text-amber-600 mt-0.5">Avances versées</div>
+                <div className="text-[10px] text-amber-600 mt-0.5">Avances versées aux bailleurs</div>
               </div>
 
-              <div className="bg-white p-4 rounded-xl border border-slate-200">
-                <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Commission Agence</div>
-                <div className="text-base font-bold text-slate-800 mt-1">
-                  {formatXOF(ownerStatementsData.totals.global_commission || 0)}
-                </div>
-                <div className="text-[10px] text-slate-400 mt-0.5">Retenues de gestion</div>
-              </div>
+              {!isManager && (
+                <>
+                  <div className="bg-white p-4 rounded-xl border border-slate-200">
+                    <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Commission Agence</div>
+                    <div className="text-base font-bold text-slate-800 mt-1">
+                      {formatXOF(ownerStatementsData.totals.global_commission || 0)}
+                    </div>
+                    <div className="text-[10px] text-slate-400 mt-0.5">Retenues de gestion</div>
+                  </div>
 
-              <div className="bg-white p-4 rounded-xl border border-indigo-200 bg-indigo-50/30">
-                <div className="text-[11px] font-semibold text-indigo-800 uppercase tracking-wider">Net Propriétaire</div>
-                <div className="text-base font-extrabold text-primary mt-1">
-                  {formatXOF(ownerStatementsData.totals.global_net_payout || 0)}
-                </div>
-                <div className="text-[10px] text-indigo-600 mt-0.5">Reversement final</div>
-              </div>
+                  <div className="bg-white p-4 rounded-xl border border-indigo-200 bg-indigo-50/30">
+                    <div className="text-[11px] font-semibold text-indigo-800 uppercase tracking-wider">Net Propriétaire</div>
+                    <div className="text-base font-extrabold text-primary mt-1">
+                      {formatXOF(ownerStatementsData.totals.global_net_payout || 0)}
+                    </div>
+                    <div className="text-[10px] text-indigo-600 mt-0.5">Reversement final</div>
+                  </div>
+                </>
+              )}
             </div>
           )}
 
@@ -1081,9 +1203,9 @@ export default function Reports() {
                       <th className="py-3.5 px-3 text-right min-w-[125px]">Loyer Global</th>
                       <th className="py-3.5 px-3 text-right min-w-[125px]">Loyer Encaissé</th>
                       <th className="py-3.5 px-3 text-right min-w-[130px]">Reste à Recouvrer</th>
-                      <th className="py-3.5 px-3 text-right min-w-[130px]">Montant Préfinancé</th>
-                      <th className="py-3.5 px-3 text-right min-w-[130px]">Commission Agence</th>
-                      <th className="py-3.5 px-3 text-right min-w-[135px]">Net Propriétaire</th>
+                      <th className="py-3.5 px-3 text-right min-w-[130px]">{isManager ? 'Avance Accordée' : 'Montant Préfinancé'}</th>
+                      {!isManager && <th className="py-3.5 px-3 text-right min-w-[130px]">Commission Agence</th>}
+                      {!isManager && <th className="py-3.5 px-3 text-right min-w-[135px]">Net Propriétaire</th>}
                       <th className="py-3.5 px-4 text-center min-w-[110px]">Bordereau</th>
                     </tr>
                   </thead>
@@ -1141,13 +1263,17 @@ export default function Reports() {
                                 <span className="text-slate-400 font-normal">—</span>
                               )}
                             </td>
-                            <td className="py-3.5 px-3 text-right text-xs text-slate-700 font-bold">
-                              <div>{formatXOF(s.agency_commission)}</div>
-                              <span className="text-[10px] text-slate-500 font-medium">({s.commission_rate}%)</span>
-                            </td>
-                            <td className="py-3.5 px-3 text-right font-extrabold text-primary text-sm">
-                              {formatXOF(s.net_owner_payout)}
-                            </td>
+                            {!isManager && (
+                              <>
+                                <td className="py-3.5 px-3 text-right text-xs text-slate-700 font-bold">
+                                  <div>{formatXOF(s.agency_commission)}</div>
+                                  <span className="text-[10px] text-slate-500 font-medium">({s.commission_rate}%)</span>
+                                </td>
+                                <td className="py-3.5 px-3 text-right font-extrabold text-primary text-sm">
+                                  {formatXOF(s.net_owner_payout)}
+                                </td>
+                              </>
+                            )}
                             <td className="py-3.5 px-4 text-center">
                               <button
                                 type="button"
@@ -1222,12 +1348,12 @@ export default function Reports() {
                                   <span className="text-slate-400 font-normal">—</span>
                                 )}
                               </td>
-                              <td className="py-2.5 px-3 text-right text-slate-400 font-normal">
-                                —
-                              </td>
-                              <td className="py-2.5 px-3 text-right text-slate-400 font-normal">
-                                —
-                              </td>
+                              {!isManager && (
+                                <>
+                                  <td className="py-2.5 px-3 text-right text-slate-400 font-normal">—</td>
+                                  <td className="py-2.5 px-3 text-right text-slate-400 font-normal">—</td>
+                                </>
+                              )}
                               <td className="py-2.5 px-4 text-center text-slate-400 text-[10px]">
                                 —
                               </td>
@@ -1255,12 +1381,16 @@ export default function Reports() {
                       <td className="py-3.5 px-3 text-right font-extrabold text-amber-700">
                         {formatXOF(ownerStatementsData.totals.global_prefinanced || 0)}
                       </td>
-                      <td className="py-3.5 px-3 text-right font-bold text-slate-700">
-                        {formatXOF(ownerStatementsData.totals.global_commission || 0)}
-                      </td>
-                      <td className="py-3.5 px-3 text-right font-extrabold text-primary text-sm">
-                        {formatXOF(ownerStatementsData.totals.global_net_payout || 0)}
-                      </td>
+                      {!isManager && (
+                        <>
+                          <td className="py-3.5 px-3 text-right font-bold text-slate-700">
+                            {formatXOF(ownerStatementsData.totals.global_commission || 0)}
+                          </td>
+                          <td className="py-3.5 px-3 text-right font-extrabold text-primary text-sm">
+                            {formatXOF(ownerStatementsData.totals.global_net_payout || 0)}
+                          </td>
+                        </>
+                      )}
                       <td className="py-3.5 px-4 text-center text-slate-400">
                         —
                       </td>
@@ -1282,9 +1412,9 @@ export default function Reports() {
       )}
 
       {/* =====================================================================
-          ONGLET 3 : RAPPORT DE PRÉFINANCEMENT PROPRIÉTAIRES
+          ONGLET 3 : RAPPORT DE PRÉFINANCEMENT PROPRIÉTAIRES (Trésorerie Agence - Réservé Comptabilité)
          ===================================================================== */}
-      {activeTab === 'prefinancing' && (
+      {!isManager && activeTab === 'prefinancing' && (
         <div className="space-y-6">
           {/* KPIs du Rapport de Préfinancement */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -1523,291 +1653,594 @@ export default function Reports() {
       )}
 
       {/* =====================================================================
-          ONGLET 3 : PERFORMANCE DES RÉCOLTEURS
+          ONGLET 3 : PERFORMANCE DES RÉCOLTEURS & FEUILLES DE TOURNÉE
          ===================================================================== */}
       {activeTab === 'collectors' && (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-          <div className="p-6 border-b border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div>
-              <h3 className="text-lg font-bold text-slate-900">Performance des Récolteurs</h3>
-              <p className="text-slate-500 text-xs mt-0.5">
-                Comparez les portefeuilles assignés, le volume de transactions et le taux de recouvrement par agent.
-              </p>
+        <div className="space-y-6">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+            <div className="p-6 border-b border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">Performance des Récolteurs & Suivi Terrain</h3>
+                <p className="text-slate-500 text-xs mt-0.5">
+                  Comparez les portefeuilles assignés, le volume de transactions et le taux de recouvrement par agent.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleExportTourneeExcel}
+                  className="px-3.5 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl text-xs font-semibold flex items-center gap-1.5"
+                  title="Exporter la feuille de tournée pour le suivi des collecteurs terrain"
+                >
+                  <i className="fas fa-map-marked-alt"></i> Feuille de Tournée
+                </button>
+                <button
+                  type="button"
+                  onClick={handleExportCollectorsExcel}
+                  className="px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-semibold flex items-center gap-1.5"
+                >
+                  <i className="fas fa-file-excel"></i> Excel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleExportCollectorsPDF}
+                  className="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-semibold flex items-center gap-1.5"
+                >
+                  <i className="fas fa-file-pdf"></i> PDF
+                </button>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={handleExportCollectorsExcel}
-                className="px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-semibold flex items-center gap-1.5"
-              >
-                <i className="fas fa-file-excel"></i> Excel
-              </button>
-              <button
-                type="button"
-                onClick={handleExportCollectorsPDF}
-                className="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-semibold flex items-center gap-1.5"
-              >
-                <i className="fas fa-file-pdf"></i> PDF
-              </button>
-            </div>
-          </div>
 
-          {!sectionErrors.collectors && (
-            collectors.length > 0 ? (
-              <div className="overflow-x-auto min-w-0">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 text-xs uppercase tracking-wider">
-                      <th className="py-3.5 px-4 font-semibold">Récolteur</th>
-                      <th className="py-3.5 px-4 font-semibold">Zone</th>
-                      <th className="py-3.5 px-4 font-semibold text-center">Portefeuille</th>
-                      <th className="py-3.5 px-4 font-semibold text-center">Transactions</th>
-                      <th className="py-3.5 px-4 font-semibold text-right">Objectif Attendu</th>
-                      <th className="py-3.5 px-4 font-semibold text-right">Total Collecté</th>
-                      <th className="py-3.5 px-4 font-semibold">Taux de Recouvrement</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {collectors.map((r, idx) => {
-                      const rate = Number(r.recoveryRate || 0);
-                      const barColor = rate >= 80 ? 'bg-emerald-500' : rate >= 50 ? 'bg-amber-500' : 'bg-rose-500';
-                      return (
-                        <tr key={r.collectorId || idx} className="hover:bg-slate-50/80 transition-colors">
-                          <td className="py-3.5 px-4">
-                            <div className="text-sm font-bold text-slate-900">{r.collectorName}</div>
-                            <div className="text-xs text-slate-400">{r.phone || ''}</div>
-                          </td>
-                          <td className="py-3.5 px-4 text-xs font-medium text-slate-600">{r.zone || 'Toutes zones'}</td>
-                          <td className="py-3.5 px-4 text-xs text-center text-slate-600">
-                            <span className="font-semibold text-slate-800">{r.assignedPropertiesCount || 0}</span> bien(s) &bull;{' '}
-                            <span className="font-semibold text-slate-800">{r.assignedClientsCount || 0}</span> loc.
-                          </td>
-                          <td className="py-3.5 px-4 text-sm font-semibold text-center text-slate-700">
-                            {r.transactionCount}
-                          </td>
-                          <td className="py-3.5 px-4 text-sm text-right text-slate-700">
-                            {formatXOF(r.targetAmount || 0, { compact: false })}
-                          </td>
-                          <td className="py-3.5 px-4 text-sm font-bold text-emerald-600 text-right">
-                            {formatXOF(r.totalCollected, { compact: false })}
-                          </td>
-                          <td className="py-3.5 px-4">
-                            <div className="flex items-center gap-2 min-w-[120px]">
-                              <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
-                                <div className={`h-full rounded-full ${barColor}`} style={{ width: `${Math.min(100, rate)}%` }}></div>
+            {!sectionErrors.collectors && (
+              collectors.length > 0 ? (
+                <div className="overflow-x-auto min-w-0">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 text-xs uppercase tracking-wider">
+                        <th className="py-3.5 px-4 font-semibold">Récolteur</th>
+                        <th className="py-3.5 px-4 font-semibold">Zone</th>
+                        <th className="py-3.5 px-4 font-semibold text-center">Portefeuille</th>
+                        <th className="py-3.5 px-4 font-semibold text-center">Transactions</th>
+                        <th className="py-3.5 px-4 font-semibold text-right">Objectif Attendu</th>
+                        <th className="py-3.5 px-4 font-semibold text-right">Total Collecté</th>
+                        <th className="py-3.5 px-4 font-semibold">Taux de Recouvrement</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {collectors.map((r, idx) => {
+                        const rate = Number(r.recoveryRate || 0);
+                        const barColor = rate >= 80 ? 'bg-emerald-500' : rate >= 50 ? 'bg-amber-500' : 'bg-rose-500';
+                        return (
+                          <tr key={r.collectorId || idx} className="hover:bg-slate-50/80 transition-colors">
+                            <td className="py-3.5 px-4">
+                              <div className="text-sm font-bold text-slate-900">{r.collectorName}</div>
+                              <div className="text-xs text-slate-400">{r.phone || ''}</div>
+                            </td>
+                            <td className="py-3.5 px-4 text-xs font-medium text-slate-600">{r.zone || 'Toutes zones'}</td>
+                            <td className="py-3.5 px-4 text-xs text-center text-slate-600">
+                              <span className="font-semibold text-slate-800">{r.assignedPropertiesCount || 0}</span> bien(s) &bull;{' '}
+                              <span className="font-semibold text-slate-800">{r.assignedClientsCount || 0}</span> loc.
+                            </td>
+                            <td className="py-3.5 px-4 text-sm font-semibold text-center text-slate-700">
+                              {r.transactionCount}
+                            </td>
+                            <td className="py-3.5 px-4 text-sm text-right text-slate-700">
+                              {formatXOF(r.targetAmount || 0, { compact: false })}
+                            </td>
+                            <td className="py-3.5 px-4 text-sm font-bold text-emerald-600 text-right">
+                              {formatXOF(r.totalCollected, { compact: false })}
+                            </td>
+                            <td className="py-3.5 px-4">
+                              <div className="flex items-center gap-2 min-w-[120px]">
+                                <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+                                  <div className={`h-full rounded-full ${barColor}`} style={{ width: `${Math.min(100, rate)}%` }}></div>
+                                </div>
+                                <span className="text-xs font-bold text-slate-700 w-9 text-right">{rate}%</span>
                               </div>
-                              <span className="text-xs font-bold text-slate-700 w-9 text-right">{rate}%</span>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-12 bg-slate-50">
-                <i className="fas fa-users text-slate-400 text-3xl mb-3"></i>
-                <h4 className="text-sm font-bold text-slate-700">Aucun récolteur à afficher</h4>
-              </div>
-            )
-          )}
-        </div>
-      )}
-
-      {/* =====================================================================
-          ONGLET 4 : BIENS & OCCUPATION
-         ===================================================================== */}
-      {activeTab === 'properties' && (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-          <div className="p-6 border-b border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div>
-              <h3 className="text-lg font-bold text-slate-900">Répartition des Biens par Statut d'Occupation</h3>
-              <p className="text-slate-500 text-xs mt-0.5">
-                Visualisez l'état du portefeuille immobilier, les loyers mensuels associés et la valeur vénale.
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={handleExportPropertiesExcel}
-                className="px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-semibold flex items-center gap-1.5"
-              >
-                <i className="fas fa-file-excel"></i> Excel
-              </button>
-              <button
-                type="button"
-                onClick={handleExportPropertiesPDF}
-                className="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-semibold flex items-center gap-1.5"
-              >
-                <i className="fas fa-file-pdf"></i> PDF
-              </button>
-            </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-12 bg-slate-50">
+                  <i className="fas fa-users text-slate-400 text-3xl mb-3"></i>
+                  <h4 className="text-sm font-bold text-slate-700">Aucun récolteur à afficher</h4>
+                </div>
+              )
+            )}
           </div>
 
-          {!sectionErrors.properties && (
-            properties.length > 0 ? (
-              <div className="overflow-x-auto min-w-0">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 text-xs uppercase tracking-wider">
-                      <th className="py-3.5 px-6 font-semibold">Statut</th>
-                      <th className="py-3.5 px-6 font-semibold">Nombre de biens</th>
-                      <th className="py-3.5 px-6 font-semibold">Part du parc</th>
-                      <th className="py-3.5 px-6 font-semibold text-right">Loyers mensuels cumulés</th>
-                      <th className="py-3.5 px-6 font-semibold text-right">Valeur patrimoniale</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {properties.map((p, idx) => {
-                      const ps = formatStatus(p.status);
-                      return (
-                        <tr key={idx} className="hover:bg-slate-50/80 transition-colors">
-                          <td className="py-4 px-6 text-sm">
-                            <span className={`px-3 py-1 text-xs font-semibold rounded-full border ${ps.twClass}`}>
-                              {ps.label || p.status || 'Inconnu'}
-                            </span>
-                          </td>
-                          <td className="py-4 px-6 text-sm font-bold text-slate-900">{p.count} bien(s)</td>
-                          <td className="py-4 px-6 text-sm text-slate-600">{p.percentage || 0}%</td>
-                          <td className="py-4 px-6 text-sm font-bold text-emerald-700 text-right">
-                            {formatXOF(p.totalRent, { compact: false })}
-                          </td>
-                          <td className="py-4 px-6 text-sm font-medium text-slate-800 text-right">
-                            {formatXOF(p.totalValue || 0, { compact: false })}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+          {/* Tableau 2 : Journal Opérationnel des Encaissements Terrain */}
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+            <div className="p-6 border-b border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+              <div>
+                <h4 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                  <i className="fas fa-receipt text-emerald-600"></i>
+                  Journal Opérationnel des Encaissements Terrain
+                </h4>
+                <p className="text-slate-500 text-xs mt-0.5">
+                  Flux des paiements collectés par vos équipes sur le terrain (date, collecteur, locataire, bien, montant).
+                </p>
               </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-12 bg-slate-50">
-                <i className="fas fa-building text-slate-400 text-3xl mb-3"></i>
-                <h4 className="text-sm font-bold text-slate-700">Aucune statistique immobilière</h4>
-              </div>
-            )
-          )}
-        </div>
-      )}
-
-      {/* =====================================================================
-          ONGLET 5 : IMPAYÉS & CRÉANCES LOCATAIRES
-         ===================================================================== */}
-      {activeTab === 'overdue' && (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-          <div className="p-6 border-b border-slate-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <div>
-              <h3 className="text-lg font-bold text-slate-900">État des Paiements en Retard & Créances Locataires</h3>
-              <p className="text-slate-500 text-xs mt-0.5">
-                Identifiez les locataires à relancer, les montants restant dus et déclenchez un préfinancement si nécessaire.
-              </p>
+              <span className="text-xs font-semibold px-2.5 py-1 bg-slate-100 text-slate-700 rounded-lg">
+                {(dashboard?.recentTransactions || []).length} transaction(s) récente(s)
+              </span>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
-              <select
-                value={severityFilter}
-                onChange={(e) => setSeverityFilter(e.target.value)}
-                className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700"
-              >
-                <option value="all">Toutes les priorités ({overdue.length})</option>
-                <option value="critique">Priorité Critique</option>
-                <option value="haute">Priorité Haute</option>
-                <option value="normale">Priorité Normale</option>
-              </select>
-
-              <button
-                type="button"
-                onClick={handleExportOverdueExcel}
-                className="px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-semibold flex items-center gap-1.5"
-              >
-                <i className="fas fa-file-excel"></i> Excel
-              </button>
-              <button
-                type="button"
-                onClick={handleExportOverduePDF}
-                className="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-semibold flex items-center gap-1.5"
-              >
-                <i className="fas fa-file-pdf"></i> PDF
-              </button>
-            </div>
-          </div>
-
-          {!sectionErrors.overdue && (
-            filteredOverdue.length > 0 ? (
+            {(dashboard?.recentTransactions || []).length > 0 ? (
               <div className="overflow-x-auto min-w-0">
                 <table className="w-full text-left border-collapse text-sm">
                   <thead>
                     <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 text-xs uppercase tracking-wider">
-                      <th className="py-3.5 px-4 font-semibold">Locataire</th>
-                      <th className="py-3.5 px-4 font-semibold">Bien Immobilier</th>
-                      <th className="py-3.5 px-4 font-semibold">Récolteur</th>
-                      <th className="py-3.5 px-4 font-semibold text-right">Loyer Mensuel</th>
-                      <th className="py-3.5 px-4 font-semibold text-right">Déjà Payé</th>
-                      <th className="py-3.5 px-4 font-semibold text-right">Reste Dû (Impayé)</th>
-                      <th className="py-3.5 px-4 font-semibold text-center">Ancienneté</th>
-                      <th className="py-3.5 px-4 font-semibold">Priorité</th>
+                      <th className="py-3 px-4">Date & Réf.</th>
+                      <th className="py-3 px-4">Collecteur</th>
+                      <th className="py-3 px-4">Locataire</th>
+                      <th className="py-3 px-4">Bien Immobilier</th>
+                      <th className="py-3 px-4">Moyen</th>
+                      <th className="py-3 px-4 text-right">Montant Encaissé</th>
+                      <th className="py-3 px-4 text-center">Statut</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {filteredOverdue.map((o, idx) => {
-                      const clientName = o.client || `${o.first_name || ''} ${o.last_name || ''}`.trim() || '—';
-                      const propName = o.property || o.property_name || '—';
-                      const rentDue = Number(o.rent_due ?? o.amount ?? 0);
-                      const paid = Number(o.amount_paid || 0);
-                      const owed = Number(o.amount_owed ?? o.amount ?? 0);
-                      const daysLate = o.days_since_contract ?? o.daysLate ?? 0;
-                      const sev = o.severity || 'normale';
-
-                      return (
-                        <tr key={o.id || idx} className="hover:bg-slate-50/80 transition-colors">
-                          <td className="py-3.5 px-4">
-                            <div className="font-bold text-slate-900">{clientName}</div>
-                            <div className="text-xs text-slate-400">{o.phone || ''}</div>
-                          </td>
-                          <td className="py-3.5 px-4">
-                            <div className="font-medium text-slate-800">{propName}</div>
-                            {o.property_address && (
-                              <div className="text-xs text-slate-400 truncate max-w-[180px]">{o.property_address}</div>
-                            )}
-                          </td>
-                          <td className="py-3.5 px-4 text-xs text-slate-600">
-                            {(o.collector_name || '').trim() || 'Non assigné'}
-                          </td>
-                          <td className="py-3.5 px-4 text-right text-slate-700">
-                            {formatXOF(rentDue, { compact: false })}
-                          </td>
-                          <td className="py-3.5 px-4 text-right text-emerald-600 font-medium">
-                            {formatXOF(paid, { compact: false })}
-                          </td>
-                          <td className="py-3.5 px-4 text-right font-extrabold text-rose-600">
-                            {formatXOF(owed, { compact: false })}
-                          </td>
-                          <td className="py-3.5 px-4 text-center">
-                            <span className="px-2.5 py-1 bg-rose-50 text-rose-700 text-xs font-semibold rounded-full border border-rose-100">
-                              {daysLate > 0 ? `${daysLate} j` : 'Mois en cours'}
-                            </span>
-                          </td>
-                          <td className="py-3.5 px-4">
-                            <span className={`px-2.5 py-0.5 text-xs font-bold rounded-full border uppercase ${SEVERITY_BADGES[sev] || SEVERITY_BADGES.normale}`}>
-                              {sev}
-                            </span>
-                          </td>
-                        </tr>
-                      );
-                    })}
+                    {(dashboard?.recentTransactions || []).map((tx, idx) => (
+                      <tr key={tx.id || idx} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="py-3 px-4">
+                          <div className="font-mono text-xs font-bold text-slate-800">{tx.reference || `TX-${tx.id}`}</div>
+                          <div className="text-[11px] text-slate-400">{formatDate(tx.date || tx.created_at)}</div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="text-xs font-bold text-slate-800">{tx.collectorName || tx.collector_name || 'Terrain'}</div>
+                          {tx.zone && <div className="text-[10px] text-slate-500 font-medium">{tx.zone}</div>}
+                        </td>
+                        <td className="py-3 px-4 font-medium text-slate-900 text-xs">
+                          {tx.client || tx.tenant_name || '—'}
+                        </td>
+                        <td className="py-3 px-4 text-xs text-slate-700">
+                          {tx.propertyName || tx.property_name || '—'}
+                        </td>
+                        <td className="py-3 px-4 text-xs text-slate-600">
+                          {formatMethod(tx.method || tx.payment_method)}
+                        </td>
+                        <td className="py-3 px-4 text-right font-extrabold text-emerald-600">
+                          {formatXOF(tx.amount || 0, { compact: false })}
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            Validé
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center py-12 bg-slate-50">
-                <i className="fas fa-check-circle text-emerald-500 text-3xl mb-3"></i>
-                <h4 className="text-sm font-bold text-slate-700">Aucun impayé à signaler</h4>
+              <div className="py-10 text-center text-slate-400 text-sm">
+                Aucune transaction récente enregistrée sur le terrain.
               </div>
-            )
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* =====================================================================
+          ONGLET 4 : BIENS, VACANCE & TRAVAUX
+         ===================================================================== */}
+      {activeTab === 'properties' && (
+        <div className="space-y-6">
+          {/* Cartes d'État Opérationnel du Parc */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="bg-white p-4 rounded-xl border border-slate-200">
+              <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Parc Immobilier Total</div>
+              <div className="text-2xl font-black text-slate-900 mt-1">
+                {properties.reduce((s, p) => s + Number(p.count || 0), 0)} biens
+              </div>
+              <div className="text-xs text-slate-400 mt-0.5">Sous gestion opérationnelle</div>
+            </div>
+
+            <div className="bg-white p-4 rounded-xl border border-emerald-200 bg-emerald-50/20">
+              <div className="text-[11px] font-semibold text-emerald-700 uppercase tracking-wider">Biens Occupés (Loués)</div>
+              <div className="text-2xl font-black text-emerald-700 mt-1">
+                {properties.find(p => ['occupied', 'loué', 'loue'].includes((p.status || '').toLowerCase()))?.count || 0}
+              </div>
+              <div className="text-xs text-emerald-600 mt-0.5 font-medium">
+                Taux d'occupation : {dashboard?.occupancyRate || 0}%
+              </div>
+            </div>
+
+            <div className="bg-white p-4 rounded-xl border border-amber-200 bg-amber-50/20">
+              <div className="text-[11px] font-semibold text-amber-700 uppercase tracking-wider">Logements Vacants</div>
+              <div className="text-2xl font-black text-amber-700 mt-1">
+                {properties.find(p => ['vacant', 'disponible'].includes((p.status || '').toLowerCase()))?.count || 0}
+              </div>
+              <div className="text-xs text-amber-600 mt-0.5 font-medium">À commercialiser / Relouer</div>
+            </div>
+
+            <div className="bg-white p-4 rounded-xl border border-blue-200 bg-blue-50/20">
+              <div className="text-[11px] font-semibold text-blue-700 uppercase tracking-wider">Biens en Travaux / Réparation</div>
+              <div className="text-2xl font-black text-blue-700 mt-1">
+                {properties.find(p => ['maintenance', 'en_reparation', 'en_travaux'].includes((p.status || '').toLowerCase()))?.count || 0}
+              </div>
+              <div className="text-xs text-blue-600 mt-0.5 font-medium">Chantiers & Remise en état</div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+            <div className="p-6 border-b border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">État du Parc : Occupation, Vacances & Travaux</h3>
+                <p className="text-slate-500 text-xs mt-0.5">
+                  Visualisez l'état du portefeuille immobilier, les potentiels locatifs et le suivi de commercialisation.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <select
+                  value={propertyFilter}
+                  onChange={(e) => setPropertyFilter(e.target.value)}
+                  className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700"
+                >
+                  <option value="all">Tous les statuts ({properties.length})</option>
+                  <option value="vacant">Biens Vacants (Disponibles)</option>
+                  <option value="maintenance">Biens en Réparation (Travaux)</option>
+                  <option value="occupied">Biens Loués (Occupés)</option>
+                </select>
+
+                <button
+                  type="button"
+                  onClick={handleExportPropertiesExcel}
+                  className="px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-semibold flex items-center gap-1.5"
+                >
+                  <i className="fas fa-file-excel"></i> Excel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleExportPropertiesPDF}
+                  className="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-semibold flex items-center gap-1.5"
+                >
+                  <i className="fas fa-file-pdf"></i> PDF
+                </button>
+              </div>
+            </div>
+
+            {!sectionErrors.properties && (
+              properties.length > 0 ? (
+                <div className="overflow-x-auto min-w-0">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 text-xs uppercase tracking-wider">
+                        <th className="py-3.5 px-6 font-semibold">Statut d'Occupation</th>
+                        <th className="py-3.5 px-6 font-semibold">Nombre de biens</th>
+                        <th className="py-3.5 px-6 font-semibold">Part du parc</th>
+                        <th className="py-3.5 px-6 font-semibold text-right">Potentiel Locatif Mensuel</th>
+                        <th className="py-3.5 px-6 font-semibold text-right">Valeur Estimée</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {properties
+                        .filter(p => {
+                          if (propertyFilter === 'all') return true;
+                          const s = (p.status || '').toLowerCase();
+                          if (propertyFilter === 'vacant') return ['vacant', 'disponible'].includes(s);
+                          if (propertyFilter === 'occupied') return ['occupied', 'loué', 'loue'].includes(s);
+                          if (propertyFilter === 'maintenance') return ['maintenance', 'en_reparation', 'en_travaux'].includes(s);
+                          return true;
+                        })
+                        .map((p, idx) => {
+                          const ps = formatStatus(p.status);
+                          return (
+                            <tr key={idx} className="hover:bg-slate-50/80 transition-colors">
+                              <td className="py-4 px-6 text-sm">
+                                <span className={`px-3 py-1 text-xs font-semibold rounded-full border ${ps.twClass}`}>
+                                  {ps.label || p.status || 'Inconnu'}
+                                </span>
+                              </td>
+                              <td className="py-4 px-6 text-sm font-bold text-slate-900">{p.count} bien(s)</td>
+                              <td className="py-4 px-6 text-sm text-slate-600">{p.percentage || 0}%</td>
+                              <td className="py-4 px-6 text-sm font-bold text-emerald-700 text-right">
+                                {formatXOF(p.totalRent, { compact: false })}
+                              </td>
+                              <td className="py-4 px-6 text-sm font-medium text-slate-800 text-right">
+                                {formatXOF(p.totalValue || 0, { compact: false })}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-12 bg-slate-50">
+                  <i className="fas fa-building text-slate-400 text-3xl mb-3"></i>
+                  <h4 className="text-sm font-bold text-slate-700">Aucune statistique immobilière</h4>
+                </div>
+              )
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* =====================================================================
+          ONGLET 5 : IMPAYÉS, PLAN D'ACTION & RELANCES
+         ===================================================================== */}
+      {activeTab === 'overdue' && (
+        <div className="space-y-6">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+            <div className="p-6 border-b border-slate-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">Suivi des Impayés & Plan d'Action Relances</h3>
+                <p className="text-slate-500 text-xs mt-0.5">
+                  Identifiez les locataires en retard, filtrez par récolteur assigné et planifiez les actions de relance terrain.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <select
+                  value={severityFilter}
+                  onChange={(e) => setSeverityFilter(e.target.value)}
+                  className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700"
+                >
+                  <option value="all">Toutes priorités ({overdue.length})</option>
+                  <option value="critique">Priorité Critique</option>
+                  <option value="haute">Priorité Haute</option>
+                  <option value="normale">Priorité Normale</option>
+                </select>
+
+                <select
+                  value={collectorFilter}
+                  onChange={(e) => setCollectorFilter(e.target.value)}
+                  className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700"
+                >
+                  <option value="all">Tous les récolteurs ({collectorOptions.length})</option>
+                  {collectorOptions.map(name => (
+                    <option key={name} value={name}>{name}</option>
+                  ))}
+                </select>
+
+                <button
+                  type="button"
+                  onClick={handleExportRelancesSheet}
+                  className="px-3.5 py-2 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-xl text-xs font-semibold flex items-center gap-1.5"
+                  title="Exporter la feuille d'action terrain des relances"
+                >
+                  <i className="fas fa-clipboard-list"></i> Feuille de Relances
+                </button>
+                <button
+                  type="button"
+                  onClick={handleExportOverdueExcel}
+                  className="px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-semibold flex items-center gap-1.5"
+                >
+                  <i className="fas fa-file-excel"></i> Excel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleExportOverduePDF}
+                  className="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-semibold flex items-center gap-1.5"
+                >
+                  <i className="fas fa-file-pdf"></i> PDF
+                </button>
+              </div>
+            </div>
+
+            {!sectionErrors.overdue && (
+              filteredOverdue.length > 0 ? (
+                <div className="overflow-x-auto min-w-0">
+                  <table className="w-full text-left border-collapse text-sm">
+                    <thead>
+                      <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 text-xs uppercase tracking-wider">
+                        <th className="py-3.5 px-4 font-semibold">Locataire</th>
+                        <th className="py-3.5 px-4 font-semibold">Bien Immobilier</th>
+                        <th className="py-3.5 px-4 font-semibold">Récolteur</th>
+                        <th className="py-3.5 px-4 font-semibold text-right">Loyer Mensuel</th>
+                        <th className="py-3.5 px-4 font-semibold text-right">Déjà Payé</th>
+                        <th className="py-3.5 px-4 font-semibold text-right">Reste Dû (Impayé)</th>
+                        <th className="py-3.5 px-4 font-semibold text-center">Ancienneté</th>
+                        <th className="py-3.5 px-4 font-semibold">Priorité</th>
+                        <th className="py-3.5 px-4 font-semibold text-right">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {filteredOverdue.map((o, idx) => {
+                        const clientName = o.client || `${o.first_name || ''} ${o.last_name || ''}`.trim() || '—';
+                        const propName = o.property || o.property_name || '—';
+                        const rentDue = Number(o.rent_due ?? o.amount ?? 0);
+                        const paid = Number(o.amount_paid || 0);
+                        const owed = Number(o.amount_owed ?? o.amount ?? 0);
+                        const daysLate = o.days_since_contract ?? o.daysLate ?? 0;
+                        const sev = o.severity || 'normale';
+
+                        return (
+                          <tr key={o.id || idx} className="hover:bg-slate-50/80 transition-colors">
+                            <td className="py-3.5 px-4">
+                              <div className="font-bold text-slate-900">{clientName}</div>
+                              <div className="text-xs text-slate-400">{o.phone || ''}</div>
+                            </td>
+                            <td className="py-3.5 px-4">
+                              <div className="font-medium text-slate-800">{propName}</div>
+                              {o.property_address && (
+                                <div className="text-xs text-slate-400 truncate max-w-[180px]">{o.property_address}</div>
+                              )}
+                            </td>
+                            <td className="py-3.5 px-4 text-xs text-slate-600 font-medium">
+                              {(o.collector_name || '').trim() || 'Non assigné'}
+                            </td>
+                            <td className="py-3.5 px-4 text-right text-slate-700">
+                              {formatXOF(rentDue, { compact: false })}
+                            </td>
+                            <td className="py-3.5 px-4 text-right text-emerald-600 font-medium">
+                              {formatXOF(paid, { compact: false })}
+                            </td>
+                            <td className="py-3.5 px-4 text-right font-extrabold text-rose-600">
+                              {formatXOF(owed, { compact: false })}
+                            </td>
+                            <td className="py-3.5 px-4 text-center">
+                              <span className="px-2.5 py-1 bg-rose-50 text-rose-700 text-xs font-semibold rounded-full border border-rose-100">
+                                {daysLate > 0 ? `${daysLate} j` : 'Mois en cours'}
+                              </span>
+                            </td>
+                            <td className="py-3.5 px-4">
+                              <span className={`px-2.5 py-0.5 text-xs font-bold rounded-full border uppercase ${SEVERITY_BADGES[sev] || SEVERITY_BADGES.normale}`}>
+                                {sev}
+                              </span>
+                            </td>
+                            <td className="py-3.5 px-4 text-right">
+                              <button
+                                type="button"
+                                onClick={() => handleOpenReminderModal(o)}
+                                className="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-xs font-bold inline-flex items-center gap-1 transition-colors"
+                                title="Planifier une relance terrain, appel ou promesse"
+                              >
+                                <i className="fas fa-bullhorn text-[11px]"></i> Relancer
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-12 bg-slate-50">
+                  <i className="fas fa-check-circle text-emerald-500 text-3xl mb-3"></i>
+                  <h4 className="text-sm font-bold text-slate-700">Aucun impayé à signaler</h4>
+                </div>
+              )
+            )}
+          </div>
+
+          {/* Section Historique des Relances Enregistrées */}
+          {remindersHistory.length > 0 && (
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+              <div className="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50/50">
+                <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <i className="fas fa-history text-indigo-600"></i>
+                  Journal des Relances Enregistrées ({remindersHistory.length})
+                </h4>
+                <button
+                  type="button"
+                  onClick={() => setRemindersHistory([])}
+                  className="text-xs text-slate-400 hover:text-slate-600"
+                >
+                  Effacer l'historique
+                </button>
+              </div>
+              <div className="divide-y divide-slate-100 text-xs">
+                {remindersHistory.map(rem => (
+                  <div key={rem.id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2 hover:bg-slate-50">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-slate-900">{rem.clientName}</span>
+                        <span className="text-slate-400">&bull;</span>
+                        <span className="text-slate-600">{rem.propertyName}</span>
+                        <span className="px-2 py-0.5 rounded-full font-bold bg-indigo-50 text-indigo-700 border border-indigo-100 uppercase text-[10px]">
+                          {rem.type}
+                        </span>
+                      </div>
+                      {rem.notes && <p className="text-slate-600 mt-1 italic">{rem.notes}</p>}
+                    </div>
+                    <div className="text-right sm:min-w-[140px]">
+                      {rem.promiseDate && (
+                        <div className="font-semibold text-amber-700">
+                          Promesse : {formatDate(rem.promiseDate)}
+                        </div>
+                      )}
+                      <div className="text-[11px] text-slate-400">
+                        {formatDate(rem.date)}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
         </div>
+      )}
+
+      {/* Modale d'Action de Relance Locataire pour le Manager */}
+      {reminderModalOpen && selectedOverdueForReminder && (
+        <Modal
+          isOpen={reminderModalOpen}
+          onClose={() => setReminderModalOpen(false)}
+          title={`Enregistrer une Action de Relance — ${selectedOverdueForReminder.client || `${selectedOverdueForReminder.first_name || ''} ${selectedOverdueForReminder.last_name || ''}`.trim() || 'Locataire'}`}
+        >
+          <div className="space-y-4 text-sm text-slate-700">
+            <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-slate-500">Bien concerné :</span>
+                <span className="font-semibold text-slate-800">{selectedOverdueForReminder.property || selectedOverdueForReminder.property_name || '—'}</span>
+              </div>
+              <div className="flex justify-between items-center text-xs mt-1.5">
+                <span className="text-slate-500">Montant impayé :</span>
+                <span className="font-bold text-rose-600">{formatXOF(Number(selectedOverdueForReminder.amount_owed ?? selectedOverdueForReminder.amount ?? 0))}</span>
+              </div>
+              <div className="flex justify-between items-center text-xs mt-1.5">
+                <span className="text-slate-500">Récolteur assigné :</span>
+                <span className="font-semibold text-slate-700">{(selectedOverdueForReminder.collector_name || '').trim() || 'Non assigné'}</span>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                Type de démarche terrain
+              </label>
+              <select
+                value={reminderType}
+                onChange={(e) => setReminderType(e.target.value)}
+                className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm bg-white"
+              >
+                <option value="phone">Appel téléphonique de rappel</option>
+                <option value="visit">Visite terrain par le collecteur</option>
+                <option value="sms">SMS / Message WhatsApp de relance</option>
+                <option value="letter">Courrier / Mise en demeure</option>
+                <option value="promise">Promesse de règlement négociée</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                Date d'engagement / Promesse de paiement (optionnel)
+              </label>
+              <input
+                type="date"
+                value={reminderPromiseDate}
+                onChange={(e) => setReminderPromiseDate(e.target.value)}
+                className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                Compte-rendu & Notes de l'échange
+              </label>
+              <textarea
+                rows={3}
+                value={reminderNotes}
+                onChange={(e) => setReminderNotes(e.target.value)}
+                placeholder="Ex: Le locataire s'engage à verser 50% le vendredi 15 et le solde en fin de mois..."
+                className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setReminderModalOpen(false)}
+                className="px-4 py-2 border border-slate-200 text-slate-600 rounded-xl text-xs font-semibold hover:bg-slate-50"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveReminder}
+                className="px-4 py-2 bg-primary hover:bg-primary/90 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs"
+              >
+                <i className="fas fa-check"></i> Enregistrer le suivi
+              </button>
+            </div>
+          </div>
+        </Modal>
       )}
 
       {/* Modale d'enregistrement d'un Préfinancement / Paiement Propriétaire */}

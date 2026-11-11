@@ -135,6 +135,7 @@ class ReportRepository {
          t.reference,
          COALESCE(NULLIF(TRIM(CONCAT(COALESCE(c.first_name, ''), ' ', COALESCE(c.last_name, ''))), ''), t.client_name, 'Locataire') AS client,
          COALESCE(p.name, c.property_name, '—') AS propertyName,
+         COALESCE(NULLIF(TRIM(CONCAT(COALESCE(cu.first_name, ''), ' ', COALESCE(cu.last_name, ''))), ''), col.zone, 'Agence') AS collectorName,
          t.amount,
          t.method,
          t.status,
@@ -142,9 +143,11 @@ class ReportRepository {
        FROM transactions t
        LEFT JOIN clients c ON c.id = t.client_id
        LEFT JOIN properties p ON p.id = c.property_id
+       LEFT JOIN collectors col ON col.id = t.collector_id
+       LEFT JOIN users cu ON cu.id = col.user_id
        WHERE t.status != 'cancelled' ${whereTx}
        ORDER BY COALESCE(t.date, t.created_at) DESC, t.id DESC
-       LIMIT 12`,
+       LIMIT 25`,
       txParams
     );
 

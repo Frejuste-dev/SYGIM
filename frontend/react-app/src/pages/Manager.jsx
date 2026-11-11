@@ -750,17 +750,17 @@ export default function Manager() {
               >
                 <div className="flex items-start gap-3.5">
                   <div className="w-10 h-10 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0 group-hover:bg-amber-600 group-hover:text-white transition-colors">
-                    <i className="fas fa-bolt text-base"></i>
+                    <i className="fas fa-home text-base"></i>
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="font-bold text-slate-900 text-sm group-hover:text-amber-700 transition-colors">
-                      Journal des Préfinancements &amp; Trésorerie
+                      État du Parc : Vacances &amp; Travaux
                     </h3>
                     <p className="text-xs text-slate-500 mt-1">
-                      Suivi des avances propriétaires versées sur fonds d'agence et rapprochement avec les encaissements locataires.
+                      Suivi opérationnel des biens vacants disponibles à la relocation, et pilotage des réparations avec les artisans.
                     </p>
                     <div className="mt-3 flex items-center gap-2 text-xs font-semibold text-amber-600">
-                      <span>Voir le journal financier</span>
+                      <span>Consulter la vacance &amp; travaux</span>
                       <i className="fas fa-arrow-right text-[10px] group-hover:translate-x-1 transition-transform"></i>
                     </div>
                   </div>
@@ -777,13 +777,13 @@ export default function Manager() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="font-bold text-slate-900 text-sm group-hover:text-rose-700 transition-colors">
-                      Alertes Impayés &amp; Retards
+                      Plan d'Action Impayés &amp; Relances
                     </h3>
                     <p className="text-xs text-slate-500 mt-1">
-                      Synthèse des arriérés locataires, alertes de relance et montants à recouvrer pour l'ensemble du portefeuille.
+                      Synthèse des arriérés locataires, priorités d'action sur le terrain et suivi des engagements de paiement.
                     </p>
                     <div className="mt-3 flex items-center gap-2 text-xs font-semibold text-rose-600">
-                      <span>Examiner les impayés</span>
+                      <span>Examiner les relances</span>
                       <i className="fas fa-arrow-right text-[10px] group-hover:translate-x-1 transition-transform"></i>
                     </div>
                   </div>

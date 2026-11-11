@@ -177,27 +177,41 @@ class ReportService {
   /**
    * Export Excel hiérarchique du décompte bailleurs & locataires
    */
-  async exportOwnerStatementsExcel(query = {}) {
+  async exportOwnerStatementsExcel(query = {}, user = null) {
     const data = await reportRepository.getOwnerStatements(query);
     const { month, period_label, statements } = data;
+    const isManager = user && ['collector_manager', 'gestionnaire', 'manager'].includes(user.role);
 
     let csv = `ÉTAT RÉCAPITULATIF DES BAILLEURS ET DÉCOMPTE LOCATIF - PÉRIODE : ${period_label.toUpperCase()}\n`;
     csv += `Généré le : ${new Date().toLocaleDateString('fr-FR')} - SYGIM Gestion Immobilière\n\n`;
-    csv += `PROPRIÉTAIRE / LOCATAIRE;BIEN IMMOBILIER;LOYER GLOBAL (ATTENDU);LOYER ENCAISSÉ;ARRIÉRÉ (RESTE);MONTANT PRÉFINANCÉ;COMMISSION AGENCE;NET PROPRIÉTAIRE\n`;
 
-    for (const s of statements) {
-      // Ligne Propriétaire (Majeure)
-      csv += `"${s.owner_name.toUpperCase()}";"${s.properties_count} bien(s)";${s.total_expected_rent};${s.total_collected_rent};${s.total_arrears};${s.total_prefinanced};${s.agency_commission};${s.net_owner_payout}\n`;
-      
-      // Sous-lignes Locataires (Indentées)
-      for (const u of s.units) {
-        csv += `"-- ${u.tenant_name}";"${u.property_name}";${u.expected_rent};${u.collected_rent};${u.arrears};${u.prefinanced_amount};;\n`;
+    if (isManager) {
+      // Pour le manager : pas de flux financier agence, colonnes strictement opérationnelles
+      csv += `PROPRIÉTAIRE / LOCATAIRE;BIEN IMMOBILIER;LOYER GLOBAL (ATTENDU);LOYER ENCAISSÉ;ARRIÉRÉ (RESTE);MONTANT PRÉFINANCÉ\n`;
+
+      for (const s of statements) {
+        csv += `"${s.owner_name.toUpperCase()}";"${s.properties_count} bien(s)";${s.total_expected_rent};${s.total_collected_rent};${s.total_arrears};${s.total_prefinanced}\n`;
+        for (const u of s.units) {
+          csv += `"-- ${u.tenant_name}";"${u.property_name}";${u.expected_rent};${u.collected_rent};${u.arrears};${u.prefinanced_amount}\n`;
+        }
+        csv += `;;;;;\n`;
       }
-      csv += `;;;;;;;\n`; // Ligne vide de séparation
-    }
 
-    // Totaux généraux
-    csv += `"TOTAL GÉNÉRAL CONSOLIDÉ";"${data.totals.total_owners} propriétaire(s)";${data.totals.global_expected};${data.totals.global_collected};${data.totals.global_arrears};${data.totals.global_prefinanced};${data.totals.global_commission};${data.totals.global_net_payout}\n`;
+      csv += `"TOTAL GÉNÉRAL CONSOLIDÉ";"${data.totals.total_owners} propriétaire(s)";${data.totals.global_expected};${data.totals.global_collected};${data.totals.global_arrears};${data.totals.global_prefinanced}\n`;
+    } else {
+      // Pour la direction et la comptabilité : inclut la commission agence et le net propriétaire
+      csv += `PROPRIÉTAIRE / LOCATAIRE;BIEN IMMOBILIER;LOYER GLOBAL (ATTENDU);LOYER ENCAISSÉ;ARRIÉRÉ (RESTE);MONTANT PRÉFINANCÉ;COMMISSION AGENCE;NET PROPRIÉTAIRE\n`;
+
+      for (const s of statements) {
+        csv += `"${s.owner_name.toUpperCase()}";"${s.properties_count} bien(s)";${s.total_expected_rent};${s.total_collected_rent};${s.total_arrears};${s.total_prefinanced};${s.agency_commission};${s.net_owner_payout}\n`;
+        for (const u of s.units) {
+          csv += `"-- ${u.tenant_name}";"${u.property_name}";${u.expected_rent};${u.collected_rent};${u.arrears};${u.prefinanced_amount};;\n`;
+        }
+        csv += `;;;;;;;\n`;
+      }
+
+      csv += `"TOTAL GÉNÉRAL CONSOLIDÉ";"${data.totals.total_owners} propriétaire(s)";${data.totals.global_expected};${data.totals.global_collected};${data.totals.global_arrears};${data.totals.global_prefinanced};${data.totals.global_commission};${data.totals.global_net_payout}\n`;
+    }
 
     return Buffer.from('\uFEFF' + csv, 'utf8');
   }

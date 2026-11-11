@@ -95,7 +95,7 @@ class ReportController {
    */
   async exportOwnerStatementsExcel(req, res, next) {
     try {
-      const csv = await reportService.exportOwnerStatementsExcel(req.query);
+      const csv = await reportService.exportOwnerStatementsExcel(req.query, req.user);
       const month = req.query.month || new Date().toISOString().slice(0, 7);
       res.header('Content-Type', 'text/csv; charset=utf-8');
       res.attachment(`decompte_bailleurs_locataires_${month}.csv`);
