@@ -770,6 +770,9 @@ class ReportRepository {
         p.type AS property_type,
         p.status AS property_status,
         COALESCE(p.rent, 0) AS property_rent,
+        p.commission_type,
+        p.commission_rate,
+        p.commission_fixed_amount,
         p.owner_id,
         c.id AS tenant_id,
         c.first_name AS tenant_first_name,
@@ -902,6 +905,9 @@ class ReportRepository {
           property_name: p.property_name,
           property_address: p.property_address,
           property_type: p.property_type,
+          commission_type: p.commission_type || 'percentage',
+          commission_rate: Number(p.commission_rate ?? o.commission_rate ?? 10),
+          commission_fixed_amount: Number(p.commission_fixed_amount || 0),
           tenant_id: p.tenant_id || null,
           tenant_name: tenantName,
           tenant_phone: p.tenant_phone || '—',
@@ -923,8 +929,21 @@ class ReportRepository {
         continue;
       }
 
+      // Calcul de la commission par bien (pourcentage ou montant fixe)
+      let ownerTotalCommission = 0;
+      for (const p of ownerProps) {
+        const pCollected = units.find(u => u.property_id === p.property_id)?.collected_rent || 0;
+        if (pCollected > 0) {
+          if (p.commission_type === 'fixed') {
+            ownerTotalCommission += Math.min(pCollected, Number(p.commission_fixed_amount || 0));
+          } else {
+            const propRate = Number(p.commission_rate ?? o.commission_rate ?? 10);
+            ownerTotalCommission += Math.round((pCollected * propRate) / 100);
+          }
+        }
+      }
       const commRate = Number(o.commission_rate || 10);
-      const agencyCommission = Math.round((totalCollected * commRate) / 100);
+      const agencyCommission = ownerTotalCommission > 0 ? ownerTotalCommission : Math.round((totalCollected * commRate) / 100);
       const netOwnerPayout = Math.max(0, totalCollected - agencyCommission + totalPrefinanced);
 
       globalExpected += totalExpected;

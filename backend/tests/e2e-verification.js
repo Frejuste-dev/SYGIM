@@ -143,8 +143,49 @@ async function runE2E() {
   const propStats = await request('/api/properties/stats', { cookie: adminCookie });
   assert(propStats.status === 200, 'GET /api/properties/stats renvoie les statistiques biens (vacants/loués)');
 
-  // Trouver un bien ou en créer un
-  let testPropertyId = propList.data?.data?.[0]?.id;
+  // Test création d'un bien avec commission en pourcentage (%)
+  const propPercentRes = await request('/api/properties', {
+    method: 'POST',
+    cookie: adminCookie,
+    body: {
+      name: `Résidence Perle ${rand}`,
+      address: 'Abidjan Cocody Riviera Golf',
+      type: 'appartement',
+      rent: 300000,
+      value: 60000000,
+      status: 'vacant',
+      commission_type: 'percentage',
+      commission_rate: 12.5,
+      commission_fixed_amount: 0
+    }
+  });
+  assert(propPercentRes.status === 201 && propPercentRes.data?.data?.id, 'Création bien avec commission en pourcentage (12.5%) réussie');
+
+  // Test création d'un bien avec commission en montant fixe (FCFA)
+  const propFixedRes = await request('/api/properties', {
+    method: 'POST',
+    cookie: adminCookie,
+    body: {
+      name: `Villa Émeraude ${rand}`,
+      address: 'Abidjan Marcory Zone 4',
+      type: 'villa',
+      rent: 500000,
+      value: 90000000,
+      status: 'vacant',
+      commission_type: 'fixed',
+      commission_rate: 0,
+      commission_fixed_amount: 40000
+    }
+  });
+  assert(
+    propFixedRes.status === 201 &&
+    propFixedRes.data?.data?.commission_type === 'fixed' &&
+    Number(propFixedRes.data?.data?.commission_fixed_amount) === 40000,
+    'Création bien avec commission en prix fixe (40 000 FCFA) réussie'
+  );
+
+  // Trouver un bien ou en créer un pour le test d'attribution
+  let testPropertyId = propPercentRes.data?.data?.id || propList.data?.data?.[0]?.id;
   if (!testPropertyId) {
     const propRes = await request('/api/properties', {
       method: 'POST',

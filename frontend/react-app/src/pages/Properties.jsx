@@ -15,7 +15,8 @@ const TYPE_ICONS = { appartement: 'fa-building', maison: 'fa-home', terrain: 'fa
 
 const EMPTY_FORM = () => ({
   name: '', address: '', type: 'appartement', status: 'vacant',
-  value: '', rent: '', area: '', rooms: '', description: '', owner_id: ''
+  value: '', rent: '', area: '', rooms: '', description: '', owner_id: '',
+  commission_type: 'percentage', commission_rate: 10, commission_fixed_amount: ''
 });
 
 export default function Properties() {
@@ -94,7 +95,10 @@ export default function Properties() {
       area: property.area ?? '',
       rooms: property.rooms ?? '',
       description: property.description || '',
-      owner_id: property.owner_id ?? ''
+      owner_id: property.owner_id ?? '',
+      commission_type: property.commission_type || 'percentage',
+      commission_rate: property.commission_rate ?? 10,
+      commission_fixed_amount: property.commission_fixed_amount ?? ''
     });
     setFormError('');
     setShowModal(true);
@@ -115,7 +119,10 @@ export default function Properties() {
         rent: form.rent ? parseFloat(form.rent) : 0,
         area: form.area ? parseFloat(form.area) : null,
         rooms: form.rooms ? parseInt(form.rooms) : null,
-        owner_id: form.owner_id ? parseInt(form.owner_id) : null
+        owner_id: form.owner_id ? parseInt(form.owner_id) : null,
+        commission_type: form.commission_type || 'percentage',
+        commission_rate: form.commission_type === 'percentage' ? (form.commission_rate !== '' ? parseFloat(form.commission_rate) : 10) : 0,
+        commission_fixed_amount: form.commission_type === 'fixed' ? (form.commission_fixed_amount !== '' ? parseFloat(form.commission_fixed_amount) : 0) : 0
       };
 
       if (editingProperty) {
@@ -152,6 +159,9 @@ export default function Properties() {
         owner: ownerName,
         status: formatStatus(p.status)?.label || p.status || '-',
         rent: `${Number(p.rent || 0).toLocaleString('fr-FR')} FCFA`,
+        commission: p.commission_type === 'fixed'
+          ? `${Number(p.commission_fixed_amount || 0).toLocaleString('fr-FR')} FCFA (Fixe)`
+          : `${p.commission_rate ?? 10}%`,
         value: `${Number(p.value || 0).toLocaleString('fr-FR')} FCFA`
       };
     });
@@ -162,6 +172,7 @@ export default function Properties() {
       owner: 'Propriétaire',
       status: 'Statut',
       rent: 'Loyer Mensuel',
+      commission: 'Commission Agence',
       value: 'Valeur Estimée'
     };
     exportToExcel(rows, `proprietes_biens_${today}.xls`, cols, ' Inventaire du Parc Immobilier — SYGIM');
@@ -179,6 +190,9 @@ export default function Properties() {
         owner: ownerName,
         status: formatStatus(p.status)?.label || p.status || '-',
         rent: `${Number(p.rent || 0).toLocaleString('fr-FR')} FCFA`,
+        commission: p.commission_type === 'fixed'
+          ? `${Number(p.commission_fixed_amount || 0).toLocaleString('fr-FR')} FCFA (Fixe)`
+          : `${p.commission_rate ?? 10}%`,
         value: `${Number(p.value || 0).toLocaleString('fr-FR')} FCFA`
       };
     });
@@ -189,6 +203,7 @@ export default function Properties() {
       owner: 'Propriétaire',
       status: 'Statut',
       rent: 'Loyer Mensuel',
+      commission: 'Commission Agence',
       value: 'Valeur Estimée'
     };
     exportToPDF(rows, `proprietes_biens_${today}.pdf`, cols, {
@@ -284,6 +299,7 @@ export default function Properties() {
                 <th className="py-3 px-6 font-semibold">Statut</th>
                 <th className="py-3 px-6 font-semibold">Valeur</th>
                 <th className="py-3 px-6 font-semibold">Loyer</th>
+                <th className="py-3 px-6 font-semibold">Commission</th>
                 <th className="py-3 px-6 font-semibold text-right">Actions</th>
               </tr>
             </thead>
@@ -328,6 +344,14 @@ export default function Properties() {
                     <td className="py-4 px-6 text-sm font-medium text-slate-900">
                       {formatXOF(p.rent, { compact: false })}
                     </td>
+                    <td className="py-4 px-6 text-sm">
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 font-semibold text-xs border border-emerald-200">
+                        <i className={p.commission_type === 'fixed' ? "fas fa-tag text-[10px]" : "fas fa-percent text-[10px]"}></i>
+                        {p.commission_type === 'fixed'
+                          ? `${formatXOF(p.commission_fixed_amount || 0)} fixe`
+                          : `${p.commission_rate ?? 10}%`}
+                      </span>
+                    </td>
                     <td className="py-4 px-6">
                       <div className="flex items-center justify-end gap-3 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                         <button className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-500 hover:text-primary hover:border-primary hover:bg-primary/5 border border-transparent hover:border-primary/20 transition-all bg-white" onClick={() => openEditModal(p)} title="Modifier">
@@ -342,7 +366,7 @@ export default function Properties() {
                 );
               }) : (
                 <tr>
-                  <td colSpan="7" className="py-12 text-center text-slate-500">
+                  <td colSpan="9" className="py-12 text-center text-slate-500">
                     <div className="flex flex-col items-center justify-center">
                       <i className="fas fa-building text-4xl text-slate-300 mb-3"></i>
                       <p>{propertyEmptyMessage}</p>
@@ -503,7 +527,119 @@ export default function Properties() {
               </div>
             </div>
 
-            {/* 3. Statut & Propriétaire */}
+            {/* 3. Paramètres de Commission Agence sur ce Bien */}
+            <div className="p-4 bg-slate-50/80 border border-slate-200 rounded-2xl space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
+                    <i className="fas fa-hand-holding-dollar text-primary"></i>
+                    Commission Agence sur ce bien
+                  </label>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    Indiquez le pourcentage (%) ou le montant fixe (FCFA) gagné par l'agence sur ce bien.
+                  </p>
+                </div>
+                <div className="inline-flex p-1 bg-white border border-slate-200 rounded-xl shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setForm({ ...form, commission_type: 'percentage' })}
+                    className={`px-3 py-1 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                      form.commission_type === 'percentage'
+                        ? 'bg-primary text-white shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <i className="fas fa-percent text-[10px]"></i>
+                    <span>Pourcentage (%)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setForm({ ...form, commission_type: 'fixed' })}
+                    className={`px-3 py-1 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                      form.commission_type === 'fixed'
+                        ? 'bg-primary text-white shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <i className="fas fa-money-bill-wave text-[10px]"></i>
+                    <span>Prix Fixe (FCFA)</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center pt-1">
+                {form.commission_type === 'percentage' ? (
+                  <div>
+                    <label htmlFor="commission_rate" className="block text-xs font-semibold text-slate-700 mb-1">
+                      Taux de commission (%)
+                    </label>
+                    <div className="relative">
+                      <input
+                        id="commission_rate"
+                        type="number"
+                        step="0.5"
+                        min="0"
+                        max="100"
+                        placeholder="Ex : 10"
+                        value={form.commission_rate}
+                        onChange={(e) => setForm({ ...form, commission_rate: e.target.value })}
+                        className="w-full pl-3.5 pr-8 py-2 bg-white border border-slate-300 rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">%</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <label htmlFor="commission_fixed_amount" className="block text-xs font-semibold text-slate-700 mb-1">
+                      Montant fixe de commission (FCFA)
+                    </label>
+                    <div className="relative">
+                      <input
+                        id="commission_fixed_amount"
+                        type="number"
+                        step="500"
+                        min="0"
+                        placeholder="Ex : 25 000"
+                        value={form.commission_fixed_amount}
+                        onChange={(e) => setForm({ ...form, commission_fixed_amount: e.target.value })}
+                        className="w-full pl-3.5 pr-14 py-2 bg-white border border-slate-300 rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">FCFA</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Estimation en direct selon le loyer saisi */}
+                <div className="p-3 bg-white border border-slate-200 rounded-xl text-xs">
+                  <div className="font-semibold text-slate-700 flex items-center gap-1.5 mb-1">
+                    <i className="fas fa-calculator text-primary"></i> Simulation sur loyer :
+                  </div>
+                  {parseFloat(form.rent) > 0 ? (
+                    (() => {
+                      const r = parseFloat(form.rent);
+                      const comm = form.commission_type === 'fixed'
+                        ? Math.min(r, parseFloat(form.commission_fixed_amount || 0))
+                        : Math.round((r * parseFloat(form.commission_rate || 0)) / 100);
+                      const net = Math.max(0, r - comm);
+                      return (
+                        <div className="space-y-0.5">
+                          <div className="text-slate-800">
+                            Commission agence : <strong className="text-emerald-700 font-extrabold">{formatXOF(comm)}</strong>
+                          </div>
+                          <div className="text-[11px] text-slate-500">
+                            Net propriétaire : <strong className="text-primary font-bold">{formatXOF(net)}</strong>
+                          </div>
+                        </div>
+                      );
+                    })()
+                  ) : (
+                    <span className="text-slate-400 italic">Saisissez un loyer mensuel ci-dessus pour visualiser le gain agence.</span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* 4. Statut & Propriétaire */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label htmlFor="status" className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">

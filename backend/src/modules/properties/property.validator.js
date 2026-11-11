@@ -44,6 +44,18 @@ const propertyValidator = [
     .optional({ checkFalsy: true })
     .isInt({ min: 1 }).withMessage('L\'identifiant du locataire doit être un entier positif'),
 
+  body('commission_type')
+    .optional()
+    .isIn(['percentage', 'fixed']).withMessage('Le type de commission doit être "percentage" ou "fixed"'),
+
+  body('commission_rate')
+    .optional({ nullable: true })
+    .isFloat({ min: 0, max: 100 }).withMessage('Le taux de commission doit être compris entre 0 et 100%'),
+
+  body('commission_fixed_amount')
+    .optional({ nullable: true })
+    .isFloat({ min: 0 }).withMessage('Le montant fixe de commission doit être positif'),
+
   handleValidationErrors
 ];
 
@@ -78,6 +90,18 @@ const updatePropertyValidator = [
   body('tenant_id')
     .optional({ checkFalsy: true })
     .isInt({ min: 1 }).withMessage('L\'identifiant du locataire doit être un entier positif'),
+
+  body('commission_type')
+    .optional()
+    .isIn(['percentage', 'fixed']).withMessage('Le type de commission doit être "percentage" ou "fixed"'),
+
+  body('commission_rate')
+    .optional({ nullable: true })
+    .isFloat({ min: 0, max: 100 }).withMessage('Le taux de commission doit être compris entre 0 et 100%'),
+
+  body('commission_fixed_amount')
+    .optional({ nullable: true })
+    .isFloat({ min: 0 }).withMessage('Le montant fixe de commission doit être positif'),
 
   handleValidationErrors
 ];
