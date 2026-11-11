@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCollectors } from '../hooks/queries/useCollectors';
 import { useProperties, usePropertyStats } from '../hooks/queries/useProperties';
@@ -30,6 +31,7 @@ const TABS = [
   { key: 'collectors', icon: 'fa-users',      label: 'Portefeuilles' },
   { key: 'assignment', icon: 'fa-handshake',   label: 'Attributions' },
   { key: 'performance', icon: 'fa-chart-line', label: 'Performances' },
+  { key: 'reports',    icon: 'fa-file-invoice', label: 'Rapports & Décomptes' },
 ];
 
 // â”€â”€â”€ Sous-composant : KPI card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -65,6 +67,7 @@ function ProgressBar({ rate }) {
 
 // â”€â”€â”€ Composant principal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export default function Manager() {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { showToast } = useToast();
 
@@ -215,6 +218,16 @@ export default function Manager() {
             </select>
           </div>
           
+          <button
+            type="button"
+            onClick={() => navigate('/admin/reports')}
+            className="inline-flex items-center gap-2 px-3.5 py-2 bg-indigo-50 text-indigo-700 border border-indigo-200 text-sm font-semibold rounded-xl hover:bg-indigo-100 transition-colors shadow-2xs"
+            title="Consulter tous les rapports et bordereaux officiels"
+          >
+            <i className="fas fa-file-invoice text-sm"></i>
+            Rapports &amp; Décomptes
+          </button>
+
           {activeTab !== 'assignment' && (
             <button
               onClick={() => setActiveTab('assignment')}
@@ -660,6 +673,123 @@ export default function Manager() {
                 <p className="text-sm text-slate-400">Les statistiques apparaitront lorsque des collecteurs seront actifs.</p>
               </div>
             )}
+          </div>
+        )}
+
+        {/* ── ONGLET : Rapports & Documents de Gestion ── */}
+        {activeTab === 'reports' && (
+          <div className="p-6 space-y-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+              <div>
+                <h2 className="text-base font-bold text-slate-900">Rapports &amp; Documents de Gestion</h2>
+                <p className="text-sm text-slate-500 mt-0.5">
+                  Consultez les décomptes des bailleurs, le suivi des collecteurs, le recouvrement et téléchargez les bordereaux officiels.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => navigate('/admin/reports')}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white text-sm font-semibold rounded-xl hover:bg-primary-dark transition-colors shadow-sm shadow-primary/20"
+              >
+                <i className="fas fa-external-link-alt text-xs"></i>
+                Ouvrir le Module Rapports Complets
+              </button>
+            </div>
+
+            {/* Cartes de modules de rapports */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div 
+                onClick={() => navigate('/admin/reports')}
+                className="p-5 bg-white rounded-xl border border-slate-200 hover:border-primary/40 hover:shadow-md transition-all cursor-pointer group"
+              >
+                <div className="flex items-start gap-3.5">
+                  <div className="w-10 h-10 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 group-hover:bg-primary group-hover:text-white transition-colors">
+                    <i className="fas fa-file-invoice-dollar text-base"></i>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-bold text-slate-900 text-sm group-hover:text-primary transition-colors">
+                      Décomptes Propriétaires &amp; Bordereaux Locatifs
+                    </h3>
+                    <p className="text-xs text-slate-500 mt-1">
+                      Vue hiérarchique avec sous-lignes locataires : loyers payés, arriérés, avances préfinancées et bordereaux A4 téléchargeables.
+                    </p>
+                    <div className="mt-3 flex items-center gap-2 text-xs font-semibold text-primary">
+                      <span>Accéder au rapport</span>
+                      <i className="fas fa-arrow-right text-[10px] group-hover:translate-x-1 transition-transform"></i>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div 
+                onClick={() => navigate('/admin/reports')}
+                className="p-5 bg-white rounded-xl border border-slate-200 hover:border-emerald-500/40 hover:shadow-md transition-all cursor-pointer group"
+              >
+                <div className="flex items-start gap-3.5">
+                  <div className="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                    <i className="fas fa-chart-line text-base"></i>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-bold text-slate-900 text-sm group-hover:text-emerald-700 transition-colors">
+                      Rapport Collecteurs &amp; Recouvrement
+                    </h3>
+                    <p className="text-xs text-slate-500 mt-1">
+                      Analyse détaillée des performances par agent : montants recouvrés, taux d'atteinte des objectifs et tournées.
+                    </p>
+                    <div className="mt-3 flex items-center gap-2 text-xs font-semibold text-emerald-600">
+                      <span>Consulter les performances</span>
+                      <i className="fas fa-arrow-right text-[10px] group-hover:translate-x-1 transition-transform"></i>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div 
+                onClick={() => navigate('/admin/reports')}
+                className="p-5 bg-white rounded-xl border border-slate-200 hover:border-amber-500/40 hover:shadow-md transition-all cursor-pointer group"
+              >
+                <div className="flex items-start gap-3.5">
+                  <div className="w-10 h-10 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0 group-hover:bg-amber-600 group-hover:text-white transition-colors">
+                    <i className="fas fa-bolt text-base"></i>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-bold text-slate-900 text-sm group-hover:text-amber-700 transition-colors">
+                      Journal des Préfinancements &amp; Trésorerie
+                    </h3>
+                    <p className="text-xs text-slate-500 mt-1">
+                      Suivi des avances propriétaires versées sur fonds d'agence et rapprochement avec les encaissements locataires.
+                    </p>
+                    <div className="mt-3 flex items-center gap-2 text-xs font-semibold text-amber-600">
+                      <span>Voir le journal financier</span>
+                      <i className="fas fa-arrow-right text-[10px] group-hover:translate-x-1 transition-transform"></i>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div 
+                onClick={() => navigate('/admin/reports')}
+                className="p-5 bg-white rounded-xl border border-slate-200 hover:border-rose-500/40 hover:shadow-md transition-all cursor-pointer group"
+              >
+                <div className="flex items-start gap-3.5">
+                  <div className="w-10 h-10 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center shrink-0 group-hover:bg-rose-600 group-hover:text-white transition-colors">
+                    <i className="fas fa-exclamation-triangle text-base"></i>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-bold text-slate-900 text-sm group-hover:text-rose-700 transition-colors">
+                      Alertes Impayés &amp; Retards
+                    </h3>
+                    <p className="text-xs text-slate-500 mt-1">
+                      Synthèse des arriérés locataires, alertes de relance et montants à recouvrer pour l'ensemble du portefeuille.
+                    </p>
+                    <div className="mt-3 flex items-center gap-2 text-xs font-semibold text-rose-600">
+                      <span>Examiner les impayés</span>
+                      <i className="fas fa-arrow-right text-[10px] group-hover:translate-x-1 transition-transform"></i>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </div>

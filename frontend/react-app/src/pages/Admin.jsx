@@ -55,7 +55,7 @@ export default function Admin() {
     {
       title: 'ANALYSE',
       items: [
-        { name: 'Rapports', path: '/admin/reports', icon: 'fas fa-file-alt', roles: ['admin', 'super_admin', 'director', 'accounting'] },
+        { name: 'Rapports', path: '/admin/reports', icon: 'fas fa-file-alt', roles: ['admin', 'super_admin', 'director', 'accounting', 'collector_manager', 'gestionnaire', 'manager'] },
         { name: 'Journal d\'activité', path: '/admin/activity', icon: 'fas fa-history', roles: ['admin', 'super_admin'] },
       ]
     },
