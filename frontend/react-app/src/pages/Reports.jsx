@@ -1153,18 +1153,13 @@ export default function Reports() {
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  handleDownloadOwnerPdf(s.owner_id, s.owner_name);
+                                  printOwnerSettlementReceipt(s, { month: selectedMonth, isStatement: true });
                                 }}
-                                disabled={isPdfLoading}
-                                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg text-xs font-bold transition-all shadow-2xs hover:border-indigo-300 cursor-pointer disabled:opacity-50"
-                                title="Télécharger le bordereau de reddition de comptes officiel"
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg text-xs font-bold transition-all shadow-2xs hover:border-indigo-300 cursor-pointer"
+                                title="Imprimer le bordereau officiel avec le détail complet des locataires"
                               >
-                                {isPdfLoading ? (
-                                  <i className="fas fa-spinner fa-spin text-xs"></i>
-                                ) : (
-                                  <i className="fas fa-file-pdf text-indigo-600"></i>
-                                )}
-                                <span>Reçu PDF</span>
+                                <i className="fas fa-print text-indigo-600"></i>
+                                <span>Bordereau PDF</span>
                               </button>
                             </td>
                           </tr>

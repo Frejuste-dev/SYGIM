@@ -347,6 +347,54 @@ class ReportRepository {
       }
     }
 
+    // Récupérer les locataires et unités pour chaque propriétaire/bien préfinancé
+    const ownerIds = [...new Set(prefRows.map(r => r.owner_id).filter(Boolean))];
+    const unitsByOwner = {};
+    if (ownerIds.length > 0) {
+      try {
+        const [unitRows] = await db.query(
+          `SELECT 
+             p.id AS property_id,
+             p.name AS property_name,
+             p.address AS property_address,
+             p.owner_id,
+             COALESCE(p.rent, 0) AS property_rent,
+             c.id AS tenant_id,
+             CONCAT(COALESCE(c.first_name, ''), ' ', COALESCE(c.last_name, '')) AS tenant_name,
+             c.phone AS tenant_phone,
+             COALESCE(c.amount_due, 0) AS tenant_due,
+             COALESCE(c.amount_paid, 0) AS tenant_paid
+           FROM properties p
+           LEFT JOIN clients c ON (c.property_id = p.id AND c.status != 'departed')
+           WHERE p.owner_id IN (?)
+           ORDER BY p.name ASC`,
+          [ownerIds]
+        );
+        for (const u of unitRows) {
+          if (!unitsByOwner[u.owner_id]) unitsByOwner[u.owner_id] = [];
+          const isVacant = !u.tenant_id;
+          const expRent = Number(u.property_rent || u.tenant_due || 0);
+          const colRent = Number(u.tenant_paid || 0);
+          const arr = Math.max(0, Number(u.tenant_due || expRent) - colRent);
+          unitsByOwner[u.owner_id].push({
+            property_id: u.property_id,
+            property_name: u.property_name,
+            property_address: u.property_address,
+            tenant_id: u.tenant_id,
+            tenant_name: isVacant ? 'Logement vacant' : u.tenant_name.trim(),
+            tenant_phone: u.tenant_phone || '',
+            is_vacant: isVacant,
+            expected_rent: expRent,
+            collected_rent: colRent,
+            arrears: arr,
+            prefinanced_amount: 0
+          });
+        }
+      } catch (err) {
+        console.error('Erreur chargement unités prefinancing:', err);
+      }
+    }
+
     let totalPrefinancedAmount = 0;
     let activePrefinancedAmount = 0;
     let reimbursedAmount = 0;
@@ -377,6 +425,27 @@ class ReportRepository {
       }
 
       const ownerName = `${row.owner_first_name || ''} ${row.owner_last_name || ''}`.trim() || `Propriétaire #${row.owner_id}`;
+
+      const ownerUnits = unitsByOwner[row.owner_id] || [];
+      const rowUnits = row.property_id
+        ? (ownerUnits.filter(u => u.property_id === row.property_id).length > 0
+            ? ownerUnits.filter(u => u.property_id === row.property_id)
+            : [{
+                property_id: row.property_id,
+                property_name: row.property_name || 'Bien préfinancé',
+                tenant_name: 'Locataire en retard',
+                tenant_phone: '',
+                is_vacant: false,
+                expected_rent: expectedRent,
+                collected_rent: recovered,
+                arrears: unrecoveredExposure,
+                prefinanced_amount: amountPaid
+              }])
+        : ownerUnits;
+
+      if (rowUnits.length === 1 && amountPaid > 0) {
+        rowUnits[0].prefinanced_amount = amountPaid;
+      }
 
       return {
         id: row.id,
@@ -410,7 +479,8 @@ class ReportRepository {
         is_prefinanced: true,
         status: isReimbursed ? 'reimbursed' : 'prefinanced',
         notes: row.notes || 'Préfinancement agence sur loyer impayé',
-        installments: installmentsBySettlement[row.id] || []
+        installments: installmentsBySettlement[row.id] || [],
+        units: rowUnits
       };
     });
 

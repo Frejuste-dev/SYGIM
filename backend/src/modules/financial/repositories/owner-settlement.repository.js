@@ -130,8 +130,74 @@ class OwnerSettlementRepository extends BaseRepository {
         if (!bySettlement[inst.settlement_id]) bySettlement[inst.settlement_id] = [];
         bySettlement[inst.settlement_id].push(inst);
       }
+
+      // Récupérer les locataires et unités pour chaque propriétaire/bien
+      const ownerIds = [...new Set(rows.map(r => r.owner_id).filter(Boolean))];
+      const unitsByOwner = {};
+      if (ownerIds.length > 0) {
+        try {
+          const [unitRows] = await pool.query(
+            `SELECT 
+               p.id AS property_id,
+               p.name AS property_name,
+               p.address AS property_address,
+               p.owner_id,
+               COALESCE(p.rent, 0) AS property_rent,
+               c.id AS tenant_id,
+               CONCAT(COALESCE(c.first_name, ''), ' ', COALESCE(c.last_name, '')) AS tenant_name,
+               c.phone AS tenant_phone,
+               COALESCE(c.amount_due, 0) AS tenant_due,
+               COALESCE(c.amount_paid, 0) AS tenant_paid
+             FROM properties p
+             LEFT JOIN clients c ON (c.property_id = p.id AND c.status != 'departed')
+             WHERE p.owner_id IN (?)
+             ORDER BY p.name ASC`,
+            [ownerIds]
+          );
+          for (const u of unitRows) {
+            if (!unitsByOwner[u.owner_id]) unitsByOwner[u.owner_id] = [];
+            const isVacant = !u.tenant_id;
+            const expRent = Number(u.property_rent || u.tenant_due || 0);
+            const colRent = Number(u.tenant_paid || 0);
+            const arr = Math.max(0, Number(u.tenant_due || expRent) - colRent);
+            unitsByOwner[u.owner_id].push({
+              property_id: u.property_id,
+              property_name: u.property_name,
+              property_address: u.property_address,
+              tenant_id: u.tenant_id,
+              tenant_name: isVacant ? 'Logement vacant' : u.tenant_name.trim(),
+              tenant_phone: u.tenant_phone || '',
+              is_vacant: isVacant,
+              expected_rent: expRent,
+              collected_rent: colRent,
+              arrears: arr,
+              prefinanced_amount: 0
+            });
+          }
+        } catch (err) {
+          console.error('Erreur chargement unités settlement:', err);
+        }
+      }
+
       for (const r of rows) {
         r.installments = bySettlement[r.id] || [];
+        const ownerUnits = unitsByOwner[r.owner_id] || [];
+        if (r.property_id) {
+          const matched = ownerUnits.filter(u => u.property_id === r.property_id);
+          r.units = matched.length > 0 ? matched : [{
+            property_id: r.property_id,
+            property_name: r.property_name || 'Bien immobilier',
+            tenant_name: 'Locataire en cours',
+            tenant_phone: '',
+            is_vacant: false,
+            expected_rent: Number(r.expected_rent || 0),
+            collected_rent: Number(r.total_collected || 0),
+            arrears: Math.max(0, Number(r.expected_rent || 0) - Number(r.total_collected || 0)),
+            prefinanced_amount: r.is_prefinanced ? Number(r.amount_paid || 0) : 0
+          }];
+        } else {
+          r.units = ownerUnits;
+        }
       }
     }
     return rows;
