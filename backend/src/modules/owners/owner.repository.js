@@ -139,6 +139,9 @@ class OwnerRepository extends BaseRepository {
         owner.properties = propMap[owner.id] || [];
         owner.property_ids = owner.properties.map(p => p.id);
         owner.propertiesCount = owner.properties.length;
+        owner.rentedCount = owner.properties.filter(p => p.status === 'loue').length;
+        owner.vacantCount = owner.properties.filter(p => p.status === 'vacant' || p.status === 'disponible').length;
+        owner.repairCount = owner.properties.filter(p => p.status === 'en_renovation' || p.status === 'en_maintenance').length;
       }
     }
 
@@ -170,7 +173,10 @@ class OwnerRepository extends BaseRepository {
     let sql = `SELECT 
                  COUNT(*) as totalOwners,
                  SUM(CASE WHEN active = 1 THEN 1 ELSE 0 END) as activeOwners,
-                 (SELECT COUNT(*) FROM properties WHERE owner_id IS NOT NULL) as totalProperties
+                 (SELECT COUNT(*) FROM properties WHERE owner_id IS NOT NULL) as totalProperties,
+                 (SELECT COUNT(*) FROM properties WHERE owner_id IS NOT NULL AND status = 'loue') as rentedProperties,
+                 (SELECT COUNT(*) FROM properties WHERE owner_id IS NOT NULL AND status IN ('vacant', 'disponible')) as vacantProperties,
+                 (SELECT COUNT(*) FROM properties WHERE owner_id IS NOT NULL AND status IN ('en_renovation', 'en_maintenance')) as repairProperties
                FROM owners WHERE 1=1`;
     const params = [];
 
@@ -191,7 +197,10 @@ class OwnerRepository extends BaseRepository {
     return {
       totalOwners: Number(rows[0].totalOwners) || 0,
       activeOwners: Number(rows[0].activeOwners) || 0,
-      totalProperties: Number(rows[0].totalProperties) || 0
+      totalProperties: Number(rows[0].totalProperties) || 0,
+      rentedProperties: Number(rows[0].rentedProperties) || 0,
+      vacantProperties: Number(rows[0].vacantProperties) || 0,
+      repairProperties: Number(rows[0].repairProperties) || 0
     };
   }
 
@@ -206,11 +215,18 @@ class OwnerRepository extends BaseRepository {
       [id]
     );
 
+    const rentedCount = properties.filter(p => p.status === 'loue').length;
+    const vacantCount = properties.filter(p => p.status === 'vacant' || p.status === 'disponible').length;
+    const repairCount = properties.filter(p => p.status === 'en_renovation' || p.status === 'en_maintenance').length;
+
     return {
       ...ownerRows[0],
       properties,
       property_ids: properties.map(p => p.id),
-      propertiesCount: properties.length
+      propertiesCount: properties.length,
+      rentedCount,
+      vacantCount,
+      repairCount
     };
   }
 

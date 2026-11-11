@@ -27,6 +27,45 @@ const SCHEDULE_LABELS = {
   on_demand: 'À la demande'
 };
 
+const PROPERTY_STATUS_CONFIG = {
+  loue: {
+    label: 'Loué',
+    badgeClass: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+    dotClass: 'bg-emerald-500',
+    iconClass: 'fa-key text-emerald-600'
+  },
+  vacant: {
+    label: 'Vacant',
+    badgeClass: 'bg-blue-50 text-blue-800 border-blue-200',
+    dotClass: 'bg-blue-500',
+    iconClass: 'fa-door-open text-blue-600'
+  },
+  disponible: {
+    label: 'Vacant',
+    badgeClass: 'bg-blue-50 text-blue-800 border-blue-200',
+    dotClass: 'bg-blue-500',
+    iconClass: 'fa-door-open text-blue-600'
+  },
+  en_renovation: {
+    label: 'En réparation',
+    badgeClass: 'bg-amber-50 text-amber-800 border-amber-300',
+    dotClass: 'bg-amber-500',
+    iconClass: 'fa-tools text-amber-600'
+  },
+  en_maintenance: {
+    label: 'En réparation',
+    badgeClass: 'bg-amber-50 text-amber-800 border-amber-300',
+    dotClass: 'bg-amber-500',
+    iconClass: 'fa-tools text-amber-600'
+  },
+  vendu: {
+    label: 'Vendu',
+    badgeClass: 'bg-slate-100 text-slate-700 border-slate-200',
+    dotClass: 'bg-slate-400',
+    iconClass: 'fa-tag text-slate-500'
+  }
+};
+
 const EMPTY_FORM = () => ({
   first_name: '',
   last_name: '',
@@ -50,6 +89,8 @@ export default function Owners() {
   const page = parseInt(searchParams.get('page') || '1', 10);
   const limit = 25;
 
+  const [propertyStatusFilter, setPropertyStatusFilter] = useState('all');
+
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const { confirm } = useConfirm();
@@ -70,7 +111,7 @@ export default function Owners() {
   const pagination = queryResult?.pagination || {};
   const isLastPage = pagination.hasNext === false || pagination.hasNextPage === false;
 
-  const { data: propertiesResult = {} } = useProperties({ limit: 200 });
+  const { data: propertiesResult = {} } = useProperties({ limit: 300 });
   const allProperties = Array.isArray(propertiesResult) ? propertiesResult : (propertiesResult?.data || []);
 
   const [ownersSummary, setOwnersSummary] = useState([]);
@@ -104,10 +145,31 @@ export default function Owners() {
   const { data: statsData = {} } = useOwnerStats({ search: searchTerm });
 
   const stats = [
-    { label: 'Total Propriétaires', value: statsData.totalOwners || owners.length || 0, icon: 'fa-user-tie', color: 'var(--warning)' },
-    { label: 'Biens Associés', value: statsData.totalProperties || 0, icon: 'fa-building', color: 'var(--primary)' },
-    { label: 'Propriétaires Actifs', value: statsData.activeOwners || owners.length || 0, icon: 'fa-check-circle', color: 'var(--success)' }
+    { label: 'Total Propriétaires', value: statsData.totalOwners || owners.length || 0, icon: 'fa-user-tie', color: 'var(--primary)' },
+    { label: 'Biens sous gestion', value: statsData.totalProperties || 0, icon: 'fa-building', color: 'var(--primary)' },
+    { label: 'En location (Loués)', value: statsData.rentedProperties || 0, icon: 'fa-key', color: 'var(--success, #16a34a)' },
+    { label: 'Biens vacants', value: statsData.vacantProperties || 0, icon: 'fa-door-open', color: 'var(--info, #2563eb)' },
+    { label: 'En réparation', value: statsData.repairProperties || 0, icon: 'fa-tools', color: 'var(--warning, #d97706)' }
   ];
+
+  // Filtrage local selon le statut du parc du propriétaire
+  const filteredOwners = owners.filter(o => {
+    if (propertyStatusFilter === 'all') return true;
+    const props = Array.isArray(o.properties) && o.properties.length > 0
+      ? o.properties
+      : allProperties.filter(p => Number(p.owner_id) === Number(o.id));
+
+    if (propertyStatusFilter === 'has_rented') {
+      return (o.rentedCount !== undefined ? o.rentedCount > 0 : props.some(p => p.status === 'loue'));
+    }
+    if (propertyStatusFilter === 'has_vacant') {
+      return (o.vacantCount !== undefined ? o.vacantCount > 0 : props.some(p => p.status === 'vacant' || p.status === 'disponible'));
+    }
+    if (propertyStatusFilter === 'has_repair') {
+      return (o.repairCount !== undefined ? o.repairCount > 0 : props.some(p => p.status === 'en_renovation' || p.status === 'en_maintenance'));
+    }
+    return true;
+  });
 
   const openCreateModal = () => {
     setEditingOwner(null);
@@ -170,6 +232,7 @@ export default function Owners() {
         showToast({ type: 'success', message: 'Propriétaire créé et biens attribués avec succès.' });
       }
       queryClient.invalidateQueries({ queryKey: ['properties'] });
+      queryClient.invalidateQueries({ queryKey: ['owners'] });
       loadOwnersSummary();
       setShowModal(false);
     } catch (err) {
@@ -198,17 +261,34 @@ export default function Owners() {
     setPayoutModalOpen(true);
   };
 
-  // Préparation des données pour Export Excel / PDF
-  const getExportData = () => owners.map(o => {
+  // Préparation des données pour Export Excel / PDF avec décomposition de l'état du parc
+  const getExportData = () => filteredOwners.map(o => {
     const props = Array.isArray(o.properties) && o.properties.length > 0
       ? o.properties
       : allProperties.filter(p => Number(p.owner_id) === Number(o.id));
+    const rentedCount = o.rentedCount !== undefined ? o.rentedCount : props.filter(p => p.status === 'loue').length;
+    const vacantCount = o.vacantCount !== undefined ? o.vacantCount : props.filter(p => p.status === 'vacant' || p.status === 'disponible').length;
+    const repairCount = o.repairCount !== undefined ? o.repairCount : props.filter(p => p.status === 'en_renovation' || p.status === 'en_maintenance').length;
+    const propertiesDetail = props.map(p => {
+      const st = p.status === 'loue' 
+        ? 'Loué' 
+        : (p.status === 'vacant' || p.status === 'disponible') 
+          ? 'Vacant' 
+          : (p.status === 'en_renovation' || p.status === 'en_maintenance') 
+            ? 'En réparation' 
+            : (p.status || 'Inconnu');
+      return `${p.name} (${st})`;
+    }).join(', ');
+
     return {
       full_name: `${o.first_name || ''} ${o.last_name || ''}`.trim(),
       phone: o.phone || '—',
       email: o.email || '—',
       properties_count: props.length,
-      properties_list: props.map(p => p.name).join(', ') || 'Aucun bien',
+      rented_count: rentedCount,
+      vacant_count: vacantCount,
+      repair_count: repairCount,
+      properties_detail: propertiesDetail || 'Aucun bien',
       total_rent: props.reduce((sum, p) => sum + Number(p.rent || 0), 0),
       payment_method: PAYMENT_METHOD_LABELS[o.preferred_payment_method] || 'Virement bancaire',
       payout_schedule: SCHEDULE_LABELS[o.payout_schedule] || 'Mensuel intégral',
@@ -221,8 +301,11 @@ export default function Owners() {
     full_name: 'Propriétaire',
     phone: 'Téléphone',
     email: 'Email',
-    properties_count: 'Nb Biens',
-    properties_list: 'Biens attribués',
+    properties_count: 'Total Biens',
+    rented_count: 'Loués (En location)',
+    vacant_count: 'Vacants',
+    repair_count: 'En Réparation',
+    properties_detail: 'Détail des Biens & Statuts',
     total_rent: 'Loyers mensuels (XOF)',
     payment_method: 'Moyen de paiement',
     payout_schedule: 'Méthode de versement',
@@ -233,18 +316,21 @@ export default function Owners() {
   const handleExportExcel = () => {
     const data = getExportData();
     if (!data.length) return showToast({ type: 'warning', message: 'Aucun propriétaire à exporter.' });
-    exportToExcel(data, 'sygim-proprietaires', EXPORT_COLUMNS, 'Liste des Propriétaires & Patrimoine');
+    exportToExcel(data, 'sygim-proprietaires-parc', EXPORT_COLUMNS, 'Propriétaires & État du Parc');
   };
 
   const handleExportPDF = () => {
     const data = getExportData();
     if (!data.length) return showToast({ type: 'warning', message: 'Aucun propriétaire à exporter.' });
-    exportToPDF(data, 'sygim-proprietaires', EXPORT_COLUMNS, {
-      title: 'Liste Officielle des Propriétaires & Biens Attribués',
-      subtitle: 'Gestion du Patrimoine & Modalités de Reversement',
+    exportToPDF(data, 'sygim-proprietaires-parc', EXPORT_COLUMNS, {
+      title: 'Liste Officielle des Propriétaires & État du Parc Immobilier',
+      subtitle: 'Inventaire des Biens : En Location, Vacants et En Réparation',
       summary: [
         { label: 'Total Propriétaires', value: data.length },
         { label: 'Biens sous gestion', value: data.reduce((s, d) => s + d.properties_count, 0) },
+        { label: 'En Location', value: data.reduce((s, d) => s + d.rented_count, 0) },
+        { label: 'Biens Vacants', value: data.reduce((s, d) => s + d.vacant_count, 0) },
+        { label: 'En Réparation', value: data.reduce((s, d) => s + d.repair_count, 0) },
         { label: 'Total Loyers Mensuels', value: formatXOF(data.reduce((s, d) => s + d.total_rent, 0)) }
       ]
     });
@@ -255,22 +341,26 @@ export default function Owners() {
       {/* 1. EN-TÊTE */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">Propriétaires & Reversements</h2>
-          <p className="text-sm text-slate-500">Gérez les propriétaires, attribuez plusieurs biens et configurez leurs modalités de paiement</p>
+          <h2 className="text-2xl font-bold text-slate-900">Propriétaires &amp; État du Parc</h2>
+          <p className="text-sm text-slate-500">
+            Suivi du patrimoine par propriétaire, état d'occupation des biens (en location, vacants, en réparation) et reversements
+          </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
           <button
             type="button"
             onClick={handleExportExcel}
-            className="inline-flex items-center gap-2 px-3.5 py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg text-sm font-semibold hover:bg-emerald-100 transition-colors"
+            className="inline-flex items-center gap-2 px-3.5 py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg text-sm font-semibold hover:bg-emerald-100 transition-colors shadow-2xs"
+            title="Exporter la liste avec le détail du statut de chaque bien"
           >
             <i className="fas fa-file-excel"></i> Excel
           </button>
           <button
             type="button"
             onClick={handleExportPDF}
-            className="inline-flex items-center gap-2 px-3.5 py-2 bg-rose-50 text-rose-700 border border-rose-200 rounded-lg text-sm font-semibold hover:bg-rose-100 transition-colors"
+            className="inline-flex items-center gap-2 px-3.5 py-2 bg-rose-50 text-rose-700 border border-rose-200 rounded-lg text-sm font-semibold hover:bg-rose-100 transition-colors shadow-2xs"
+            title="Exporter l'inventaire officiel du parc propriétaire en PDF"
           >
             <i className="fas fa-file-pdf"></i> PDF
           </button>
@@ -291,8 +381,8 @@ export default function Owners() {
         </div>
       </div>
 
-      {/* 2. CARTES KPI */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* 2. CARTES KPI (5 INDICATEURS CLÉS D'OCCUPATION DU PARC) */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         {stats.map((s) => (
           <StatsCard key={s.label} label={s.label} title={s.label} value={s.value} icon={s.icon} color={s.color} />
         ))}
@@ -300,28 +390,61 @@ export default function Owners() {
 
       {/* 3. TABLEAU DES PROPRIÉTAIRES */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-slate-100">
-          <FilterBar
-            searchPlaceholder="Rechercher par nom, téléphone ou email..."
-            searchValue={searchTerm}
-            onSearchChange={(val) => handleFilterChange('search', val)}
-          />
+        {/* Barre de Recherche et Filtre d'occupation */}
+        <div className="p-4 border-b border-slate-100 flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
+          <div className="flex-1">
+            <FilterBar
+              searchPlaceholder="Rechercher par nom, téléphone ou email..."
+              searchValue={searchTerm}
+              onSearchChange={(val) => handleFilterChange('search', val)}
+            />
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <label htmlFor="owner-property-filter" className="text-xs font-semibold text-slate-500 whitespace-nowrap">
+              <i className="fas fa-filter text-primary mr-1"></i>Filtrer le parc :
+            </label>
+            <select
+              id="owner-property-filter"
+              value={propertyStatusFilter}
+              onChange={(e) => setPropertyStatusFilter(e.target.value)}
+              aria-label="Filtrer le parc de biens"
+              className="text-xs font-medium border border-slate-200 rounded-lg px-3 py-2 bg-white text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer shadow-2xs"
+            >
+              <option value="all">Tous les propriétaires ({owners.length})</option>
+              <option value="has_rented">🟢 Avec biens en location</option>
+              <option value="has_vacant">⚪ Avec biens vacants</option>
+              <option value="has_repair">🟠 Avec biens en réparation</option>
+            </select>
+          </div>
         </div>
 
         <div className="overflow-x-auto">
           {loading ? (
             <div className="p-8 text-center text-slate-500">
-              <i className="fas fa-spinner fa-spin mr-2"></i>Chargement des propriétaires...
+              <i className="fas fa-spinner fa-spin mr-2"></i>Chargement des propriétaires et de leurs biens...
             </div>
-          ) : owners.length === 0 ? (
+          ) : filteredOwners.length === 0 ? (
             <div className="p-12 text-center">
               <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-400 text-2xl">
                 <i className="fas fa-user-tie"></i>
               </div>
-              <p className="text-slate-600 font-medium mb-2">Aucun propriétaire enregistré.</p>
-              <button className="mt-4 bg-primary text-white rounded-lg px-4 py-2 hover:bg-primary-dark transition-all text-sm font-medium" onClick={openCreateModal}>
-                <i className="fas fa-plus mr-2"></i>Ajouter un propriétaire
-              </button>
+              <p className="text-slate-600 font-medium mb-2">
+                {propertyStatusFilter !== 'all' 
+                  ? 'Aucun propriétaire ne correspond à ce filtre de parc.' 
+                  : 'Aucun propriétaire enregistré.'}
+              </p>
+              {propertyStatusFilter !== 'all' ? (
+                <button 
+                  className="mt-2 text-xs text-primary font-semibold hover:underline"
+                  onClick={() => setPropertyStatusFilter('all')}
+                >
+                  Réinitialiser le filtre
+                </button>
+              ) : (
+                <button className="mt-4 bg-primary text-white rounded-lg px-4 py-2 hover:bg-primary-dark transition-all text-sm font-medium" onClick={openCreateModal}>
+                  <i className="fas fa-plus mr-2"></i>Ajouter un propriétaire
+                </button>
+              )}
             </div>
           ) : (
             <table className="w-full text-left border-collapse">
@@ -329,27 +452,39 @@ export default function Owners() {
                 <tr>
                   <th className="bg-slate-50 border-y border-slate-200 text-slate-500 text-xs uppercase tracking-wider py-3.5 px-4 font-semibold">Propriétaire</th>
                   <th className="bg-slate-50 border-y border-slate-200 text-slate-500 text-xs uppercase tracking-wider py-3.5 px-4 font-semibold">Contact</th>
-                  <th className="bg-slate-50 border-y border-slate-200 text-slate-500 text-xs uppercase tracking-wider py-3.5 px-4 font-semibold">Biens attribués (Multi-biens)</th>
-                  <th className="bg-slate-50 border-y border-slate-200 text-slate-500 text-xs uppercase tracking-wider py-3.5 px-4 font-semibold">Modalités de paiement souhaitées</th>
+                  <th className="bg-slate-50 border-y border-slate-200 text-slate-500 text-xs uppercase tracking-wider py-3.5 px-4 font-semibold min-w-[320px]">
+                    Biens &amp; État du Parc (Loué / Vacant / Réparation)
+                  </th>
+                  <th className="bg-slate-50 border-y border-slate-200 text-slate-500 text-xs uppercase tracking-wider py-3.5 px-4 font-semibold">Modalités de reversement</th>
                   <th className="bg-slate-50 border-y border-slate-200 text-slate-500 text-xs uppercase tracking-wider py-3.5 px-4 font-semibold text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {owners.map((o) => {
+                {filteredOwners.map((o) => {
                   const ownerProps = Array.isArray(o.properties) && o.properties.length > 0
                     ? o.properties
                     : allProperties.filter(p => Number(p.owner_id) === Number(o.id));
                   const totalPortfolioRent = ownerProps.reduce((sum, p) => sum + Number(p.rent || 0), 0);
 
+                  const rentedCount = o.rentedCount !== undefined 
+                    ? o.rentedCount 
+                    : ownerProps.filter(p => p.status === 'loue').length;
+                  const vacantCount = o.vacantCount !== undefined 
+                    ? o.vacantCount 
+                    : ownerProps.filter(p => p.status === 'vacant' || p.status === 'disponible').length;
+                  const repairCount = o.repairCount !== undefined 
+                    ? o.repairCount 
+                    : ownerProps.filter(p => p.status === 'en_renovation' || p.status === 'en_maintenance').length;
+
                   return (
                     <tr key={o.id} className="hover:bg-slate-50/50 transition-colors">
                       <td className="py-4 px-4 text-sm text-slate-900 font-bold">
                         <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs shrink-0 border border-indigo-100">
+                          <div className="w-9 h-9 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs shrink-0 border border-indigo-100 shadow-2xs">
                             {(o.last_name || o.first_name || 'P').slice(0, 1).toUpperCase()}
                           </div>
                           <div>
-                            <div>{o.first_name} {o.last_name}</div>
+                            <div className="text-slate-900 font-bold">{o.first_name} {o.last_name}</div>
                             {o.bank_name && (
                               <div className="text-xs font-normal text-slate-400">
                                 <i className="fas fa-university mr-1"></i>{o.bank_name} {o.bank_account ? `(${o.bank_account})` : ''}
@@ -365,24 +500,68 @@ export default function Owners() {
                       </td>
 
                       <td className="py-4 px-4 text-sm">
-                        <div className="flex flex-wrap items-center gap-1.5 mb-1">
-                          <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-primary/10 text-primary">
-                            {ownerProps.length} bien{ownerProps.length > 1 ? 's' : ''}
+                        {/* Résumé global du patrimoine */}
+                        <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
+                          <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-primary/10 text-primary border border-primary/20">
+                            {ownerProps.length} bien{ownerProps.length > 1 ? 's' : ''} au total
                           </span>
                           {totalPortfolioRent > 0 && (
-                            <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
+                            <span className="text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">
                               {formatXOF(totalPortfolioRent)}/mois
                             </span>
                           )}
                         </div>
+
+                        {/* Badges de décomposition d'état du parc (Loué / Vacant / En réparation) */}
+                        <div className="flex flex-wrap items-center gap-1.5 mb-2">
+                          <span 
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200"
+                            title="Nombre de biens actuellement loués et occupés"
+                          >
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                            {rentedCount} en location
+                          </span>
+                          <span 
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200"
+                            title="Nombre de biens vacants disponibles à la location"
+                          >
+                            <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                            {vacantCount} vacant{vacantCount > 1 ? 's' : ''}
+                          </span>
+                          <span 
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200"
+                            title="Nombre de biens actuellement en travaux ou en réparation"
+                          >
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                            {repairCount} en réparation
+                          </span>
+                        </div>
+
+                        {/* Liste des biens individuels avec badge de statut */}
                         {ownerProps.length > 0 ? (
-                          <div className="flex flex-wrap gap-1 mt-1 max-w-xs">
-                            {ownerProps.map(p => (
-                              <span key={p.id} className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-100 text-slate-700 rounded text-[11px] font-medium">
-                                <i className="fas fa-home text-[9px] text-slate-400"></i>
-                                {p.name}
-                              </span>
-                            ))}
+                          <div className="flex flex-wrap gap-1.5 max-w-md">
+                            {ownerProps.map(p => {
+                              const cfg = PROPERTY_STATUS_CONFIG[p.status] || {
+                                label: p.status || 'Inconnu',
+                                badgeClass: 'bg-slate-100 text-slate-700 border-slate-200',
+                                dotClass: 'bg-slate-400',
+                                iconClass: 'fa-home text-slate-400'
+                              };
+                              return (
+                                <span 
+                                  key={p.id} 
+                                  className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-medium border ${cfg.badgeClass}`}
+                                  title={`${p.name} - Statut : ${cfg.label}`}
+                                >
+                                  <i className={`fas ${cfg.iconClass} text-[9px]`}></i>
+                                  <span className="font-semibold">{p.name}</span>
+                                  <span className="inline-flex items-center gap-1 text-[10px] opacity-90 font-normal">
+                                    <span className={`w-1 h-1 rounded-full ${cfg.dotClass}`}></span>
+                                    ({cfg.label})
+                                  </span>
+                                </span>
+                              );
+                            })}
                           </div>
                         ) : (
                           <span className="text-xs text-slate-400 italic">Aucun bien rattaché</span>
@@ -404,8 +583,8 @@ export default function Owners() {
                           <button
                             type="button"
                             onClick={() => handleOpenPayout(o)}
-                            className="px-2.5 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 rounded-lg text-xs font-bold transition-colors flex items-center gap-1"
-                            title="Enregistrer un paiement ou préfinancement pour ce propriétaire"
+                            className="px-2.5 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 rounded-lg text-xs font-bold transition-colors flex items-center gap-1 shadow-2xs"
+                            title="Enregistrer un versement ou préfinancement pour ce propriétaire"
                           >
                             <i className="fas fa-hand-holding-dollar"></i> Payer
                           </button>
@@ -413,7 +592,7 @@ export default function Owners() {
                             type="button"
                             className="p-1.5 text-slate-400 hover:text-primary transition-colors rounded-lg hover:bg-slate-100"
                             onClick={() => openEditModal(o)}
-                            title="Modifier & Attribuer des biens"
+                            title="Modifier les coordonnées & attribuer des biens"
                           >
                             <i className="fas fa-edit"></i>
                           </button>
@@ -421,7 +600,7 @@ export default function Owners() {
                             type="button"
                             className="p-1.5 text-slate-400 hover:text-rose-600 transition-colors rounded-lg hover:bg-rose-50"
                             onClick={() => handleDelete(o)}
-                            title="Supprimer"
+                            title="Supprimer ce propriétaire"
                           >
                             <i className="fas fa-trash"></i>
                           </button>
@@ -438,7 +617,7 @@ export default function Owners() {
         {/* 4. PAGINATION */}
         <div className="bg-slate-50 px-4 py-3 border-t border-slate-200 flex items-center justify-between sm:px-6">
           <div className="text-sm text-slate-500">
-            Affichage de <span className="font-medium text-slate-700">{owners.length}</span> propriétaire(s) — Page <span className="font-medium text-slate-700">{page}</span>
+            Affichage de <span className="font-medium text-slate-700">{filteredOwners.length}</span> sur <span className="font-medium text-slate-700">{owners.length}</span> propriétaire(s) &bull; Page <span className="font-medium text-slate-700">{page}</span>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -459,12 +638,12 @@ export default function Owners() {
         </div>
       </div>
 
-      {/* 5. MODALE CRÉATION / ÉDITION PROPRIÉTAIRE + ATTRIBUTION MULTI-BIENS + PRÉFÉRENCES PAIEMENT */}
+      {/* 5. MODALE CRÉATION / ÉDITION PROPRIÉTAIRE + ATTRIBUTION MULTI-BIENS */}
       {showModal && (
         <Modal
           isOpen={true}
           onClose={() => setShowModal(false)}
-          title={editingOwner ? 'Modifier le propriétaire & ses biens' : 'Nouveau propriétaire'}
+          title={editingOwner ? 'Modifier le propriétaire & son parc de biens' : 'Nouveau propriétaire'}
           subtitle="Identité, préférences de reversement et attribution multi-biens"
           icon="fa-user-tie"
           maxWidth="700px"
@@ -529,14 +708,14 @@ export default function Owners() {
               </div>
             </div>
 
-            {/* 2. Modalités & Préférences de Paiement du Propriétaire (Grille 2 colonnes spacieuse) */}
+            {/* 2. Modalités & Préférences de Reversement */}
             <div className="bg-slate-50/90 p-4 sm:p-5 rounded-2xl border border-slate-200/90 space-y-4">
               <div className="flex items-center gap-2 border-b border-slate-200/80 pb-2.5">
                 <div className="w-7 h-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
                   <i className="fas fa-money-check-dollar text-xs"></i>
                 </div>
                 <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800">
-                  Modalités & Préférences de Paiement du Propriétaire
+                  Modalités &amp; Préférences de Paiement du Propriétaire
                 </h4>
               </div>
 
@@ -624,7 +803,7 @@ export default function Owners() {
               </div>
             </div>
 
-            {/* 3. Attribution Multi-Biens Immobiliers */}
+            {/* 3. Attribution Multi-Biens Immobiliers & État d'occupation */}
             <div className="bg-indigo-50/40 p-4 sm:p-5 rounded-2xl border border-indigo-200/80 space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2 min-w-0">
@@ -641,16 +820,22 @@ export default function Owners() {
               </div>
 
               <p className="text-xs text-slate-500">
-                Cochez tous les biens immobiliers appartenant à ce propriétaire :
+                Cochez tous les biens immobiliers appartenant à ce propriétaire (avec statut d'occupation actuel) :
               </p>
 
-              <div className="custom-scrollbar max-h-48 overflow-y-auto border border-slate-200 rounded-xl bg-white divide-y divide-slate-100 shadow-2xs">
+              <div className="custom-scrollbar max-h-52 overflow-y-auto border border-slate-200 rounded-xl bg-white divide-y divide-slate-100 shadow-2xs">
                 {allProperties.length === 0 ? (
                   <div className="p-4 text-xs text-slate-400 text-center">Aucun bien disponible dans la base.</div>
                 ) : (
                   allProperties.map(prop => {
                     const isChecked = form.property_ids.includes(Number(prop.id));
                     const otherOwner = prop.owner_id && (!editingOwner || Number(prop.owner_id) !== Number(editingOwner.id));
+                    const propStatusCfg = PROPERTY_STATUS_CONFIG[prop.status] || {
+                      label: prop.status || 'Inconnu',
+                      badgeClass: 'bg-slate-100 text-slate-700 border-slate-200',
+                      dotClass: 'bg-slate-400'
+                    };
+
                     return (
                       <label
                         key={prop.id}
@@ -673,6 +858,11 @@ export default function Owners() {
                           </div>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
+                          {/* Badge Statut d'occupation */}
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold border ${propStatusCfg.badgeClass}`}>
+                            <span className={`w-1 h-1 rounded-full ${propStatusCfg.dotClass}`}></span>
+                            {propStatusCfg.label}
+                          </span>
                           <span className="font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/70 px-2 py-0.5 rounded-md whitespace-nowrap">
                             {formatXOF(prop.rent || 0)}
                           </span>
@@ -696,7 +886,7 @@ export default function Owners() {
             {/* 4. Adresse postale & Notes */}
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
-                Adresse postale & Observations
+                Adresse postale &amp; Observations
               </label>
               <input
                 type="text"
