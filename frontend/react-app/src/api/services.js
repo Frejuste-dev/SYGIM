@@ -217,7 +217,13 @@ export const API = {
             httpClient.get(`/transactions/owner/${ownerId}`),
         
         export: (filters = {}) => 
-            httpClient.get('/transactions/export/csv', { params: filters })
+            httpClient.get('/transactions/export/csv', { params: filters }),
+
+        validate: (transactionId, data = {}) =>
+            httpClient.post(`/transactions/${transactionId}/validate`, data),
+
+        reject: (transactionId, data = {}) =>
+            httpClient.post(`/transactions/${transactionId}/reject`, data)
     },
 
     /**

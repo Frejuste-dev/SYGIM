@@ -31,6 +31,21 @@ class FinancialController {
 
       const normalizedMethod = (method === 'CHECK' ? 'CHEQUE' : method);
 
+      // Si la saisie provient d'un récolteur terrain, l'encaissement est mis en attente
+      // de validation par le comptable lors de la remise des fonds
+      if (req.user?.role === 'collector') {
+        const transactionService = require('../transactions/transaction.service');
+        const createdTx = await transactionService.createTransaction({
+          clientId: parseInt(clientId, 10),
+          amount: parseFloat(amountReceived),
+          method: (normalizedMethod || 'cash').toLowerCase(),
+          collectorId: resolvedCollectorId,
+          reference: receiptNumber,
+          status: 'pending'
+        }, req.user);
+        return res.status(201).json(ApiResponse.created(createdTx, 'Encaissement transmis à la comptabilité (en attente de réception des fonds).'));
+      }
+
       const result = await paymentService.registerPayment({
         clientId: parseInt(clientId, 10),
         amountReceived: parseFloat(amountReceived),

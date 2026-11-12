@@ -12,6 +12,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useQueryClient } from '@tanstack/react-query';
 import { useClients } from '../hooks/queries/useClients';
 import { useProperties } from '../hooks/queries/useProperties';
+import { useTransactions } from '../hooks/queries/useTransactions';
 import { API } from '../api/services';
 import PaymentModal from '../components/PaymentModal';
 import SignaturePad from '../components/SignaturePad';
@@ -197,27 +198,19 @@ export default function Collector() {
   const handleConfirmSignature = async (signatureImg) => {
     if (!pendingPayment || !selectedClient) return { success: false, message: 'Données incomplètes' };
     try {
-      let response;
-      try {
-        response = await API.Financial.registerPayment({
-          clientId: selectedClient.id,
-          amountReceived: pendingPayment.amount,
-          method: pendingPayment.method.toUpperCase(),
-          receiptNumber: pendingPayment.reference
-        });
-      } catch {
-        response = await API.Transactions.create({
-          clientId: selectedClient.id,
-          amount: pendingPayment.amount,
-          method: pendingPayment.method,
-          reference: pendingPayment.reference,
-          status: 'processed',
-          type: 'rent',
-          signature: signatureImg
-        });
-      }
+      // Enregistrement de l'encaissement terrain :
+      // Le statut est 'pending' (en attente) jusqu'à ce que le comptable valide la réception physique des fonds.
+      const response = await API.Transactions.create({
+        clientId: selectedClient.id,
+        amount: pendingPayment.amount,
+        method: pendingPayment.method,
+        reference: pendingPayment.reference,
+        status: 'pending',
+        type: 'rent',
+        signature: signatureImg
+      });
 
-      if (response?.success || response?.data?.payment) {
+      if (response?.success || response?.data?.id || response?.id) {
         await queryClient.invalidateQueries({ queryKey: ['clients'] });
         await queryClient.invalidateQueries({ queryKey: ['transactions'] });
         await fetchRepairs();
@@ -225,7 +218,7 @@ export default function Collector() {
         const clientName = `${selectedClient.last_name || selectedClient.lastName || ''} ${selectedClient.first_name || selectedClient.firstName || ''}`.trim();
         showToast({
           type: 'success',
-          message: `Paiement de ${formatXOF(pendingPayment.amount)} encaissé pour ${clientName}.`
+          message: `Encaissement de ${formatXOF(pendingPayment.amount)} saisi pour ${clientName}. Transmis à la comptabilité pour validation lors du versement.`
         });
 
         setActiveModal(null);
@@ -238,8 +231,9 @@ export default function Collector() {
         return { success: false, message: msg };
       }
     } catch (err) {
-      showToast({ type: 'error', message: err.message || 'Erreur réseau' });
-      return { success: false, message: err.message };
+      const msg = err.response?.data?.message || err.message || 'Erreur de connexion';
+      showToast({ type: 'error', message: msg });
+      return { success: false, message: msg };
     }
   };
 
@@ -264,6 +258,29 @@ export default function Collector() {
   }).length;
 
   const activeRepairsCount = repairsList.filter(r => r.status === 'IN_PROGRESS').length;
+
+  // Suivi des encaissements terrain (en attente de versement vs validés en caisse)
+  const { data: txData } = useTransactions({ limit: 100 });
+  const collectorTransactions = useMemo(() => {
+    return Array.isArray(txData?.data) ? txData.data : (Array.isArray(txData) ? txData : []);
+  }, [txData]);
+
+  const pendingCollectionAmount = useMemo(() => {
+    return collectorTransactions
+      .filter(t => t.status === 'pending')
+      .reduce((sum, t) => sum + Number(t.amount || 0), 0);
+  }, [collectorTransactions]);
+
+  const pendingTransactionsCount = useMemo(() => {
+    return collectorTransactions.filter(t => t.status === 'pending').length;
+  }, [collectorTransactions]);
+
+  const validatedTodayAmount = useMemo(() => {
+    const todayStr = new Date().toISOString().slice(0, 10);
+    return collectorTransactions
+      .filter(t => t.status === 'processed' && (t.date === todayStr || (t.created_at && t.created_at.slice(0, 10) === todayStr)))
+      .reduce((sum, t) => sum + Number(t.amount || 0), 0);
+  }, [collectorTransactions]);
 
   return (
     <div className="space-y-3 sm:space-y-5 pb-28 md:pb-8 max-w-7xl mx-auto overflow-x-hidden w-full">
@@ -290,6 +307,35 @@ export default function Collector() {
           <i className={`fas fa-sync text-xs ${isRefreshing ? 'fa-spin text-primary' : ''}`}></i>
           <span className="hidden sm:inline">{isRefreshing ? 'Sync...' : 'Synchroniser'}</span>
         </button>
+      </div>
+
+      {/* Synthèse des fonds terrain (En main vs Validé comptabilité) */}
+      <div className="grid grid-cols-2 gap-2 sm:gap-4">
+        <div className="bg-amber-50/80 border border-amber-200 rounded-2xl p-3 sm:p-4 shadow-2xs">
+          <div className="flex items-center gap-1.5 text-amber-800 text-[11px] sm:text-xs font-bold uppercase tracking-wider">
+            <i className="fas fa-clock text-amber-600"></i>
+            <span>Fonds en main (À verser)</span>
+          </div>
+          <div className="text-base sm:text-xl font-black text-amber-900 mt-1">
+            {formatXOF(pendingCollectionAmount)}
+          </div>
+          <div className="text-[10px] sm:text-xs text-amber-700 mt-0.5 font-medium">
+            {pendingTransactionsCount > 0 ? `${pendingTransactionsCount} encaissement(s) en attente comptable` : 'Aucun versement en attente'}
+          </div>
+        </div>
+
+        <div className="bg-emerald-50/80 border border-emerald-200 rounded-2xl p-3 sm:p-4 shadow-2xs">
+          <div className="flex items-center gap-1.5 text-emerald-800 text-[11px] sm:text-xs font-bold uppercase tracking-wider">
+            <i className="fas fa-check-circle text-emerald-600"></i>
+            <span>Réceptionné en caisse</span>
+          </div>
+          <div className="text-base sm:text-xl font-black text-emerald-900 mt-1">
+            {formatXOF(validatedTodayAmount)}
+          </div>
+          <div className="text-[10px] sm:text-xs text-emerald-700 mt-0.5 font-medium">
+            Fonds validés aujourd'hui
+          </div>
+        </div>
       </div>
 
       {/* Barre d'onglets opérationnels (3 colonnes sans débordement) */}

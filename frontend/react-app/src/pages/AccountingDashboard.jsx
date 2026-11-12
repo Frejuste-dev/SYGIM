@@ -4,6 +4,7 @@ import { useDashboardKpis } from '../hooks/queries/useDashboardKpis';
 import { useTransactions, useTransactionStats } from '../hooks/queries/useTransactions';
 import { API } from '../api/services';
 import { useToast } from '../components/ToastContext';
+import Modal from '../components/Modal';
 import OwnerPayoutModal from '../components/OwnerPayoutModal';
 import InstallmentHistoryModal from '../components/InstallmentHistoryModal';
 import { formatXOF, formatDate, formatMethod } from '../utils/formatters';
@@ -28,7 +29,7 @@ export default function AccountingDashboard() {
   const navigate = useNavigate();
   const { showToast } = useToast();
 
-  const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'settlements' | 'ledger'
+  const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'pending_validation' | 'settlements' | 'ledger'
   const [showPayoutModal, setShowPayoutModal] = useState(false);
   const [selectedOwnerForPayout, setSelectedOwnerForPayout] = useState(null);
   const [selectedSettlementForInstallments, setSelectedSettlementForInstallments] = useState(null);
@@ -36,7 +37,18 @@ export default function AccountingDashboard() {
   const [settlements, setSettlements] = useState([]);
   const [settlementStats, setSettlementStats] = useState({});
   const [ledgerData, setLedgerData] = useState({ entries: [], summary: {} });
+  const [pendingTransactions, setPendingTransactions] = useState([]);
   const [loadingFinancial, setLoadingFinancial] = useState(false);
+
+  // Modale de validation réception des fonds
+  const [selectedTxForValidation, setSelectedTxForValidation] = useState(null);
+  const [validationNotes, setValidationNotes] = useState('');
+  const [validatingTx, setValidatingTx] = useState(false);
+
+  // Modale de rejet d'encaissement
+  const [selectedTxForRejection, setSelectedTxForRejection] = useState(null);
+  const [rejectionReason, setRejectionReason] = useState('');
+  const [rejectingTx, setRejectingTx] = useState(false);
 
   const { data: kpis = {}, isLoading: kpisLoading } = useDashboardKpis();
   const { data: transactionsData = {}, isLoading: txLoading } = useTransactions({ limit: 15 });
@@ -46,9 +58,10 @@ export default function AccountingDashboard() {
   const loadFinancialData = useCallback(async () => {
     setLoadingFinancial(true);
     try {
-      const [stlResult, ldgResult] = await Promise.allSettled([
+      const [stlResult, ldgResult, pendingResult] = await Promise.allSettled([
         API.Financial.getSettlements(),
-        API.Financial.getGeneralLedger()
+        API.Financial.getGeneralLedger(),
+        API.Transactions.getAll({ status: 'pending', limit: 100 })
       ]);
 
       if (stlResult.status === 'fulfilled') {
@@ -66,12 +79,62 @@ export default function AccountingDashboard() {
           summary: ldgPayload.summary || {}
         });
       }
+
+      if (pendingResult.status === 'fulfilled') {
+        const pendingRes = pendingResult.value;
+        const pendingPayload = pendingRes?.data || pendingRes || [];
+        setPendingTransactions(Array.isArray(pendingPayload) ? pendingPayload : (pendingPayload.data || []));
+      }
     } catch (err) {
       console.error('Erreur chargement données comptables:', err);
     } finally {
       setLoadingFinancial(false);
     }
   }, []);
+
+  const handleConfirmValidation = async () => {
+    if (!selectedTxForValidation) return;
+    try {
+      setValidatingTx(true);
+      await API.Transactions.validate(selectedTxForValidation.id, { notes: validationNotes });
+      showToast({
+        type: 'success',
+        message: `Encaissement de ${formatXOF(selectedTxForValidation.amount)} validé avec succès. Les fonds ont été réceptionnés en caisse.`
+      });
+      setSelectedTxForValidation(null);
+      setValidationNotes('');
+      loadFinancialData();
+    } catch (err) {
+      showToast({
+        type: 'error',
+        message: err.response?.data?.message || err.message || 'Erreur lors de la validation.'
+      });
+    } finally {
+      setValidatingTx(false);
+    }
+  };
+
+  const handleConfirmRejection = async () => {
+    if (!selectedTxForRejection) return;
+    try {
+      setRejectingTx(true);
+      await API.Transactions.reject(selectedTxForRejection.id, { reason: rejectionReason });
+      showToast({
+        type: 'info',
+        message: `Transaction ${selectedTxForRejection.reference} rejetée.`
+      });
+      setSelectedTxForRejection(null);
+      setRejectionReason('');
+      loadFinancialData();
+    } catch (err) {
+      showToast({
+        type: 'error',
+        message: err.response?.data?.message || err.message || 'Erreur lors du rejet.'
+      });
+    } finally {
+      setRejectingTx(false);
+    }
+  };
 
   useEffect(() => {
     loadFinancialData();
@@ -81,6 +144,10 @@ export default function AccountingDashboard() {
   const totalDue = kpis.totalDue ?? 0;
   const collectionRate = kpis.collectionRate ?? 0;
   const todayRevenue = stats.todayCollected || 0;
+
+  const totalPendingAmount = useMemo(() => {
+    return pendingTransactions.reduce((sum, t) => sum + Number(t.amount || 0), 0);
+  }, [pendingTransactions]);
 
   const methodColors = { cash: '#10b981', mobile_money: '#f59e0b', bank_transfer: '#3b82f6', cheque: '#8b5cf6', default: '#94a3b8' };
   const paymentMethodData = (stats.methodStats || []).map(m => ({
@@ -319,6 +386,23 @@ export default function AccountingDashboard() {
           <i className="fas fa-chart-pie"></i> Vue d'ensemble & Encaissements
         </button>
         <button
+          onClick={() => setActiveTab('pending_validation')}
+          className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 ${
+            activeTab === 'pending_validation'
+              ? 'bg-amber-600 text-white shadow-sm'
+              : 'bg-white text-slate-700 hover:bg-amber-50 hover:text-amber-800 border border-amber-200'
+          }`}
+        >
+          <i className="fas fa-hand-holding-usd text-amber-500"></i> Encaissements Terrain à Valider
+          {pendingTransactions.length > 0 && (
+            <span className={`px-2 py-0.5 rounded-full text-xs font-black ${
+              activeTab === 'pending_validation' ? 'bg-white text-amber-800' : 'bg-amber-500 text-white animate-pulse'
+            }`}>
+              {pendingTransactions.length}
+            </span>
+          )}
+        </button>
+        <button
           onClick={() => setActiveTab('settlements')}
           className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 ${
             activeTab === 'settlements'
@@ -348,7 +432,31 @@ export default function AccountingDashboard() {
 
       {/* ONGLET 1 : VUE D'ENSEMBLE */}
       {activeTab === 'overview' && (
-        <>
+        <div className="space-y-6">
+          {/* Bannière Alerte Versements Terrain en attente */}
+          {pendingTransactions.length > 0 && (
+            <div className="bg-amber-50/90 border border-amber-300 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center text-lg shrink-0 shadow-2xs">
+                  <i className="fas fa-hand-holding-dollar"></i>
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-amber-950">
+                    {pendingTransactions.length} encaissement(s) terrain en attente de versement ({formatXOF(totalPendingAmount)})
+                  </h4>
+                  <p className="text-xs text-amber-800 mt-0.5">
+                    Les collecteurs ont saisi des paiements sur le terrain. Réceptionnez physiquement les fonds avant de valider l'entrée en caisse.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setActiveTab('pending_validation')}
+                className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shrink-0 shadow-2xs"
+              >
+                <i className="fas fa-check-double"></i> Valider les versements
+              </button>
+            </div>
+          )}
           {/* KPIs Comptables */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
             <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 flex flex-col justify-between">
@@ -513,10 +621,140 @@ export default function AccountingDashboard() {
               </div>
             )}
           </div>
-        </>
+        </div>
       )}
 
-      {/* ONGLET 2 : PAIEMENTS & PRÉFINANCEMENTS PROPRIÉTAIRES */}
+      {/* ONGLET 2 : ENCAISSEMENTS TERRAIN À VALIDER (REMISE DES FONDS COLLECTEURS) */}
+      {activeTab === 'pending_validation' && (
+        <div className="space-y-6">
+          {/* KPIs Versements Terrain */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            <div className="bg-white rounded-2xl border border-amber-200 shadow-sm p-6 bg-amber-50/20">
+              <div className="text-xs font-bold text-amber-800 uppercase tracking-wider mb-2">Total Fonds Terrain à Réceptionner</div>
+              <div className="text-2xl font-black text-amber-900 tracking-tight">{formatXOF(totalPendingAmount)}</div>
+              <div className="text-xs text-amber-700 mt-2 font-medium flex items-center gap-1">
+                <i className="fas fa-clock"></i> En attente de remise physique à la caisse
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+              <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Nombre d'Encaissements Saisis</div>
+              <div className="text-2xl font-black text-slate-900 tracking-tight">{pendingTransactions.length} transaction(s)</div>
+              <div className="text-xs text-slate-500 mt-2">Enregistrées avec signature client</div>
+            </div>
+
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+              <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Agents Collecteurs Porteurs</div>
+              <div className="text-2xl font-black text-slate-900 tracking-tight">
+                {new Set(pendingTransactions.map(t => t.collector_id).filter(Boolean)).size} collecteur(s)
+              </div>
+              <div className="text-xs text-slate-500 mt-2">Porteurs de fonds sur le terrain</div>
+            </div>
+          </div>
+
+          {/* Tableau de validation des encaissements */}
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="p-6 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                  <i className="fas fa-hand-holding-usd text-amber-600"></i>
+                  File d'Attente de Validation des Encaissements Terrain
+                </h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  Vérifiez le montant physique remis par le collecteur et cliquez sur « Valider la réception » pour créditer le locataire et intégrer les fonds dans la comptabilité.
+                </p>
+              </div>
+              <button
+                onClick={loadFinancialData}
+                disabled={loadingFinancial}
+                className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold flex items-center gap-1.5 transition"
+              >
+                <i className={`fas fa-sync text-xs ${loadingFinancial ? 'fa-spin' : ''}`}></i> Actualiser
+              </button>
+            </div>
+
+            {pendingTransactions.length === 0 ? (
+              <div className="text-center py-16 px-4">
+                <div className="w-16 h-16 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto mb-4 text-2xl">
+                  <i className="fas fa-check-double"></i>
+                </div>
+                <h4 className="text-base font-bold text-slate-800">Aucun encaissement en attente de validation</h4>
+                <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
+                  Tous les fonds saisis par les récolteurs terrain ont été réceptionnés et validés en caisse.
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-sm">
+                  <thead>
+                    <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 text-xs uppercase">
+                      <th className="py-3.5 px-4 font-semibold">Réf. & Date</th>
+                      <th className="py-3.5 px-4 font-semibold">Collecteur (Porteur)</th>
+                      <th className="py-3.5 px-4 font-semibold">Locataire & Bien</th>
+                      <th className="py-3.5 px-4 font-semibold">Moyen</th>
+                      <th className="py-3.5 px-4 text-right font-semibold">Montant Reçu</th>
+                      <th className="py-3.5 px-4 text-center font-semibold">Statut</th>
+                      <th className="py-3.5 px-4 text-right font-semibold">Action Comptable</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {pendingTransactions.map(t => (
+                      <tr key={t.id} className="hover:bg-amber-50/30 transition-colors">
+                        <td className="py-3.5 px-4">
+                          <div className="font-mono text-xs font-bold text-slate-900">{t.reference || `TX-${t.id}`}</div>
+                          <div className="text-xs text-slate-400">{formatDate(t.date || t.created_at)}</div>
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <div className="font-bold text-slate-800">{t.collector_name || 'Agent Collecteur'}</div>
+                          {t.collector_phone && <div className="text-xs text-slate-400">{t.collector_phone}</div>}
+                          {t.collector_zone && <span className="inline-block text-[10px] font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded mt-0.5">{t.collector_zone}</span>}
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <div className="font-semibold text-slate-900">{t.client_name || t.client || 'Locataire'}</div>
+                          <div className="text-xs text-slate-500 truncate max-w-[200px]">{t.property_name || '—'}</div>
+                        </td>
+                        <td className="py-3.5 px-4 text-xs font-medium text-slate-600">
+                          {formatMethod(t.method)}
+                        </td>
+                        <td className="py-3.5 px-4 text-right font-black text-amber-800 text-base">
+                          {formatXOF(t.amount, { compact: false })}
+                        </td>
+                        <td className="py-3.5 px-4 text-center">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                            <i className="fas fa-clock text-[10px] text-amber-700"></i> À réceptionner
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={() => { setSelectedTxForValidation(t); setValidationNotes(''); }}
+                              className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-2xs transition-all active:scale-95"
+                              title="Valider la réception physique des fonds en caisse"
+                            >
+                              <i className="fas fa-check-circle"></i> Valider la réception
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => { setSelectedTxForRejection(t); setRejectionReason(''); }}
+                              className="px-2.5 py-1.5 bg-slate-100 hover:bg-rose-50 text-slate-500 hover:text-rose-700 border border-slate-200 rounded-xl text-xs font-semibold transition"
+                              title="Rejeter cet encaissement"
+                            >
+                              <i className="fas fa-times"></i>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ONGLET 3 : PAIEMENTS & PRÉFINANCEMENTS PROPRIÉTAIRES */}
       {activeTab === 'settlements' && (
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="p-6 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -735,6 +973,153 @@ export default function AccountingDashboard() {
           onClose={() => setSelectedSettlementForInstallments(null)}
           onSuccess={loadFinancialData}
         />
+      )}
+
+      {/* MODALE DE VALIDATION DE RÉCEPTION DES FONDS PAR LE COMPTABLE */}
+      {selectedTxForValidation && (
+        <Modal
+          isOpen={Boolean(selectedTxForValidation)}
+          onClose={() => !validatingTx && setSelectedTxForValidation(null)}
+          title="Validation de Réception des Fonds Collecteur"
+        >
+          <div className="space-y-4 text-sm text-slate-700">
+            <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl bg-emerald-600 text-white flex items-center justify-center text-xl shrink-0 shadow-2xs">
+                <i className="fas fa-hand-holding-usd"></i>
+              </div>
+              <div>
+                <span className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider block">Montant à réceptionner en caisse</span>
+                <span className="text-2xl font-black text-emerald-950">{formatXOF(selectedTxForValidation.amount, { compact: false })}</span>
+              </div>
+            </div>
+
+            <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-2 text-xs">
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500">Référence encaissement :</span>
+                <span className="font-mono font-bold text-slate-800">{selectedTxForValidation.reference || `TX-${selectedTxForValidation.id}`}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500">Agent Récolteur (Porteur) :</span>
+                <span className="font-bold text-slate-900">{selectedTxForValidation.collector_name || 'Agent Collecteur'}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500">Locataire payeur :</span>
+                <span className="font-semibold text-slate-800">{selectedTxForValidation.client_name || selectedTxForValidation.client || 'Locataire'}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500">Bien immobilier concerné :</span>
+                <span className="text-slate-700 font-medium">{selectedTxForValidation.property_name || '—'}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500">Mode de paiement :</span>
+                <span className="font-semibold text-slate-800">{formatMethod(selectedTxForValidation.method)}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500">Date de collecte terrain :</span>
+                <span className="text-slate-700">{formatDate(selectedTxForValidation.date || selectedTxForValidation.created_at)}</span>
+              </div>
+            </div>
+
+            {selectedTxForValidation.signature_data && (
+              <div className="border border-slate-200 rounded-xl p-2.5 bg-white">
+                <span className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Émargement / Signature numérique du locataire</span>
+                <img
+                  src={selectedTxForValidation.signature_data}
+                  alt="Signature locataire"
+                  className="max-h-20 max-w-full object-contain mx-auto"
+                />
+              </div>
+            )}
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                Observations de caisse (optionnel)
+              </label>
+              <input
+                type="text"
+                value={validationNotes}
+                onChange={(e) => setValidationNotes(e.target.value)}
+                placeholder="Ex: Espèces comptées et versées à la caisse N°1..."
+                className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                disabled={validatingTx}
+                onClick={() => setSelectedTxForValidation(null)}
+                className="px-4 py-2 border border-slate-200 text-slate-600 rounded-xl text-xs font-semibold hover:bg-slate-50 transition"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                disabled={validatingTx}
+                onClick={handleConfirmValidation}
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition disabled:opacity-50"
+              >
+                {validatingTx ? (
+                  <>
+                    <i className="fas fa-spinner fa-spin"></i> Validation...
+                  </>
+                ) : (
+                  <>
+                    <i className="fas fa-check-circle"></i> Confirmer la réception des fonds
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* MODALE DE REJET D'ENCAISSEMENT */}
+      {selectedTxForRejection && (
+        <Modal
+          isOpen={Boolean(selectedTxForRejection)}
+          onClose={() => !rejectingTx && setSelectedTxForRejection(null)}
+          title="Rejet d'un Encaissement Terrain"
+        >
+          <div className="space-y-4 text-sm text-slate-700">
+            <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-800">
+              <i className="fas fa-exclamation-triangle mr-1.5"></i>
+              Vous êtes sur le point de rejeter la transaction <strong>{selectedTxForRejection.reference}</strong> de <strong>{formatXOF(selectedTxForRejection.amount)}</strong>.
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                Motif du rejet (obligatoire)
+              </label>
+              <textarea
+                rows={3}
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                placeholder="Ex: Montant physique non conforme au reçu, doublon de saisie..."
+                className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                disabled={rejectingTx}
+                onClick={() => setSelectedTxForRejection(null)}
+                className="px-4 py-2 border border-slate-200 text-slate-600 rounded-xl text-xs font-semibold hover:bg-slate-50 transition"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                disabled={rejectingTx || !rejectionReason.trim()}
+                onClick={handleConfirmRejection}
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition disabled:opacity-50"
+              >
+                {rejectingTx ? 'Rejet...' : 'Confirmer le rejet'}
+              </button>
+            </div>
+          </div>
+        </Modal>
       )}
     </div>
   );

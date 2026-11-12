@@ -8,6 +8,7 @@ import StatsCard from '../components/StatsCard';
 import { formatXOF, formatDate, formatMethod, formatStatus } from '../utils/formatters';
 import { exportToExcel, exportToPDF, printOwnerSettlementReceipt } from '../utils/exportUtils';
 import ReceiptTemplate from '../components/ReceiptTemplate';
+import Modal from '../components/Modal';
 import OwnerPayoutModal from '../components/OwnerPayoutModal';
 import InstallmentHistoryModal from '../components/InstallmentHistoryModal';
 
@@ -62,7 +63,13 @@ export default function Transactions() {
   const [isSubmittingReversal, setIsSubmittingReversal] = useState(false);
 
   const canReverse = ['admin', 'director', 'accounting'].includes(user?.role);
+  const canValidate = ['admin', 'director', 'accounting'].includes(user?.role);
   const canManageOwnerPayouts = ['admin', 'director', 'accounting', 'manager'].includes(user?.role);
+
+  // Validation d'encaissement terrain par la comptabilité
+  const [selectedTxForValidation, setSelectedTxForValidation] = useState(null);
+  const [validationNotes, setValidationNotes] = useState('');
+  const [isValidatingTx, setIsValidatingTx] = useState(false);
 
   const [searchParams, setSearchParams] = useSearchParams();
   const searchTerm = searchParams.get('search') || '';
@@ -495,6 +502,15 @@ export default function Transactions() {
                         </td>
                         <td className="py-4 px-6">
                           <div className="flex items-center justify-end gap-2">
+                            {canValidate && t.status === 'pending' && (
+                              <button
+                                onClick={() => { setSelectedTxForValidation(t); setValidationNotes(''); }}
+                                className="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white border border-emerald-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1 shadow-2xs"
+                                title="Valider la réception physique des fonds remis par le collecteur"
+                              >
+                                <i className="fas fa-check"></i> Valider
+                              </button>
+                            )}
                             {canReverse && t.status !== 'cancelled' && t.status !== 'refunded' && !t.is_reversed && (
                               <button
                                 onClick={() => { setReversingTransaction(t); setReversalReason(''); }}
@@ -881,6 +897,115 @@ export default function Transactions() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* MODAL DE VALIDATION D'ENCAISSEMENT PAR LE COMPTABLE */}
+      {selectedTxForValidation && (
+        <Modal
+          isOpen={Boolean(selectedTxForValidation)}
+          onClose={() => !isValidatingTx && setSelectedTxForValidation(null)}
+          title="Validation de Réception des Fonds"
+        >
+          <div className="space-y-4 text-sm text-slate-700">
+            <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl bg-emerald-600 text-white flex items-center justify-center text-xl shrink-0 shadow-2xs">
+                <i className="fas fa-hand-holding-usd"></i>
+              </div>
+              <div>
+                <span className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider block">Montant à réceptionner en caisse</span>
+                <span className="text-2xl font-black text-emerald-950">{formatXOF(selectedTxForValidation.amount, { compact: false })}</span>
+              </div>
+            </div>
+
+            <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-2 text-xs">
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500">Réf. transaction :</span>
+                <span className="font-mono font-bold text-slate-800">{selectedTxForValidation.reference || `TX-${selectedTxForValidation.id}`}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500">Agent Récolteur (Porteur) :</span>
+                <span className="font-bold text-slate-900">{selectedTxForValidation.collector_name || 'Agent Terrain'}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500">Locataire payeur :</span>
+                <span className="font-semibold text-slate-800">{selectedTxForValidation.client_name || selectedTxForValidation.client || '-'}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500">Bien immobilier :</span>
+                <span className="text-slate-700 font-medium">{selectedTxForValidation.property_name || '—'}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500">Mode de paiement :</span>
+                <span className="font-semibold text-slate-800">{formatMethod(selectedTxForValidation.method)}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500">Date de collecte :</span>
+                <span className="text-slate-700">{formatDate(selectedTxForValidation.date || selectedTxForValidation.created_at)}</span>
+              </div>
+            </div>
+
+            {selectedTxForValidation.signature_data && (
+              <div className="border border-slate-200 rounded-xl p-2.5 bg-white">
+                <span className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Émargement / Signature locataire</span>
+                <img
+                  src={selectedTxForValidation.signature_data}
+                  alt="Signature"
+                  className="max-h-20 max-w-full object-contain mx-auto"
+                />
+              </div>
+            )}
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                Observations de caisse (optionnel)
+              </label>
+              <input
+                type="text"
+                value={validationNotes}
+                onChange={(e) => setValidationNotes(e.target.value)}
+                placeholder="Ex: Espèces comptées et versées en caisse..."
+                className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                disabled={isValidatingTx}
+                onClick={() => setSelectedTxForValidation(null)}
+                className="px-4 py-2 border border-slate-200 text-slate-600 rounded-xl text-xs font-semibold hover:bg-slate-50 transition"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                disabled={isValidatingTx}
+                onClick={async () => {
+                  try {
+                    setIsValidatingTx(true);
+                    await API.Transactions.validate(selectedTxForValidation.id, { notes: validationNotes });
+                    showToast({
+                      type: 'success',
+                      message: `Encaissement de ${formatXOF(selectedTxForValidation.amount)} validé avec succès. Fonds réceptionnés en caisse.`
+                    });
+                    setSelectedTxForValidation(null);
+                    window.location.reload();
+                  } catch (err) {
+                    showToast({
+                      type: 'error',
+                      message: err.response?.data?.message || err.message || 'Erreur lors de la validation.'
+                    });
+                  } finally {
+                    setIsValidatingTx(false);
+                  }
+                }}
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition disabled:opacity-50"
+              >
+                {isValidatingTx ? 'Validation...' : 'Confirmer la réception des fonds'}
+              </button>
+            </div>
+          </div>
+        </Modal>
       )}
 
       {/* MODAL D'EXTOURNE COMPTABLE */}

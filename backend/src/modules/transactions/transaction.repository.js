@@ -11,29 +11,29 @@ class TransactionRepository extends BaseRepository {
     const params = [];
 
     if (filters.status && filters.status !== 'all') {
-      sql += ' AND status = ?';
+      sql += ' AND t.status = ?';
       params.push(filters.status);
     }
     if (filters.method && filters.method !== 'all') {
-      sql += ' AND method = ?';
+      sql += ' AND t.method = ?';
       params.push(filters.method);
     }
     if (filters.clientId) {
-      sql += ' AND client_id = ?';
+      sql += ' AND t.client_id = ?';
       params.push(filters.clientId);
     }
     if (filters.dateFrom) {
-      sql += ' AND date >= ?';
+      sql += ' AND t.date >= ?';
       params.push(filters.dateFrom);
     }
     if (filters.dateTo) {
-      sql += ' AND date <= ?';
+      sql += ' AND t.date <= ?';
       params.push(filters.dateTo);
     }
     if (filters.search) {
-      sql += ' AND (client_name LIKE ? OR reference LIKE ? OR description LIKE ?)';
+      sql += ' AND (t.client_name LIKE ? OR t.reference LIKE ? OR t.description LIKE ? OR col.first_name LIKE ? OR col.last_name LIKE ?)';
       const s = `%${filters.search}%`;
-      params.push(s, s, s);
+      params.push(s, s, s, s, s);
     }
 
     return { sql, params };
@@ -41,17 +41,29 @@ class TransactionRepository extends BaseRepository {
 
   async findAll(filters = {}, user = null) {
     const { sql: where, params } = this._buildWhereClause(filters);
-    let sql = `SELECT * FROM transactions WHERE 1=1${where}`;
+    let sql = `SELECT t.*,
+                      CONCAT(COALESCE(col.first_name, ''), ' ', COALESCE(col.last_name, '')) AS collector_name,
+                      col.phone AS collector_phone,
+                      col.zone AS collector_zone,
+                      COALESCE(p.name, cl.property_name, '—') AS property_name,
+                      cl.phone AS client_phone,
+                      COALESCE(u.display_name, CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, '')), u.username) AS validator_name
+               FROM transactions t
+               LEFT JOIN collectors col ON col.id = t.collector_id
+               LEFT JOIN clients cl ON cl.id = t.client_id
+               LEFT JOIN properties p ON p.id = cl.property_id
+               LEFT JOIN users u ON u.id = t.validated_by
+               WHERE 1=1${where}`;
 
     if (user && user.role === 'collector') {
       const [userRow] = await pool.query('SELECT id FROM collectors WHERE user_id = ?', [user.id]);
       if (userRow.length > 0) {
-        sql += ' AND collector_id = ?';
+        sql += ' AND t.collector_id = ?';
         params.push(userRow[0].id);
       }
     }
 
-    sql += ' ORDER BY date DESC, created_at DESC';
+    sql += ' ORDER BY t.date DESC, t.created_at DESC';
 
     const limit = parseInt(filters.limit || 20);
     const offset = (parseInt(filters.page || 1) - 1) * limit;
@@ -64,18 +76,41 @@ class TransactionRepository extends BaseRepository {
 
   async countAll(filters = {}, user = null) {
     const { sql: where, params } = this._buildWhereClause(filters);
-    let sql = `SELECT COUNT(*) as total FROM transactions WHERE 1=1${where}`;
+    let sql = `SELECT COUNT(*) as total 
+               FROM transactions t
+               LEFT JOIN collectors col ON col.id = t.collector_id
+               WHERE 1=1${where}`;
 
     if (user && user.role === 'collector') {
       const [userRow] = await pool.query('SELECT id FROM collectors WHERE user_id = ?', [user.id]);
       if (userRow.length > 0) {
-        sql += ' AND collector_id = ?';
+        sql += ' AND t.collector_id = ?';
         params.push(userRow[0].id);
       }
     }
 
     const [rows] = await pool.query(sql, params);
     return rows[0].total;
+  }
+
+  async findById(id) {
+    const [rows] = await pool.query(
+      `SELECT t.*,
+              CONCAT(COALESCE(col.first_name, ''), ' ', COALESCE(col.last_name, '')) AS collector_name,
+              col.phone AS collector_phone,
+              col.zone AS collector_zone,
+              COALESCE(p.name, cl.property_name, '—') AS property_name,
+              cl.phone AS client_phone,
+              COALESCE(u.display_name, CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, '')), u.username) AS validator_name
+       FROM transactions t
+       LEFT JOIN collectors col ON col.id = t.collector_id
+       LEFT JOIN clients cl ON cl.id = t.client_id
+       LEFT JOIN properties p ON p.id = cl.property_id
+       LEFT JOIN users u ON u.id = t.validated_by
+       WHERE t.id = ?`,
+      [id]
+    );
+    return rows.length ? rows[0] : null;
   }
 
   async getStats(period) {
@@ -256,6 +291,151 @@ class TransactionRepository extends BaseRepository {
       if (connection) {
         connection.release();
       }
+    }
+  }
+
+  /**
+   * Valide formellement une transaction collecteur lors de la réception physique des fonds par le comptable
+   * Met à jour le statut en 'processed', crédite le client et applique les déductions travaux éventuelles
+   */
+  async validateTransaction(id, validatorUserId, notes = null) {
+    let connection;
+    try {
+      connection = await pool.getConnection();
+      await connection.beginTransaction();
+
+      const [rows] = await connection.query(
+        'SELECT * FROM transactions WHERE id = ? FOR UPDATE',
+        [id]
+      );
+      if (rows.length === 0) {
+        const error = new Error('Transaction introuvable');
+        error.statusCode = 404;
+        throw error;
+      }
+      const tx = rows[0];
+
+      if (tx.status === 'processed') {
+        const error = new Error('Cette transaction est déjà validée');
+        error.statusCode = 400;
+        throw error;
+      }
+      if (tx.status === 'cancelled' || tx.status === 'refunded') {
+        const error = new Error('Impossible de valider une transaction annulée ou remboursée');
+        error.statusCode = 400;
+        throw error;
+      }
+
+      // 1. Mettre à jour la transaction
+      const validationNotes = notes ? `${tx.notes ? tx.notes + ' | ' : ''}Validé: ${notes}` : tx.notes;
+      await connection.query(
+        `UPDATE transactions 
+         SET status = 'processed',
+             validated_by = ?,
+             validated_at = NOW(),
+             notes = ?,
+             updated_at = NOW()
+         WHERE id = ?`,
+        [validatorUserId, validationNotes, id]
+      );
+
+      // 2. Créditer le client et mettre à jour son statut
+      if (tx.client_id) {
+        await connection.query(
+          `UPDATE clients 
+           SET amount_paid = amount_paid + ?, 
+               payment_method = ?,
+               status = CASE 
+                  WHEN amount_paid + ? >= amount_due THEN 'paid'
+                  WHEN amount_paid + ? > 0 THEN 'partial'
+                  ELSE status 
+               END,
+               updated_at = NOW()
+           WHERE id = ?`,
+          [tx.amount, tx.method || 'cash', tx.amount, tx.amount, tx.client_id]
+        );
+
+        // 3. Amortissement réparation locataire active si existante
+        try {
+          const [repRows] = await connection.query(
+            "SELECT * FROM tenant_repairs WHERE client_id = ? AND status = 'IN_PROGRESS' ORDER BY id ASC LIMIT 1 FOR UPDATE",
+            [tx.client_id]
+          );
+          if (repRows.length > 0) {
+            const rep = repRows[0];
+            const dedAllowed = rep.deduction_mode === 'immediate'
+              ? parseFloat(rep.remaining_amount)
+              : Math.min(parseFloat(rep.monthly_deduction || rep.remaining_amount), parseFloat(rep.remaining_amount));
+            if (dedAllowed > 0) {
+              const newReimbursed = parseFloat((parseFloat(rep.reimbursed_amount) + dedAllowed).toFixed(2));
+              const newRemaining = Math.max(0, parseFloat((parseFloat(rep.remaining_amount) - dedAllowed).toFixed(2)));
+              const newStatus = newRemaining <= 0 ? 'SETTLED' : 'IN_PROGRESS';
+              await connection.query(
+                "UPDATE tenant_repairs SET reimbursed_amount = ?, remaining_amount = ?, status = ? WHERE id = ?",
+                [newReimbursed, newRemaining, newStatus, rep.id]
+              );
+            }
+          }
+        } catch (repErr) {
+          // non-bloquant
+        }
+      }
+
+      await connection.commit();
+      return { ...tx, status: 'processed', validated_by: validatorUserId, validated_at: new Date() };
+    } catch (err) {
+      if (connection) await connection.rollback();
+      throw err;
+    } finally {
+      if (connection) connection.release();
+    }
+  }
+
+  /**
+   * Rejette une transaction d'encaissement (si les fonds ne correspondent pas ou erreur de saisie terrain)
+   */
+  async rejectTransaction(id, validatorUserId, reason = null) {
+    let connection;
+    try {
+      connection = await pool.getConnection();
+      await connection.beginTransaction();
+
+      const [rows] = await connection.query(
+        'SELECT * FROM transactions WHERE id = ? FOR UPDATE',
+        [id]
+      );
+      if (rows.length === 0) {
+        const error = new Error('Transaction introuvable');
+        error.statusCode = 404;
+        throw error;
+      }
+      const tx = rows[0];
+
+      if (tx.status === 'processed') {
+        const error = new Error('Une transaction déjà validée ne peut pas être rejetée (utiliser une extourne)');
+        error.statusCode = 400;
+        throw error;
+      }
+
+      const rejectionNotes = reason ? `${tx.notes ? tx.notes + ' | ' : ''}Rejeté par comptabilité: ${reason}` : tx.notes;
+      await connection.query(
+        `UPDATE transactions 
+         SET status = 'cancelled',
+             validated_by = ?,
+             validated_at = NOW(),
+             notes = ?,
+             updated_at = NOW()
+         WHERE id = ?`,
+        [validatorUserId, rejectionNotes, id]
+      );
+
+      await connection.commit();
+      return { ...tx, status: 'cancelled', validated_by: validatorUserId, validated_at: new Date() };
+    } catch (err) {
+      if (connection) await connection.rollback();
+      throw err;
+    } finally {
+      if (connection) connection.release();
     }
   }
 }

@@ -40,6 +40,24 @@ class TransactionController extends BaseController {
     }
   }
 
+  async validate(req, res, next) {
+    try {
+      const data = await this.service.validateTransaction(req.params.id, req.user, req.body?.notes);
+      res.json(ApiResponse.success(data, 'Encaissement validé avec succès. Les fonds ont été réceptionnés en caisse.'));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async reject(req, res, next) {
+    try {
+      const data = await this.service.rejectTransaction(req.params.id, req.user, req.body?.reason);
+      res.json(ApiResponse.success(data, 'Transaction rejetée.'));
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async exportCSV(req, res, next) {
     try {
       const { status, method, clientId, dateFrom, dateTo, search } = req.query;

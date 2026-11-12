@@ -128,18 +128,63 @@ class TransactionService extends BaseService {
       }
     }
 
+    // Règle Métier : Si la saisie est faite par un collecteur sur le terrain,
+    // le statut est STRICTEMENT mis en attente ('pending') de validation comptable.
+    // L'argent n'est crédité que lorsque le comptable reçoit physiquement les fonds.
+    if (user && user.role === 'collector') {
+      data.status = 'pending';
+    } else if (!data.status) {
+      data.status = 'processed';
+    }
+
     data.collectorId = resolvedCollectorId;
     const createdTx = await this.repository.createWithClientUpdate(data);
 
-    // Régularisation automatique d'un éventuel préfinancement propriétaire dès que le locataire paie
+    // Régularisation automatique d'un éventuel préfinancement UNIQUEMENT si la transaction est traitée/validée
+    if (data.status === 'processed') {
+      try {
+        const ownerSettlementService = require('../financial/services/OwnerSettlementService');
+        await ownerSettlementService.reconcilePrefinancingForTenantPayment(data.clientId, data.amount);
+      } catch (e) {
+        // non-bloquant
+      }
+    }
+
+    return createdTx;
+  }
+
+  /**
+   * Validation d'un encaissement collecteur par le comptable lors de la remise des fonds
+   */
+  async validateTransaction(id, user, notes = null) {
+    if (!user || !['admin', 'director', 'accounting'].includes(user.role)) {
+      const AppError = require('../../utils/errors/AppError');
+      throw AppError.forbidden('Seul le comptable, le directeur ou un administrateur peut valider un encaissement');
+    }
+
+    const validatedTx = await this.repository.validateTransaction(id, user.id, notes);
+
+    // Régularisation automatique d'un éventuel préfinancement dès que les fonds sont formellement validés
     try {
       const ownerSettlementService = require('../financial/services/OwnerSettlementService');
-      await ownerSettlementService.reconcilePrefinancingForTenantPayment(data.clientId, data.amount);
+      await ownerSettlementService.reconcilePrefinancingForTenantPayment(validatedTx.client_id, validatedTx.amount);
     } catch (e) {
       // non-bloquant
     }
 
-    return createdTx;
+    return validatedTx;
+  }
+
+  /**
+   * Rejet d'une transaction terrain par le comptable
+   */
+  async rejectTransaction(id, user, reason = null) {
+    if (!user || !['admin', 'director', 'accounting'].includes(user.role)) {
+      const AppError = require('../../utils/errors/AppError');
+      throw AppError.forbidden('Seul le comptable, le directeur ou un administrateur peut rejeter un encaissement');
+    }
+
+    return await this.repository.rejectTransaction(id, user.id, reason);
   }
 }
 
