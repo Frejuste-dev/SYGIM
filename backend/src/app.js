@@ -122,7 +122,7 @@ app.use('/api/rgpd',         require('./modules/rgpd/rgpd.routes'));
 // ═══════════════════════════════════════════════════════════════════════
 
 const fs = require('fs');
-const reactDistPath = path.join(__dirname, '..', '..', 'frontend', 'react-app', 'dist');
+const reactDistPath = path.join(__dirname, '..', '..', 'frontend', 'dist');
 const legacyFrontendPath = path.join(__dirname, '..', '..', 'frontend');
 const frontendPath = fs.existsSync(reactDistPath) ? reactDistPath : legacyFrontendPath;
 

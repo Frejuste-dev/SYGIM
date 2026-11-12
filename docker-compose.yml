@@ -23,7 +23,7 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
       - ./backend/database/sygim_schema.sql:/docker-entrypoint-initdb.d/01_schema.sql
-      - ./backend/database/migration_001_collectors_fk.sql:/docker-entrypoint-initdb.d/02_migration.sql
+      - ./backend/src/infrastructure/database/migrations/001_collectors_fk.sql:/docker-entrypoint-initdb.d/02_migration.sql
     networks:
       - sygim_network
     healthcheck:

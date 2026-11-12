@@ -1,16 +1,16 @@
-# ╔══════════════════════════════════════════════════════════════════╗
+# ╔═══════════════════════════════════════════════════════════════════╗
 # ║       SYGIM — Dockerfile Frontend (Nginx + React SPA)           ║
-# ╚══════════════════════════════════════════════════════════════════╝
+# ╚═══════════════════════════════════════════════════════════════════╝
 
 # Étape 1: Build de l'application React
 FROM node:20-alpine AS builder
 WORKDIR /app
 # Copier les fichiers package.json et package-lock.json
-COPY react-app/package*.json ./
+COPY package*.json ./
 # Installer les dépendances
 RUN npm ci
 # Copier le reste du code source
-COPY react-app/ ./
+COPY . ./
 # Compiler l'application pour la production
 RUN npm run build
 
