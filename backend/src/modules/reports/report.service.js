@@ -220,8 +220,9 @@ class ReportService {
    * Bordereau de reddition de comptes mensuel officiel (PDF individuel propriétaire)
    * Note : La commission agence est EXCLUE du bordereau selon la demande formelle du client
    */
-  async exportOwnerStatementPdf(ownerId, month) {
-    const data = await reportRepository.getOwnerStatements({ month, ownerId: parseInt(ownerId, 10) });
+  async exportOwnerStatementPdf(ownerId, filtersOrMonth) {
+    const filters = typeof filtersOrMonth === 'object' ? filtersOrMonth : { month: filtersOrMonth };
+    const data = await reportRepository.getOwnerStatements({ ...filters, ownerId: parseInt(ownerId, 10) });
     const statement = data.statements[0];
 
     if (!statement) {

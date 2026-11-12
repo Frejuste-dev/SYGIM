@@ -85,6 +85,22 @@ class ReportRepository {
       settlementsCount: 0
     };
     try {
+      const osDateClauses = [];
+      const osParams = [];
+      if (ownerId) {
+        osDateClauses.push('os.owner_id = ?');
+        osParams.push(ownerId);
+      }
+      if (startDate) {
+        osDateClauses.push('DATE(COALESCE(os.payout_date, os.period_start, os.created_at)) >= ?');
+        osParams.push(startDate);
+      }
+      if (endDate) {
+        osDateClauses.push('DATE(COALESCE(os.payout_date, os.period_start, os.created_at)) <= ?');
+        osParams.push(endDate);
+      }
+      const osWhere = osDateClauses.length > 0 ? `WHERE ${osDateClauses.join(' AND ')}` : '';
+
       const [[osRow]] = await db.query(
         `SELECT
            COUNT(*) AS settlementsCount,
@@ -94,9 +110,9 @@ class ReportRepository {
            COALESCE(SUM(CASE WHEN (is_prefinanced = 1 OR payout_mode = 'prefinancing' OR UPPER(status) = 'PREFINANCED') AND UPPER(status) != 'REIMBURSED' THEN amount_paid ELSE 0 END), 0) AS activePrefinanced,
            COALESCE(SUM(CASE WHEN UPPER(status) = 'REIMBURSED' THEN amount_paid ELSE 0 END), 0) AS reimbursedPrefinanced,
            SUM(CASE WHEN is_prefinanced = 1 OR payout_mode = 'prefinancing' OR UPPER(status) IN ('PREFINANCED', 'REIMBURSED') THEN 1 ELSE 0 END) AS prefinancedCount
-         FROM owner_settlements
-         ${ownerId ? 'WHERE owner_id = ?' : ''}`,
-        ownerId ? [ownerId] : []
+         FROM owner_settlements os
+         ${osWhere}`,
+        osParams
       );
       if (osRow) {
         settlementStats = {
@@ -730,14 +746,22 @@ class ReportRepository {
    * Ligne Propriétaire: Loyer Global | Loyer Encaissé | Reste | Préfinancé | Commission | Net
    * Sous-lignes Locataires: Locataire | Bien | Loyer Attendu | Loyer Payé | Arriéré | Préfinancé
    */
-  async getOwnerStatements({ month, search, ownerId } = {}) {
-    const targetMonth = month || new Date().toISOString().slice(0, 7); // e.g. '2026-11'
-    const [yearStr, monthStr] = targetMonth.split('-');
-    const year = parseInt(yearStr, 10);
-    const monthNum = parseInt(monthStr, 10);
-    const startDate = `${targetMonth}-01`;
-    const lastDay = new Date(year, monthNum, 0).getDate();
-    const endDate = `${targetMonth}-${String(lastDay).padStart(2, '0')}`;
+  async getOwnerStatements({ month, startDate: qStartDate, endDate: qEndDate, search, ownerId } = {}) {
+    let startDate = qStartDate;
+    let endDate = qEndDate;
+    let targetMonth = month;
+
+    if (!startDate || !endDate) {
+      targetMonth = month || new Date().toISOString().slice(0, 7); // e.g. '2026-11'
+      const [yearStr, monthStr] = targetMonth.split('-');
+      const year = parseInt(yearStr, 10);
+      const monthNum = parseInt(monthStr, 10);
+      startDate = `${targetMonth}-01`;
+      const lastDay = new Date(year, monthNum, 0).getDate();
+      endDate = `${targetMonth}-${String(lastDay).padStart(2, '0')}`;
+    } else {
+      targetMonth = startDate.slice(0, 7);
+    }
 
     // 1. Récupérer les propriétaires
     let ownersQuery = `
@@ -764,7 +788,7 @@ class ReportRepository {
     ownersQuery += ' ORDER BY o.last_name ASC, o.first_name ASC';
     const [ownersRows] = await db.query(ownersQuery, ownerParams);
 
-    // 2. Récupérer tous les biens et leurs locataires actifs
+    // 2. Récupérer tous les biens et leurs locataires (actifs ou ayant occupé/payé sur la période)
     const [propertyRows] = await db.query(`
       SELECT 
         p.id AS property_id,
@@ -782,12 +806,48 @@ class ReportRepository {
         c.last_name AS tenant_last_name,
         c.phone AS tenant_phone,
         c.status AS tenant_status,
+        c.departure_date,
         COALESCE(c.amount_due, 0) AS tenant_amount_due,
         COALESCE(c.amount_paid, 0) AS tenant_amount_paid
       FROM properties p
-      LEFT JOIN clients c ON (c.property_id = p.id AND c.status != 'departed')
+      LEFT JOIN clients c ON (
+        (c.property_id = p.id AND c.status != 'departed')
+        OR (c.id = p.tenant_id)
+        OR (
+          c.departure_date >= ?
+          AND (
+            (SELECT property_id FROM tenant_repairs WHERE client_id = c.id ORDER BY id DESC LIMIT 1) = p.id
+            OR (SELECT property_id FROM invoices WHERE client_id = c.id ORDER BY id DESC LIMIT 1) = p.id
+          )
+        )
+      )
       ORDER BY p.name ASC
-    `);
+    `, [startDate]);
+
+    // 3. Récupérer les encaissements réels validés sur la période pour chaque locataire / bien
+    const [txRows] = await db.query(`
+      SELECT 
+        t.client_id,
+        COALESCE(c.property_id, (SELECT property_id FROM tenant_repairs WHERE client_id = t.client_id ORDER BY id DESC LIMIT 1)) AS property_id,
+        SUM(t.amount) AS total_collected
+      FROM transactions t
+      JOIN clients c ON c.id = t.client_id
+      WHERE t.status IN ('processed', 'paid', 'completed')
+        AND DATE(COALESCE(t.date, t.created_at)) >= ?
+        AND DATE(COALESCE(t.date, t.created_at)) <= ?
+      GROUP BY t.client_id, property_id
+    `, [startDate, endDate]);
+
+    const collectedByProperty = {};
+    const collectedByClient = {};
+    for (const tx of txRows) {
+      if (tx.property_id) {
+        collectedByProperty[tx.property_id] = (collectedByProperty[tx.property_id] || 0) + Number(tx.total_collected || 0);
+      }
+      if (tx.client_id) {
+        collectedByClient[tx.client_id] = (collectedByClient[tx.client_id] || 0) + Number(tx.total_collected || 0);
+      }
+    }
 
     // 3. Récupérer les factures pour ce mois précis
     const [invoicesRows] = await db.query(`
@@ -903,15 +963,21 @@ class ReportRepository {
         let isVacant = false;
 
         if (hasTenant) {
-          tenantName = `${p.tenant_first_name || ''} ${p.tenant_last_name || ''}`.trim() || `Locataire #${p.tenant_id}`;
+          const departureNotice = p.departure_date ? ` (Sortie le ${new Date(p.departure_date).toLocaleDateString('fr-FR')})` : '';
+          tenantName = `${p.tenant_first_name || ''} ${p.tenant_last_name || ''}`.trim() + departureNotice || `Locataire #${p.tenant_id}`;
           expectedRent = inv ? Number(inv.total_amount || 0) : Number(p.property_rent || p.tenant_amount_due || 0);
           
-          if (inv) {
-            collectedRent = Number(inv.paid_amount || 0);
+          const txCash = collectedByProperty[p.property_id] ?? collectedByClient[p.tenant_id] ?? null;
+          const repairVal = repairsByProperty[p.property_id] || 0;
+
+          if (txCash !== null && txCash !== undefined) {
+            collectedRent = Math.min(expectedRent, txCash + repairVal);
+          } else if (inv) {
+            collectedRent = Math.min(expectedRent, Number(inv.paid_amount || 0));
           } else {
-            collectedRent = p.tenant_status === 'paid' ? expectedRent : Number(p.tenant_amount_paid || 0);
+            collectedRent = 0;
           }
-          arrears = expectedRent - collectedRent;
+          arrears = Math.max(0, expectedRent - collectedRent);
         } else {
           // Logement vacant (inclus explicitement avec mention)
           tenantName = '(Logement vacant - 0 XOF)';
@@ -980,7 +1046,7 @@ class ReportRepository {
       const commRate = Number(o.commission_rate || 10);
       const agencyCommission = ownerTotalCommission > 0 ? ownerTotalCommission : Math.round((totalCollected * commRate) / 100);
       const maintenanceDeductions = repairsByOwner[o.id] || 0;
-      const netOwnerPayout = Math.max(0, totalCollected - agencyCommission - maintenanceDeductions + totalPrefinanced);
+      const netOwnerPayout = Math.max(0, totalCollected - agencyCommission - maintenanceDeductions);
 
       globalExpected += totalExpected;
       globalCollected += totalCollected;

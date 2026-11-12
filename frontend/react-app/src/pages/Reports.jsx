@@ -66,9 +66,10 @@ export default function Reports() {
   const [error, setError] = useState(null);
   const [sectionErrors, setSectionErrors] = useState(createSectionErrors);
 
-  // Filtres de période optionnels
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  // Filtres de période synchronisés
+  const [selectedMonth, setSelectedMonth] = useState('2026-11');
+  const [startDate, setStartDate] = useState('2026-11-01');
+  const [endDate, setEndDate] = useState('2026-11-30');
   const [severityFilter, setSeverityFilter] = useState('all');
   const [collectorFilter, setCollectorFilter] = useState('all');
   const [propertyFilter, setPropertyFilter] = useState('all');
@@ -97,13 +98,88 @@ export default function Reports() {
   const [preselectedOwner, setPreselectedOwner] = useState(null);
 
   // Décompte Bailleurs & Locataires (Accordéon hiérarchique)
-  const [selectedMonth, setSelectedMonth] = useState('2026-11');
   const [tenantSearch, setTenantSearch] = useState('');
   const [ownerStatementsData, setOwnerStatementsData] = useState({ totals: {}, statements: [] });
   const [loadingStatements, setLoadingStatements] = useState(false);
   const [expandedOwnerIds, setExpandedOwnerIds] = useState(new Set());
   const [loadingPdfOwnerId, setLoadingPdfOwnerId] = useState(null);
   const [exportingExcel, setExportingExcel] = useState(false);
+
+  const handleMonthChange = (delta) => {
+    const [yStr, mStr] = (selectedMonth || '2026-11').split('-');
+    let y = parseInt(yStr, 10);
+    let m = parseInt(mStr, 10) + delta;
+    if (m > 12) {
+      m = 1;
+      y += 1;
+    } else if (m < 1) {
+      m = 12;
+      y -= 1;
+    }
+    const newMonth = `${y}-${String(m).padStart(2, '0')}`;
+    const lastDay = new Date(y, m, 0).getDate();
+    setSelectedMonth(newMonth);
+    setStartDate(`${newMonth}-01`);
+    setEndDate(`${newMonth}-${String(lastDay).padStart(2, '0')}`);
+  };
+
+  const handleMonthSelect = (newMonth) => {
+    if (!newMonth) {
+      setSelectedMonth('');
+      return;
+    }
+    const [yStr, mStr] = newMonth.split('-');
+    const y = parseInt(yStr, 10);
+    const m = parseInt(mStr, 10);
+    const lastDay = new Date(y, m, 0).getDate();
+    setSelectedMonth(newMonth);
+    setStartDate(`${newMonth}-01`);
+    setEndDate(`${newMonth}-${String(lastDay).padStart(2, '0')}`);
+  };
+
+  const handleStartDateChange = (val) => {
+    setStartDate(val);
+    if (val && val.length >= 7) {
+      setSelectedMonth(val.slice(0, 7));
+    }
+  };
+
+  const handleEndDateChange = (val) => {
+    setEndDate(val);
+    if (!startDate && val && val.length >= 7) {
+      setSelectedMonth(val.slice(0, 7));
+    }
+  };
+
+  const applyPeriodPreset = (preset) => {
+    if (preset === 'current_month') {
+      const y = 2026, m = 11;
+      const mStr = `${y}-${String(m).padStart(2, '0')}`;
+      const lastDay = new Date(y, m, 0).getDate();
+      setSelectedMonth(mStr);
+      setStartDate(`${mStr}-01`);
+      setEndDate(`${mStr}-${String(lastDay).padStart(2, '0')}`);
+    } else if (preset === 'prev_month') {
+      const y = 2026, m = 10;
+      const mStr = `${y}-${String(m).padStart(2, '0')}`;
+      const lastDay = new Date(y, m, 0).getDate();
+      setSelectedMonth(mStr);
+      setStartDate(`${mStr}-01`);
+      setEndDate(`${mStr}-${String(lastDay).padStart(2, '0')}`);
+    } else if (preset === 'q4_2026') {
+      setSelectedMonth('2026-11');
+      setStartDate('2026-10-01');
+      setEndDate('2026-12-31');
+    } else if (preset === 'year_2026') {
+      setSelectedMonth('2026-11');
+      setStartDate('2026-01-01');
+      setEndDate('2026-12-31');
+    } else if (preset === 'all') {
+      setSelectedMonth('');
+      setStartDate('');
+      setEndDate('');
+    }
+  };
 
   const dateParams = useMemo(() => {
     const p = {};
@@ -176,7 +252,9 @@ export default function Reports() {
     setLoadingStatements(true);
     try {
       const response = await API.Reports.getOwnerStatements({
-        month: selectedMonth,
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
+        month: selectedMonth || undefined,
         search: tenantSearch
       });
       const data = response?.data || response;
@@ -190,27 +268,13 @@ export default function Reports() {
     } finally {
       setLoadingStatements(false);
     }
-  }, [selectedMonth, tenantSearch, showToast]);
+  }, [startDate, endDate, selectedMonth, tenantSearch, showToast]);
 
   useEffect(() => {
     if (activeTab === 'owner_statements') {
       fetchOwnerStatements();
     }
   }, [activeTab, fetchOwnerStatements]);
-
-  const handleMonthChange = (delta) => {
-    const [yStr, mStr] = selectedMonth.split('-');
-    let y = parseInt(yStr, 10);
-    let m = parseInt(mStr, 10) + delta;
-    if (m > 12) {
-      m = 1;
-      y += 1;
-    } else if (m < 1) {
-      m = 12;
-      y -= 1;
-    }
-    setSelectedMonth(`${y}-${String(m).padStart(2, '0')}`);
-  };
 
   const toggleOwnerExpand = (ownerId) => {
     setExpandedOwnerIds(prev => {
@@ -237,12 +301,16 @@ export default function Reports() {
   const handleDownloadOwnerPdf = async (ownerId, ownerName) => {
     try {
       setLoadingPdfOwnerId(ownerId);
-      const response = await API.Reports.downloadOwnerStatementPdf(ownerId, { month: selectedMonth });
+      const response = await API.Reports.downloadOwnerStatementPdf(ownerId, {
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
+        month: selectedMonth || undefined
+      });
       const blob = new Blob([response.data || response], { type: 'application/pdf' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `bordereau_decompte_${(ownerName || 'proprietaire').replace(/[^a-zA-Z0-9]/g, '_')}_${selectedMonth}.pdf`;
+      a.download = `bordereau_decompte_${(ownerName || 'proprietaire').replace(/[^a-zA-Z0-9]/g, '_')}_${selectedMonth || 'periode'}.pdf`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -259,7 +327,12 @@ export default function Reports() {
   const handleExportOwnerStatementsExcel = async () => {
     try {
       setExportingExcel(true);
-      const response = await API.Reports.exportOwnerStatementsExcel({ month: selectedMonth, search: tenantSearch });
+      const response = await API.Reports.exportOwnerStatementsExcel({
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
+        month: selectedMonth || undefined,
+        search: tenantSearch
+      });
       const blob = new Blob([response.data || response], { type: 'text/csv;charset=utf-8;' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -716,36 +789,77 @@ export default function Reports() {
             <input
               type="date"
               value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:outline-none focus:border-primary"
+              onChange={(e) => handleStartDateChange(e.target.value)}
+              className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-primary focus:bg-white"
             />
-            <span className="text-xs text-slate-400">au</span>
+            <span className="text-xs text-slate-400 font-medium">au</span>
             <input
               type="date"
               value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:outline-none focus:border-primary"
+              onChange={(e) => handleEndDateChange(e.target.value)}
+              className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-primary focus:bg-white"
             />
           </div>
-          {(startDate || endDate) && (
+
+          {/* Raccourcis de période rapides synchronisés */}
+          <div className="flex flex-wrap items-center gap-1.5 pl-2 border-l border-slate-200">
             <button
               type="button"
-              onClick={() => { setStartDate(''); setEndDate(''); }}
-              className="text-xs font-semibold text-rose-600 hover:underline"
+              onClick={() => applyPeriodPreset('current_month')}
+              className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition-colors ${
+                selectedMonth === '2026-11' && startDate === '2026-11-01' && endDate === '2026-11-30'
+                  ? 'bg-primary text-white shadow-xs'
+                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+              }`}
             >
-              Réinitialiser
+              Ce mois (Nov)
             </button>
-          )}
+            <button
+              type="button"
+              onClick={() => applyPeriodPreset('prev_month')}
+              className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition-colors ${
+                selectedMonth === '2026-10' && startDate === '2026-10-01' && endDate === '2026-10-31'
+                  ? 'bg-primary text-white shadow-xs'
+                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+              }`}
+            >
+              Mois préc. (Oct)
+            </button>
+            <button
+              type="button"
+              onClick={() => applyPeriodPreset('q4_2026')}
+              className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition-colors ${
+                startDate === '2026-10-01' && endDate === '2026-12-31'
+                  ? 'bg-primary text-white shadow-xs'
+                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+              }`}
+            >
+              T4 2026
+            </button>
+            {(startDate || endDate) && (
+              <button
+                type="button"
+                onClick={() => applyPeriodPreset('all')}
+                className="px-2 py-1 text-[11px] font-semibold text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                title="Supprimer les filtres de date"
+              >
+                Réinitialiser
+              </button>
+            )}
+          </div>
         </div>
 
         <button
           type="button"
-          onClick={fetchData}
-          disabled={loading}
+          onClick={() => {
+            fetchData();
+            if (activeTab === 'owner_statements') fetchOwnerStatements();
+          }}
+          disabled={loading || loadingStatements}
           className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition-colors disabled:opacity-50"
         >
-          <i className={`fas fa-sync-alt ${loading ? 'fa-spin' : ''}`}></i>
-          {loading ? 'Actualisation...' : 'Actualiser les données'}
+          <i className={`fas fa-sync-alt ${loading || loadingStatements ? 'fa-spin' : ''}`}></i>
+          {loading || loadingStatements ? 'Actualisation...' : 'Actualiser'}
         </button>
       </div>
 
@@ -1053,7 +1167,7 @@ export default function Reports() {
                 <input
                   type="month"
                   value={selectedMonth}
-                  onChange={(e) => setSelectedMonth(e.target.value)}
+                  onChange={(e) => handleMonthSelect(e.target.value)}
                   className="px-2.5 py-1 bg-transparent text-xs font-bold text-slate-900 focus:outline-none cursor-pointer"
                 />
                 <button

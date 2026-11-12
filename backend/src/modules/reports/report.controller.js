@@ -112,10 +112,10 @@ class ReportController {
   async exportOwnerStatementPdf(req, res, next) {
     try {
       const { ownerId } = req.params;
-      const { month } = req.query;
-      const pdf = await reportService.exportOwnerStatementPdf(ownerId, month);
+      const pdf = await reportService.exportOwnerStatementPdf(ownerId, req.query);
+      const label = req.query.month || (req.query.startDate && req.query.endDate ? `${req.query.startDate}_au_${req.query.endDate}` : 'periode');
       res.header('Content-Type', 'application/pdf');
-      res.attachment(`bordereau_reddition_proprietaire_${ownerId}_${month || 'mois'}.pdf`);
+      res.attachment(`bordereau_reddition_proprietaire_${ownerId}_${label}.pdf`);
       res.send(pdf);
     } catch (error) {
       next(error);
