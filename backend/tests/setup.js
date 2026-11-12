@@ -10,4 +10,4 @@ process.env.DB_USER = process.env.DB_USER || 'root';
 process.env.DB_PASSWORD = process.env.DB_PASSWORD || '';
 
 // Si on veut mocker la base de données globalement, on peut le faire ici ou dans chaque test.
-// Pour les tests unitaires/intégration sans BDD, on utilisera jest.mock('../config/db') dans les tests.
+// Pour les tests unitaires/intégration sans BDD, on utilisera jest.mock('../src/config/database') dans les tests.

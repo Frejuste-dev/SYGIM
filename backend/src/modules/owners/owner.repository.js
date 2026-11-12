@@ -1,5 +1,5 @@
 const BaseRepository = require('../../core/BaseRepository');
-const { pool } = require('../../../config/db');
+const { pool } = require('../../config/database');
 
 const VALID_OWNER_COLUMNS = [
   'first_name',

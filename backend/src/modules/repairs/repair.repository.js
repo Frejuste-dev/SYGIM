@@ -1,4 +1,4 @@
-const { pool } = require('../../../config/db');
+const { pool } = require('../../config/database');
 
 class RepairRepository {
   async findAll(filters = {}) {

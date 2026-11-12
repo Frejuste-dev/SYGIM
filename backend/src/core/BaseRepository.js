@@ -5,7 +5,7 @@
 
 const Logger = require('../utils/logger/Logger');
 const AppError = require('../utils/errors/AppError');
-const { pool: db } = require('../../config/db');
+const { pool: db } = require('../config/database');
 
 class BaseRepository {
   constructor(tableName) {

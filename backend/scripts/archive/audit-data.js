@@ -4,7 +4,7 @@
  */
 
 require('dotenv').config();
-const { pool } = require('./config/db');
+const { pool } = require('../../src/config/database');
 
 async function auditData() {
   console.log('\n🔍 AUDIT DES DONNÉES ANORMALES\n');

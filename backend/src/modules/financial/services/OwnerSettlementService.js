@@ -1,4 +1,4 @@
-const { pool } = require('../../../../config/db');
+const { pool } = require('../../../config/database');
 const ownerSettlementRepository = require('../repositories/owner-settlement.repository');
 const AppError = require('../../../utils/errors/AppError');
 const Logger = require('../../../utils/logger/Logger');

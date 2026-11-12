@@ -100,7 +100,7 @@ class PropertyService extends BaseService {
   }
 
   async assignTenant(propertyId, data, user) {
-    const { pool } = require('../../../config/db');
+    const { pool } = require('../../config/database');
     const AppError = require('../../utils/errors/AppError');
 
     const prop = await this.repository.findById(propertyId);

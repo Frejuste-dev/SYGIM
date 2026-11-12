@@ -5,7 +5,7 @@
  * Rôle     : Persistence et agrégations SQL pour les rapports & analytics
  */
 
-const { pool: db } = require('../../../config/db');
+const { pool: db } = require('../../config/database');
 
 class ReportRepository {
   /**

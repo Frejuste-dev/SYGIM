@@ -1,4 +1,4 @@
-const { pool } = require('../../../config/db');
+const { pool } = require('../../config/database');
 
 class AlertRepository {
   async findOverduePayments(filters = {}, userRole = null, userId = null) {

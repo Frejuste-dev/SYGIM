@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { execSync } = require('child_process');
-const { pool } = require('../../../config/db');
+const { pool } = require('../../../src/config/database');
 
 const TEST_MIGRATIONS_DIR = path.join(__dirname, 'test_migrations');
 

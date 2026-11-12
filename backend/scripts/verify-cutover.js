@@ -1,5 +1,5 @@
 require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
-const { pool } = require('../config/db');
+const { pool } = require('../src/config/database');
 
 async function verify() {
   const [invRows] = await pool.query('SELECT status, count(*) as count, sum(total_amount) as total, sum(paid_amount) as paid, sum(balance_due) as due FROM invoices GROUP BY status');

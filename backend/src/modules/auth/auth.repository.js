@@ -4,7 +4,7 @@
  * date: 2026-06-16
  */
 
-const { pool } = require('../../../config/db');
+const { pool } = require('../../config/database');
 const Logger = require('../../utils/logger/Logger');
 
 class AuthRepository {

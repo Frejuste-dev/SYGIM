@@ -542,7 +542,7 @@ describe('logSanitizer — Tests Unitaires (SEC-003-B)', () => {
 
   describe('14. Vérification du Logging Sécurisé de db.js (SEC-003-D)', () => {
     it('doit exporter testConnection qui utilise Logger sans dépendance circulaire', async () => {
-      const { testConnection } = require('../../../config/db');
+      const { testConnection } = require('../../../src/config/database');
       expect(typeof testConnection).toBe('function');
     });
   });

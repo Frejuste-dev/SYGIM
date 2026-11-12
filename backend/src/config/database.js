@@ -7,7 +7,7 @@
 const mysql = require('mysql2/promise');
 const { randomUUID } = require('crypto');
 require('dotenv').config();
-const Logger = require('../src/utils/logger/Logger');
+const Logger = require('../utils/logger/Logger');
 
 const pool = mysql.createPool({
     host:               process.env.DB_HOST     || 'localhost',

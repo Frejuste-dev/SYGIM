@@ -17,7 +17,7 @@
  */
 
 require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
-const { pool } = require('../config/db');
+const { pool } = require('../src/config/database');
 
 const log = (msg) => console.log(`   ${msg}`);
 

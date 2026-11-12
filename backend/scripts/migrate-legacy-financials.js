@@ -28,7 +28,7 @@ const envPath = fs.existsSync(path.join(__dirname, '..', '.env'))
   : path.join(__dirname, '..', '.env.dev');
 require('dotenv').config({ path: envPath });
 
-const { pool } = require('../config/db');
+const { pool } = require('../src/config/database');
 
 async function migrateLegacyFinancials() {
   const isDryRun = process.argv.includes('--dry-run');
