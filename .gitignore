@@ -1,3 +1,7 @@
+# ==============================================================================
+# SYGIM - .gitignore
+# ==============================================================================
+
 # Dependencies
 node_modules/
 */node_modules/
@@ -8,17 +12,24 @@ node_modules/
 !.env.*.example
 !.env.docker.example
 backend/.env*
+!backend/.env.example
+!backend/.env.*.example
 CREDENTIALS_PRODUCTION.md
 backend/certs/
 
-# Logs & temporary files
+# Logs & Runtime
 logs/
 *.log
 backend/logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Temporary files & Backups
 *.tmp*
 .tmp*
 backups/
-coverage/
 routes_dump.txt
 services_dump.txt
 text.tex
@@ -27,7 +38,14 @@ backend/clean-dashes.js
 backend/real_schema.txt
 backend/real_schema_utf8.txt
 
-# Build outputs
+# Test artifacts & Coverage
+coverage/
+test-results/
+playwright-report/
+blob-report/
+.nyc_output/
+
+# Build outputs & Bundles
 dist/
 dist-ssr/
 build/
@@ -35,5 +53,7 @@ build/
 # IDE & OS
 .idea/
 .vscode/
+*.swp
+*.swo
 .DS_Store
 Thumbs.db
