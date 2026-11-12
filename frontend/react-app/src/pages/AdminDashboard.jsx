@@ -8,8 +8,6 @@ import { useTransactions, useTransactionStats } from '../hooks/queries/useTransa
 import { useOwners, useOwnerStats } from '../hooks/queries/useOwners';
 import { useDashboardKpis } from '../hooks/queries/useDashboardKpis';
 import { useToast } from '../components/ToastContext';
-import DashboardSidebar from '../components/DashboardSidebar';
-import DashboardHeader from '../components/DashboardHeader';
 import Modal from '../components/Modal';
 import { formatXOF, formatDate, formatMethod, formatStatus, transactionSearchDate } from '../utils/formatters';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
