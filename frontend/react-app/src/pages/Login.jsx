@@ -88,11 +88,23 @@ export default function Login() {
         </div>
       </div>
 
-      {/* PARTIE DROITE : TOUTE LA ZONE ILLUSTRATION & BRANDING */}
-      <div className="hidden lg:flex lg:w-1/2 min-h-screen bg-gradient-to-br from-indigo-50/70 via-slate-50 to-indigo-100/50 flex-col justify-between p-12 xl:p-16 relative overflow-hidden border-l border-slate-100">
-        {/* Lueur d'ambiance subtile */}
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl pointer-events-none"></div>
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-indigo-300/15 rounded-full blur-3xl pointer-events-none"></div>
+      {/* PARTIE DROITE : TOUTE LA ZONE ILLUSTRATION & BRANDING AVEC ANIMATION DE FOND */}
+      <div className="hidden lg:flex lg:w-1/2 min-h-screen bg-gradient-to-br from-indigo-50/70 via-slate-50 to-indigo-100/50 flex-col justify-between p-12 xl:p-16 relative overflow-hidden border-l border-slate-100 select-none">
+        
+        {/* Animated Mesh Gradient Orbs (Fond fluide et vivant) */}
+        <div className="absolute -top-20 -left-20 w-[420px] h-[420px] bg-primary/20 rounded-full blur-[90px] pointer-events-none animate-blob-1"></div>
+        <div className="absolute -bottom-20 -right-20 w-[460px] h-[460px] bg-rose-400/20 rounded-full blur-[100px] pointer-events-none animate-blob-2"></div>
+        <div className="absolute top-1/2 left-1/4 w-[320px] h-[320px] bg-sky-400/15 rounded-full blur-[80px] pointer-events-none animate-blob-1 [animation-delay:4s]"></div>
+        <div className="absolute top-1/3 right-1/4 w-[280px] h-[280px] bg-indigo-400/20 rounded-full blur-[70px] pointer-events-none animate-blob-2 [animation-delay:8s]"></div>
+
+        {/* Trame de points géométrique subtile */}
+        <div
+          className="absolute inset-0 z-0 opacity-20 pointer-events-none"
+          style={{
+            backgroundImage: 'radial-gradient(#6366f1 1.2px, transparent 1.2px)',
+            backgroundSize: '24px 24px'
+          }}
+        ></div>
 
         {/* Logo SYGIM en haut à droite */}
         <div className="relative z-10 flex items-center gap-3">
@@ -105,13 +117,37 @@ export default function Login() {
           </div>
         </div>
 
-        {/* Illustration occupant généreusement tout le centre droit */}
+        {/* Illustration animée avec badges flottants dynamiques */}
         <div className="relative z-10 my-auto w-full max-w-lg mx-auto flex items-center justify-center px-4">
-          <img
-            src={loginIllustration}
-            alt="Illustration SYGIM"
-            className="w-full h-auto max-h-[440px] object-contain drop-shadow-md select-none transition-transform hover:scale-[1.02] duration-300"
-          />
+          <div className="relative animate-float-slow">
+            <img
+              src={loginIllustration}
+              alt="Illustration SYGIM"
+              className="w-full h-auto max-h-[420px] object-contain drop-shadow-md select-none"
+            />
+
+            {/* Badge flottant 1 (haut droite) */}
+            <div className="absolute -top-3 -right-2 sm:-right-4 bg-white/90 backdrop-blur-md border border-white/70 shadow-lg shadow-indigo-500/10 rounded-2xl px-3.5 py-2 flex items-center gap-2.5 animate-float-reverse">
+              <div className="w-7 h-7 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center text-xs shadow-xs">
+                <i className="fas fa-bolt"></i>
+              </div>
+              <div className="text-left">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block leading-tight">Recouvrement</span>
+                <span className="text-xs font-bold text-slate-800">100% Digital</span>
+              </div>
+            </div>
+
+            {/* Badge flottant 2 (bas gauche) */}
+            <div className="absolute -bottom-3 -left-2 sm:-left-4 bg-white/90 backdrop-blur-md border border-white/70 shadow-lg shadow-indigo-500/10 rounded-2xl px-3.5 py-2 flex items-center gap-2.5 animate-float-slow [animation-delay:3s]">
+              <div className="w-7 h-7 rounded-xl bg-primary/10 text-primary flex items-center justify-center text-xs shadow-xs">
+                <i className="fas fa-shield-alt"></i>
+              </div>
+              <div className="text-left">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block leading-tight">Sécurité</span>
+                <span className="text-xs font-bold text-slate-800">Données Certifiées</span>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Footer discret */}
