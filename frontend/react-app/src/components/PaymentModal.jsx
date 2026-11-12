@@ -20,31 +20,39 @@ export default function PaymentModal({ isOpen, onClose, client, onProceedToSigna
   const due = client?.amount_due ?? client?.amountDue ?? 0;
   const paid = client?.amount_paid ?? client?.amountPaid ?? 0;
   const remaining = Math.max(0, due - paid);
+  const pendingAmount = parseFloat(client?.pendingAmount || 0);
+  const effectiveRemaining = Math.max(0, remaining - pendingAmount);
   const activeRepairRemaining = parseFloat(client?.active_repair_remaining || 0);
   const activeRepairDeduction = parseFloat(client?.active_repair_deduction || 0);
   const isRepairImmediate = client?.active_repair_mode === 'immediate';
 
   const repairDeduction = activeRepairRemaining > 0
     ? (isRepairImmediate
-        ? Math.min(remaining, activeRepairRemaining)
-        : Math.min(remaining, activeRepairDeduction > 0 ? activeRepairDeduction : activeRepairRemaining))
+        ? Math.min(effectiveRemaining, activeRepairRemaining)
+        : Math.min(effectiveRemaining, activeRepairDeduction > 0 ? activeRepairDeduction : activeRepairRemaining))
     : 0;
 
-  const netCollectible = Math.max(0, remaining - repairDeduction);
+  const netCollectible = Math.max(0, effectiveRemaining - repairDeduction);
 
   useEffect(() => {
     if (!isOpen || !client) return;
     const clientDue = client.amount_due ?? client.amountDue ?? 0;
     const clientPaid = client.amount_paid ?? client.amountPaid ?? 0;
     const clientRem = Math.max(0, clientDue - clientPaid);
+    const clientPend = parseFloat(client.pendingAmount || 0);
+    const effRem = Math.max(0, clientRem - clientPend);
 
     const remRepair = parseFloat(client.active_repair_remaining || 0);
     const dedRepair = parseFloat(client.active_repair_deduction || 0);
     const isImm = client.active_repair_mode === 'immediate';
-    const repDed = remRepair > 0 ? (isImm ? Math.min(clientRem, remRepair) : Math.min(clientRem, dedRepair > 0 ? dedRepair : remRepair)) : 0;
-    const net = Math.max(0, clientRem - repDed);
+    const repDed = remRepair > 0 ? (isImm ? Math.min(effRem, remRepair) : Math.min(effRem, dedRepair > 0 ? dedRepair : remRepair)) : 0;
+    const net = Math.max(0, effRem - repDed);
 
-    setAmount(net > 0 ? net : clientRem);
+    if (client.suggestedAmount !== undefined) {
+      setAmount(client.suggestedAmount);
+    } else {
+      setAmount(net > 0 ? net : (effRem > 0 ? effRem : clientRem));
+    }
     setMethod('mobile_money'); // Défaut terrain Côte d'Ivoire
     setReference('');
     setValidationError('');
@@ -124,7 +132,29 @@ export default function PaymentModal({ isOpen, onClose, client, onProceedToSigna
                 {formatXOF(remaining, { compact: false })}
               </span>
             </div>
+            {paid > 0 && (
+              <div className="flex items-center justify-between text-xs text-emerald-600 font-semibold pt-1">
+                <span>Déjà validé en caisse :</span>
+                <span>{formatXOF(paid, { compact: false })}</span>
+              </div>
+            )}
           </div>
+
+          {/* Bannière encaissement terrain en attente si existant */}
+          {pendingAmount > 0 && (
+            <div className="bg-amber-50 rounded-2xl border border-amber-200/90 p-3 space-y-1 text-xs">
+              <div className="flex items-center justify-between font-bold text-amber-900">
+                <span className="flex items-center gap-1.5">
+                  <i className="fas fa-clock text-amber-500 animate-pulse"></i>
+                  Déjà collecté sur le terrain :
+                </span>
+                <span className="text-amber-900 font-black">+{formatXOF(pendingAmount, { compact: false })}</span>
+              </div>
+              <p className="text-[11px] text-amber-800 leading-tight">
+                Transmis à la comptabilité &bull; Reste suggéré à percevoir : <strong className="text-slate-900">{formatXOF(netCollectible)}</strong>
+              </p>
+            </div>
+          )}
 
           {/* Bannière déduction réparation si active */}
           {repairDeduction > 0 && (

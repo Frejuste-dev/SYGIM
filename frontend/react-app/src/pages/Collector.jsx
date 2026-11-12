@@ -497,6 +497,15 @@ export default function Collector() {
                 const repairDeduction = activeRepairRemaining > 0
                   ? (isImmediate ? Math.min(remaining, activeRepairRemaining) : Math.min(remaining, activeRepairDeduction > 0 ? activeRepairDeduction : activeRepairRemaining))
                   : 0;
+
+                // Données de collecte en attente de versement comptable
+                const clientPendingAmount = collectorTransactions
+                  .filter(t => (Number(t.client_id) === Number(client.id)) && t.status === 'pending')
+                  .reduce((sum, t) => sum + Number(t.amount || 0), 0);
+
+                const effectiveRemaining = Math.max(0, remaining - clientPendingAmount);
+                const effectiveCollectible = Math.max(0, effectiveRemaining - repairDeduction);
+                const isFullyPending = clientPendingAmount >= remaining && remaining > 0;
                 const netCollectible = Math.max(0, remaining - repairDeduction);
 
                 return (
@@ -547,23 +556,46 @@ export default function Collector() {
                         </div>
                       )}
 
+                      {/* Encart Encaissement Terrain en attente de versement */}
+                      {clientPendingAmount > 0 && !isSettled && (
+                        <div className="mt-2.5 bg-amber-50 rounded-xl border border-amber-200/80 p-2 text-xs space-y-0.5">
+                          <div className="flex items-center justify-between font-bold text-amber-900">
+                            <span className="flex items-center gap-1.5 text-[11px] truncate">
+                              <i className="fas fa-clock text-amber-500 animate-pulse"></i>
+                              Encaissé terrain (en attente) :
+                            </span>
+                            <span className="text-amber-900 font-extrabold shrink-0">+{formatXOF(clientPendingAmount)}</span>
+                          </div>
+                          <p className="text-[10px] text-amber-700 truncate">
+                            Transmis au comptable &bull; validé lors du versement
+                          </p>
+                        </div>
+                      )}
+
                       {/* Synthèse Financière Loyer */}
                       <div className="mt-2.5 grid grid-cols-2 gap-2 bg-slate-50 rounded-xl p-2.5 border border-slate-100 text-xs">
                         <div>
                           <span className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold block">Loyer dû</span>
                           <span className="font-semibold text-slate-700">{formatXOF(due)}</span>
+                          {paid > 0 && (
+                            <span className="text-[10px] text-emerald-600 font-medium block">Validé caisse : {formatXOF(paid)}</span>
+                          )}
                         </div>
                         <div className="text-right">
                           <span className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold block">
-                            {repairDeduction > 0 ? 'Net à encaisser' : 'Reste à payer'}
+                            {clientPendingAmount > 0 ? 'Reste à percevoir' : (repairDeduction > 0 ? 'Net à encaisser' : 'Reste à payer')}
                           </span>
                           {isSettled ? (
                             <span className="font-bold text-emerald-600 flex items-center justify-end gap-1">
                               <i className="fas fa-check-circle text-[10px]"></i> À jour
                             </span>
+                          ) : isFullyPending ? (
+                            <span className="font-bold text-amber-600 flex items-center justify-end gap-1 text-xs">
+                              <i className="fas fa-hourglass-half text-[10px]"></i> En attente caisse
+                            </span>
                           ) : (
                             <span className="font-extrabold text-rose-600 text-sm">
-                              {formatXOF(repairDeduction > 0 ? netCollectible : remaining)}
+                              {formatXOF(effectiveCollectible)}
                             </span>
                           )}
                         </div>
@@ -572,14 +604,19 @@ export default function Collector() {
 
                     {/* Boutons d'Action Opérationnels Terrain */}
                     <div className="space-y-2 pt-2 border-t border-slate-100">
-                      {!isSettled ? (
+                      {!isSettled && !isFullyPending ? (
                         <button
-                          onClick={() => handleOpenPayment(client)}
+                          onClick={() => handleOpenPayment({ ...client, pendingAmount: clientPendingAmount, suggestedAmount: effectiveCollectible })}
                           className="w-full py-2.5 px-3 min-h-[44px] bg-primary text-white text-xs sm:text-sm font-bold rounded-xl shadow-sm shadow-primary/20 hover:bg-primary-dark active:scale-[0.98] transition flex items-center justify-center gap-2 touch-manipulation"
                         >
                           <i className="fas fa-hand-holding-dollar"></i>
-                          <span>Encaisser {repairDeduction > 0 ? formatXOF(netCollectible) : formatXOF(remaining)}</span>
+                          <span>Encaisser {clientPendingAmount > 0 ? `le solde (${formatXOF(effectiveCollectible)})` : formatXOF(effectiveCollectible)}</span>
                         </button>
+                      ) : isFullyPending ? (
+                        <div className="w-full py-2.5 px-3 bg-amber-50 text-amber-800 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 border border-amber-200">
+                          <i className="fas fa-clock text-amber-600"></i>
+                          <span>Totalité encaissée ({formatXOF(clientPendingAmount)}) — En attente caisse</span>
+                        </div>
                       ) : (
                         <div className="w-full py-2 px-3 bg-emerald-50 text-emerald-700 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 border border-emerald-200">
                           <i className="fas fa-check-double text-emerald-500"></i>
