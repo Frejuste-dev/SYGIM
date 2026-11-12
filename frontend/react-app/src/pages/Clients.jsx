@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useClients, useClientStats, useCreateClient, useUpdateClient, useDeleteClient } from '../hooks/queries/useClients';
 import { useProperties } from '../hooks/queries/useProperties';
+import { useCollectors } from '../hooks/queries/useCollectors';
 import { useSearchParams } from 'react-router-dom';
 import { useToast } from '../components/ToastContext';
 import { useConfirm } from '../components/ConfirmContext';
@@ -62,10 +63,13 @@ export default function Clients() {
   const { data: propertiesResult = {} } = useProperties({ limit: 100 });
   const properties = Array.isArray(propertiesResult) ? propertiesResult : (propertiesResult?.data || []);
 
+  const { data: collectorsResult = {} } = useCollectors({ limit: 100 });
+  const collectors = Array.isArray(collectorsResult) ? collectorsResult : (collectorsResult?.data || []);
+
   const [showModal, setShowModal] = useState(false);
   const [editingClient, setEditingClient] = useState(null);
   const [selectedClientForStatement, setSelectedClientForStatement] = useState(null);
-  const [form, setForm] = useState({ firstName: '', lastName: '', phone: '', email: '', propertyId: '', propertyName: '', amountDue: '' });
+  const [form, setForm] = useState({ firstName: '', lastName: '', phone: '', email: '', propertyId: '', propertyName: '', amountDue: '', collectorId: '' });
   const [formError, setFormError] = useState('');
 
   const createClient = useCreateClient();
@@ -89,7 +93,7 @@ export default function Clients() {
 
   const openCreateModal = () => {
     setEditingClient(null);
-    setForm({ firstName: '', lastName: '', phone: '', email: '', propertyId: '', propertyName: '', amountDue: '' });
+    setForm({ firstName: '', lastName: '', phone: '', email: '', propertyId: '', propertyName: '', amountDue: '', collectorId: '' });
     setFormError('');
     setShowModal(true);
   };
@@ -104,6 +108,7 @@ export default function Clients() {
       propertyId: client.property_id ? String(client.property_id) : '',
       propertyName: client.property_name || '',
       amountDue: client.amount_due ? String(client.amount_due) : '',
+      collectorId: client.collector_id ? String(client.collector_id) : '',
     });
     setFormError('');
     setShowModal(true);
@@ -122,6 +127,8 @@ export default function Clients() {
         ...form,
         propertyId: form.propertyId ? parseInt(form.propertyId, 10) : null,
         property_id: form.propertyId ? parseInt(form.propertyId, 10) : null,
+        collectorId: form.collectorId ? parseInt(form.collectorId, 10) : null,
+        collector_id: form.collectorId ? parseInt(form.collectorId, 10) : null,
         amountDue: parseFloat(form.amountDue) || 0
       };
       if (editingClient) {
@@ -297,6 +304,12 @@ export default function Clients() {
                           <div>
                             <div className="font-semibold text-slate-900">{client.first_name} {client.last_name}</div>
                             <div className="text-xs text-slate-500">{client.property_name || 'Aucun bien assigné'}</div>
+                            {client.collector_name && (
+                              <div className="text-[11px] text-blue-600 font-medium flex items-center gap-1 mt-0.5">
+                                <i className="fas fa-motorcycle text-[10px]"></i>
+                                <span>{client.collector_name}</span>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </td>
@@ -476,6 +489,25 @@ export default function Clients() {
                     className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label htmlFor="collectorId" className="block text-xs font-semibold text-slate-700 mb-1.5">
+                  Agent Collecteur assigné (Tournée de collecte)
+                </label>
+                <select
+                  id="collectorId"
+                  value={form.collectorId || ''}
+                  onChange={e => setForm({ ...form, collectorId: e.target.value })}
+                  className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-medium text-slate-900 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer"
+                >
+                  <option value="">-- Sélectionner un collecteur --</option>
+                  {collectors.map(c => (
+                    <option key={c.id} value={c.id}>
+                      {c.first_name} {c.last_name} {c.zone ? `(Zone : ${c.zone})` : ''}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 
