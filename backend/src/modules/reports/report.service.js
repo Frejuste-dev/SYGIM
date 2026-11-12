@@ -318,9 +318,10 @@ class ReportService {
 
       // ── BLOC DE SYNTHÈSE DES REVERSEMENTS (SANS COMMISSION AGENCE) ──
       currentY += 15;
-      const totalPayoutToOwner = statement.total_collected_rent + statement.total_prefinanced;
+      const maintenanceDed = Number(statement.maintenance_deductions || 0);
+      const totalPayoutToOwner = Math.max(0, statement.total_collected_rent + statement.total_prefinanced - maintenanceDed);
 
-      doc.rect(36, currentY, 523, 65).fill('#f1f5f9').stroke('#94a3b8');
+      doc.rect(36, currentY, 523, maintenanceDed > 0 ? 75 : 65).fill('#f1f5f9').stroke('#94a3b8');
       doc.fillColor('#0f172a').fontSize(9).font('Helvetica-Bold')
          .text('SYNTHÈSE DE LA REDDITION DE COMPTES AU PROPRIÉTAIRE', 48, currentY + 10);
 
@@ -328,17 +329,23 @@ class ReportService {
       doc.text(`Total Loyers Attendus : ${formatNum(statement.total_expected_rent)}`, 48, currentY + 28);
       doc.text(`Total Loyers Encaissés : ${formatNum(statement.total_collected_rent)}`, 48, currentY + 44);
 
+      if (maintenanceDed > 0) {
+        doc.fillColor('#b45309').font('Helvetica-Bold')
+           .text(`Retenues Travaux / Réparations : - ${formatNum(maintenanceDed)}`, 48, currentY + 58);
+      }
+
+      doc.fillColor('#0f172a').font('Helvetica');
       doc.text(`Arriérés Locataires Restants : ${formatNum(statement.total_arrears)}`, 220, currentY + 28);
       doc.text(`Avances Préfinancées versées : ${formatNum(statement.total_prefinanced)}`, 220, currentY + 44);
 
-      doc.rect(375, currentY + 8, 175, 48).fill('#047857');
+      doc.rect(375, currentY + 8, 175, maintenanceDed > 0 ? 58 : 48).fill('#047857');
       doc.fillColor('#ffffff').fontSize(8).font('Helvetica-Bold')
          .text('NET REVERSÉ AU BAILLEUR', 385, currentY + 16, { width: 155, align: 'center' });
       doc.fontSize(12).font('Helvetica-Bold')
-         .text(formatNum(totalPayoutToOwner), 385, currentY + 32, { width: 155, align: 'center' });
+         .text(formatNum(totalPayoutToOwner), 385, currentY + (maintenanceDed > 0 ? 36 : 32), { width: 155, align: 'center' });
 
       // ── CADRES DE SIGNATURES ──
-      const ySign = currentY + 85;
+      const ySign = currentY + (maintenanceDed > 0 ? 95 : 85);
       doc.rect(36, ySign, 250, 75).stroke('#cbd5e1');
       doc.fillColor('#334155').fontSize(8).font('Helvetica-Bold')
          .text('POUR L\'AGENCE SYGIM (Cachet & Signature)', 46, ySign + 8);

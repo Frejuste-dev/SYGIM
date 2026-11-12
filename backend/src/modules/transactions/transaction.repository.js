@@ -242,27 +242,16 @@ class TransactionRepository extends BaseRepository {
       );
 
       if (data.clientId && (data.status === 'processed' || !data.status)) {
-        await connection.query(
-          `UPDATE clients SET amount_paid = amount_paid + ?, 
-           payment_method = ?,
-           status = CASE 
-              WHEN amount_paid + ? >= amount_due THEN 'paid'
-              WHEN amount_paid + ? > 0 THEN 'partial'
-              ELSE status 
-           END
-           WHERE id = ?`,
-          [data.amount, data.method || 'cash', data.amount, data.amount, data.clientId]
-        );
-
         // Amortissement de la réparation locataire active si existante
+        let dedAllowed = 0;
         try {
           const [repRows] = await connection.query(
-            "SELECT * FROM tenant_repairs WHERE client_id = ? AND status = 'IN_PROGRESS' ORDER BY id ASC LIMIT 1",
+            "SELECT * FROM tenant_repairs WHERE client_id = ? AND status = 'IN_PROGRESS' ORDER BY id ASC LIMIT 1 FOR UPDATE",
             [data.clientId]
           );
           if (repRows.length > 0) {
             const rep = repRows[0];
-            const dedAllowed = rep.deduction_mode === 'immediate'
+            dedAllowed = rep.deduction_mode === 'immediate'
               ? parseFloat(rep.remaining_amount)
               : Math.min(parseFloat(rep.monthly_deduction || rep.remaining_amount), parseFloat(rep.remaining_amount));
             if (dedAllowed > 0) {
@@ -276,8 +265,22 @@ class TransactionRepository extends BaseRepository {
             }
           }
         } catch (repErr) {
-          // ignore non-blocking
+          // non-bloquant
         }
+
+        // Le loyer satisfait = versement espèces + crédit déduction travaux
+        const totalCredited = parseFloat(data.amount || 0) + dedAllowed;
+        await connection.query(
+          `UPDATE clients SET amount_paid = amount_paid + ?, 
+           payment_method = ?,
+           status = CASE 
+              WHEN amount_paid + ? >= amount_due THEN 'paid'
+              WHEN amount_paid + ? > 0 THEN 'partial'
+              ELSE status 
+           END
+           WHERE id = ?`,
+          [totalCredited, data.method || 'cash', totalCredited, totalCredited, data.clientId]
+        );
       }
 
       await connection.commit();
@@ -339,23 +342,9 @@ class TransactionRepository extends BaseRepository {
         [validatorUserId, validationNotes, id]
       );
 
-      // 2. Créditer le client et mettre à jour son statut
+      // 2. Amortissement réparation locataire active si existante & Créditer le locataire
       if (tx.client_id) {
-        await connection.query(
-          `UPDATE clients 
-           SET amount_paid = amount_paid + ?, 
-               payment_method = ?,
-               status = CASE 
-                  WHEN amount_paid + ? >= amount_due THEN 'paid'
-                  WHEN amount_paid + ? > 0 THEN 'partial'
-                  ELSE status 
-               END,
-               updated_at = NOW()
-           WHERE id = ?`,
-          [tx.amount, tx.method || 'cash', tx.amount, tx.amount, tx.client_id]
-        );
-
-        // 3. Amortissement réparation locataire active si existante
+        let dedAllowed = 0;
         try {
           const [repRows] = await connection.query(
             "SELECT * FROM tenant_repairs WHERE client_id = ? AND status = 'IN_PROGRESS' ORDER BY id ASC LIMIT 1 FOR UPDATE",
@@ -363,7 +352,7 @@ class TransactionRepository extends BaseRepository {
           );
           if (repRows.length > 0) {
             const rep = repRows[0];
-            const dedAllowed = rep.deduction_mode === 'immediate'
+            dedAllowed = rep.deduction_mode === 'immediate'
               ? parseFloat(rep.remaining_amount)
               : Math.min(parseFloat(rep.monthly_deduction || rep.remaining_amount), parseFloat(rep.remaining_amount));
             if (dedAllowed > 0) {
@@ -379,6 +368,22 @@ class TransactionRepository extends BaseRepository {
         } catch (repErr) {
           // non-bloquant
         }
+
+        // Le loyer satisfait = versement espèces + déduction travaux locataire
+        const totalCredited = parseFloat(tx.amount || 0) + dedAllowed;
+        await connection.query(
+          `UPDATE clients 
+           SET amount_paid = amount_paid + ?, 
+               payment_method = ?,
+               status = CASE 
+                  WHEN amount_paid + ? >= amount_due THEN 'paid'
+                  WHEN amount_paid + ? > 0 THEN 'partial'
+                  ELSE status 
+               END,
+               updated_at = NOW()
+           WHERE id = ?`,
+          [totalCredited, tx.method || 'cash', totalCredited, totalCredited, tx.client_id]
+        );
       }
 
       await connection.commit();

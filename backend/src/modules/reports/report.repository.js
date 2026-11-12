@@ -829,6 +829,38 @@ class ReportRepository {
       }
     }
 
+    // 4b. Récupérer les déductions travaux / réparations locataires sur la période
+    const [repairsRows] = await db.query(`
+      SELECT 
+        tr.property_id,
+        tr.client_id,
+        tr.total_cost,
+        tr.deduction_mode,
+        tr.monthly_deduction,
+        tr.reimbursed_amount,
+        tr.remaining_amount,
+        tr.status,
+        p.owner_id
+      FROM tenant_repairs tr
+      JOIN properties p ON p.id = tr.property_id
+      WHERE (tr.status = 'IN_PROGRESS' OR tr.status = 'SETTLED')
+        AND (DATE(tr.created_at) <= ? OR DATE(tr.repair_date) <= ?)
+    `, [endDate, endDate]);
+
+    const repairsByProperty = {};
+    const repairsByOwner = {};
+    for (const r of repairsRows) {
+      const val = r.deduction_mode === 'immediate'
+        ? Number(r.reimbursed_amount || r.total_cost || 0)
+        : Number(r.reimbursed_amount || r.monthly_deduction || 0);
+      if (r.property_id) {
+        repairsByProperty[r.property_id] = (repairsByProperty[r.property_id] || 0) + val;
+      }
+      if (r.owner_id) {
+        repairsByOwner[r.owner_id] = (repairsByOwner[r.owner_id] || 0) + val;
+      }
+    }
+
     // 5. Indexer les biens par propriétaire
     const propertiesByOwner = {};
     for (const prop of propertyRows) {
@@ -947,7 +979,8 @@ class ReportRepository {
       }
       const commRate = Number(o.commission_rate || 10);
       const agencyCommission = ownerTotalCommission > 0 ? ownerTotalCommission : Math.round((totalCollected * commRate) / 100);
-      const netOwnerPayout = Math.max(0, totalCollected - agencyCommission + totalPrefinanced);
+      const maintenanceDeductions = repairsByOwner[o.id] || 0;
+      const netOwnerPayout = Math.max(0, totalCollected - agencyCommission - maintenanceDeductions + totalPrefinanced);
 
       globalExpected += totalExpected;
       globalCollected += totalCollected;
@@ -973,6 +1006,7 @@ class ReportRepository {
         total_arrears: totalArrears,
         total_prefinanced: totalPrefinanced,
         agency_commission: agencyCommission,
+        maintenance_deductions: maintenanceDeductions,
         net_owner_payout: netOwnerPayout,
         matched_by_tenant: matchedByTenant,
         units

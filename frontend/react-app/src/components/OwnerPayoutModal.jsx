@@ -146,8 +146,20 @@ export default function OwnerPayoutModal({ isOpen, onClose, preselectedOwner = n
         setPayoutMode('full');
       }
       setCommissionRate(found.commission_rate ?? 10);
+      if (found.maintenanceDeductions !== undefined) {
+        setMaintenanceDeductions(Number(found.maintenanceDeductions || 0));
+      }
     }
   };
+
+  // Pré-remplir automatiquement les retenues travaux/réparations actives du propriétaire ou du bien
+  useEffect(() => {
+    if (selectedProperty && selectedProperty.repairDeduction !== undefined) {
+      setMaintenanceDeductions(Number(selectedProperty.repairDeduction || 0));
+    } else if (selectedOwner && selectedOwner.maintenanceDeductions !== undefined) {
+      setMaintenanceDeductions(Number(selectedOwner.maintenanceDeductions || 0));
+    }
+  }, [selectedProperty, selectedOwner]);
 
   // Mettre à jour automatiquement le montant à verser quand le netDue ou le mode change
   useEffect(() => {

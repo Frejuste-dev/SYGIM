@@ -89,6 +89,13 @@ class OwnerSettlementService {
       GROUP BY owner_id
     `);
 
+    const [repairs] = await pool.query(`
+      SELECT tr.*, p.owner_id
+      FROM tenant_repairs tr
+      JOIN properties p ON p.id = tr.property_id
+      WHERE tr.status = 'IN_PROGRESS' OR tr.status = 'SETTLED'
+    `);
+
     const settlementMap = {};
     for (const s of settlements) {
       settlementMap[s.owner_id] = {
@@ -109,13 +116,22 @@ class OwnerSettlementService {
       const propClients = clientsByProperty[p.id] || [];
       const propDue = propClients.reduce((sum, c) => sum + parseFloat(c.amount_due || 0), 0) || parseFloat(p.rent || 0);
       const propPaid = propClients.reduce((sum, c) => sum + parseFloat(c.amount_paid || 0), 0);
+      const propRepairs = repairs.filter(r => r.property_id === p.id);
+      const propRepairDeduction = propRepairs.reduce((sum, r) => {
+        const val = r.deduction_mode === 'immediate'
+          ? parseFloat(r.remaining_amount || r.total_cost || 0)
+          : Math.min(parseFloat(r.monthly_deduction || r.remaining_amount || 0), parseFloat(r.total_cost || 0));
+        return sum + val;
+      }, 0);
+
       propsByOwner[p.owner_id].push({
         ...p,
         rent: parseFloat(p.rent || 0),
         tenants: propClients,
         tenantDue: propDue,
         tenantPaid: propPaid,
-        tenantUnpaid: Math.max(0, propDue - propPaid)
+        tenantUnpaid: Math.max(0, propDue - propPaid),
+        repairDeduction: propRepairDeduction
       });
     }
 
@@ -125,8 +141,9 @@ class OwnerSettlementService {
       const collectedFromTenants = ownerProps.reduce((s, p) => s + (p.tenantPaid || 0), 0);
       const unpaidByTenants = Math.max(0, expectedRent - collectedFromTenants);
       const commRate = parseFloat(owner.commission_rate ?? 10);
-      const netExpected = Math.round(expectedRent * (1 - commRate / 100));
-      const netFromCollected = Math.round(collectedFromTenants * (1 - commRate / 100));
+      const totalMaintenanceDeductions = ownerProps.reduce((s, p) => s + (p.repairDeduction || 0), 0);
+      const netExpected = Math.max(0, Math.round(expectedRent * (1 - commRate / 100) - totalMaintenanceDeductions));
+      const netFromCollected = Math.max(0, Math.round(collectedFromTenants * (1 - commRate / 100) - totalMaintenanceDeductions));
       const settleInfo = settlementMap[owner.id] || { totalPaidToOwner: 0, totalPrefinanced: 0 };
 
       return {
@@ -139,6 +156,7 @@ class OwnerSettlementService {
         unpaidByTenants,
         hasTenantArrears: unpaidByTenants > 0,
         commissionRate: commRate,
+        maintenanceDeductions: totalMaintenanceDeductions,
         netExpectedPayout: netExpected,
         netCollectedPayout: netFromCollected,
         alreadyPaidToOwner: settleInfo.totalPaidToOwner,
