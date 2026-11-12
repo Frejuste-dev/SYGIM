@@ -98,6 +98,7 @@ export default function OwnerPayoutModal({ isOpen, onClose, preselectedOwner = n
     const commission = Math.round((baseAmount * rate) / 100);
     const deductions = parseFloat(maintenanceDeductions || 0);
     const netDue = Math.max(0, Math.round(baseAmount - commission - deductions));
+    const netUnpaidAdvance = Math.max(0, Math.round(unpaidRent * (1 - rate / 100) - deductions));
 
     return {
       expectedRent,
@@ -105,7 +106,8 @@ export default function OwnerPayoutModal({ isOpen, onClose, preselectedOwner = n
       unpaidRent,
       baseAmount,
       commission,
-      netDue
+      netDue,
+      netUnpaidAdvance
     };
   }, [selectedOwner, selectedProperty, payoutMode, commissionRate, maintenanceDeductions]);
 
@@ -460,26 +462,75 @@ export default function OwnerPayoutModal({ isOpen, onClose, preselectedOwner = n
                 onChange={(e) => setAmountPaid(e.target.value)}
                 className="w-full px-3.5 py-2.5 bg-emerald-50/50 border-2 border-emerald-500 rounded-xl text-base font-black text-slate-900"
               />
-              <div className="flex gap-1.5 mt-1">
-                <button
-                  type="button"
-                  onClick={() => setAmountPaid(financialMetrics.netDue)}
-                  className="text-[10px] px-2 py-0.5 bg-slate-100 hover:bg-slate-200 rounded font-semibold text-slate-700"
-                >
-                  100% ({formatXOF(financialMetrics.netDue)})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setPayoutMode('installment'); setAmountPaid(Math.round(financialMetrics.netDue / 2)); }}
-                  className="text-[10px] px-2 py-0.5 bg-slate-100 hover:bg-slate-200 rounded font-semibold text-slate-700"
-                >
-                  50% Échelonné
-                </button>
+              <div className="flex flex-wrap gap-1.5 mt-1.5">
+                {payoutMode === 'prefinancing' ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setAmountPaid(financialMetrics.netDue)}
+                      className={`text-[10px] px-2 py-1 rounded font-bold transition ${Number(amountPaid) === Number(financialMetrics.netDue) ? 'bg-amber-600 text-white shadow-xs' : 'bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200'}`}
+                      title="Avancer l'intégralité du loyer net garanti du mois"
+                    >
+                      <i className="fas fa-bolt mr-1 text-[9px]"></i>
+                      Tout le mois ({formatXOF(financialMetrics.netDue)})
+                    </button>
+                    {financialMetrics.unpaidRent > 0 && financialMetrics.collectedRent > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setAmountPaid(financialMetrics.netUnpaidAdvance)}
+                        className={`text-[10px] px-2 py-1 rounded font-bold transition ${Number(amountPaid) === Number(financialMetrics.netUnpaidAdvance) ? 'bg-primary text-white shadow-xs' : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200'}`}
+                        title="Avancer uniquement le net de l'impayé locataire restant"
+                      >
+                        <i className="fas fa-hourglass-half mr-1 text-[9px]"></i>
+                        Impayé seul ({formatXOF(financialMetrics.netUnpaidAdvance)})
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setAmountPaid(financialMetrics.netDue)}
+                      className="text-[10px] px-2 py-0.5 bg-slate-100 hover:bg-slate-200 rounded font-semibold text-slate-700"
+                    >
+                      100% ({formatXOF(financialMetrics.netDue)})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setPayoutMode('installment'); setAmountPaid(Math.round(financialMetrics.netDue / 2)); }}
+                      className="text-[10px] px-2 py-0.5 bg-slate-100 hover:bg-slate-200 rounded font-semibold text-slate-700"
+                    >
+                      50% Échelonné
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           </div>
 
-          {remainingAfterPayout > 0 && (
+          {payoutMode === 'prefinancing' && (
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 space-y-1">
+              <div className="flex items-center justify-between font-bold">
+                <span className="flex items-center gap-1.5">
+                  <i className="fas fa-bolt text-amber-600"></i>
+                  Avance de Trésorerie Propriétaire :
+                </span>
+                <span className="font-black text-amber-900">Total garanti : {formatXOF(financialMetrics.netDue)}</span>
+              </div>
+              <p className="text-[11px] text-amber-800 leading-relaxed">
+                {financialMetrics.collectedRent > 0 ? (
+                  <>
+                    Locataire a payé en caisse : <strong className="text-emerald-700">{formatXOF(financialMetrics.collectedRent)}</strong> (part nette bailleur : {formatXOF(Math.round(financialMetrics.collectedRent * (1 - commissionRate / 100)))}).<br />
+                    Impayé restant à recouvrer : <strong className="text-rose-700">{formatXOF(financialMetrics.unpaidRent)}</strong> ➔ Avance nette sur l'impayé : <strong className="text-slate-900 font-extrabold">{formatXOF(financialMetrics.netUnpaidAdvance)}</strong>.
+                  </>
+                ) : (
+                  <>Le locataire n'a pas encore payé. L'agence avance la totalité du loyer net mensuel au bailleur ({formatXOF(financialMetrics.netDue)}).</>
+                )}
+              </p>
+            </div>
+          )}
+
+          {remainingAfterPayout > 0 && payoutMode === 'installment' && (
             <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-800 flex items-center justify-between">
               <span>
                 <i className="fas fa-clock mr-1.5"></i>
