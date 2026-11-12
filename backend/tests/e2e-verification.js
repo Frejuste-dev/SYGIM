@@ -362,7 +362,10 @@ async function runE2E() {
   assert(collectorLedger.status === 403, 'Collecteur bloqué en 403 Forbidden sur /api/financial/ledger');
 
   const collectorTxList = await request('/api/transactions', { cookie: collectorCookie });
-  assert(collectorTxList.status === 403, 'Collecteur bloqué en 403 Forbidden sur /api/transactions (liste globale)');
+  assert(collectorTxList.status === 200 && Array.isArray(collectorTxList.data?.data), 'Collecteur accède à ses propres encaissements filtrés (200 OK)');
+
+  const collectorValidateAttempt = await request('/api/transactions/1/validate', { method: 'POST', cookie: collectorCookie });
+  assert(collectorValidateAttempt.status === 403, 'Collecteur strictement bloqué en 403 Forbidden sur la validation comptable');
 
   console.log('\n===============================================================');
   console.log(`🏁 RÉSULTATS : ${passed} TESTS RÉUSSIS, ${failed} ÉCHECS`);

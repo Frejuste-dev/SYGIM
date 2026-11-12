@@ -7,3 +7,4 @@ ALTER TABLE `transactions`
 
 -- Indexation pour accélérer les requêtes de filtrage des transactions en attente de validation
 CREATE INDEX IF NOT EXISTS `idx_transactions_status_collector` ON `transactions` (`status`, `collector_id`);
+
