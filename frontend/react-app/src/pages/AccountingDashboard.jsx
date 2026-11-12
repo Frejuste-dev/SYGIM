@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDashboardKpis } from '../hooks/queries/useDashboardKpis';
 import { useTransactions, useTransactionStats } from '../hooks/queries/useTransactions';
