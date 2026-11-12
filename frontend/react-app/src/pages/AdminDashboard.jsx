@@ -157,7 +157,7 @@ export default function AdminDashboard() {
     <div className="space-y-8 w-full max-w-full overflow-hidden box-border">
 
       {loading && (
-        <div className="bg-blue-50 text-blue-700 p-4 rounded-lg flex items-center gap-3">
+        <div className="bg-primary/10 text-primary border border-primary/20 p-4 rounded-xl flex items-center gap-3">
           <i className="fas fa-spinner fa-spin"></i>
           <span>Synchronisation des données en cours...</span>
         </div>

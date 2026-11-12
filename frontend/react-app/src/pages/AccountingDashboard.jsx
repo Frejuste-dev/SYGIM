@@ -424,7 +424,7 @@ export default function AccountingDashboard() {
           }`}
         >
           <i className="fas fa-book"></i> Grand Livre Comptable
-          <span className={`px-2 py-0.5 rounded-full text-xs ${activeTab === 'ledger' ? 'bg-white/20 text-white' : 'bg-indigo-100 text-indigo-800'}`}>
+          <span className={`px-2 py-0.5 rounded-full text-xs ${activeTab === 'ledger' ? 'bg-white/20 text-white' : 'bg-primary/10 text-primary'}`}>
             {ledgerData.entries?.length || 0}
           </span>
         </button>
@@ -851,7 +851,7 @@ export default function AccountingDashboard() {
                               onClick={() => setSelectedSettlementForInstallments(s)}
                               className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1 ${
                                 s.remaining_to_pay > 0
-                                  ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-sm'
+                                  ? 'bg-primary hover:bg-primary-dark text-white shadow-sm'
                                   : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
                               }`}
                               title="Voir l'historique des tranches ou enregistrer un versement partiel"
@@ -861,7 +861,7 @@ export default function AccountingDashboard() {
                             </button>
                             <button
                               onClick={() => printOwnerSettlementReceipt(s)}
-                              className="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1"
+                              className="px-2.5 py-1 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1 cursor-pointer"
                               title="Imprimer le Bordereau / Reçu Officiel PDF"
                             >
                               <i className="fas fa-print"></i> Bordereau

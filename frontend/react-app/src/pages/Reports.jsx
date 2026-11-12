@@ -10,7 +10,7 @@ import { exportToExcel, exportToPDF, printOwnerSettlementReceipt } from '../util
 
 const REPORT_TABS = [
   { key: 'overview', label: "Vue d'ensemble", icon: 'fa-chart-pie' },
-  { key: 'owner_statements', label: 'Décompte Bailleurs & Locataires', icon: 'fa-file-invoice-dollar', badgeColor: 'bg-indigo-100 text-indigo-800' },
+  { key: 'owner_statements', label: 'Décompte Bailleurs & Locataires', icon: 'fa-file-invoice-dollar', badgeColor: 'bg-primary/10 text-primary border border-primary/20' },
   { key: 'prefinancing', label: 'Rapport de Préfinancement', icon: 'fa-bolt', badgeColor: 'bg-amber-100 text-amber-800' },
   { key: 'collectors', label: 'Performance Récolteurs', icon: 'fa-users' },
   { key: 'properties', label: 'Biens & Occupation', icon: 'fa-building' },
@@ -18,7 +18,7 @@ const REPORT_TABS = [
 ];
 
 const MANAGER_REPORT_TABS = [
-  { key: 'owner_statements', label: 'Décompte Bailleurs & Locataires', icon: 'fa-file-invoice-dollar', badgeColor: 'bg-indigo-100 text-indigo-800' },
+  { key: 'owner_statements', label: 'Décompte Bailleurs & Locataires', icon: 'fa-file-invoice-dollar', badgeColor: 'bg-primary/10 text-primary border border-primary/20' },
   { key: 'collectors', label: 'Tournées & Collecteurs', icon: 'fa-users' },
   { key: 'overdue', label: 'Impayés & Plan de Relance', icon: 'fa-exclamation-triangle', badgeColor: 'bg-rose-100 text-rose-800' },
   { key: 'properties', label: 'Biens, Vacance & Travaux', icon: 'fa-building' },
@@ -1289,12 +1289,12 @@ export default function Reports() {
                     <div className="text-[10px] text-slate-400 mt-0.5">Retenues de gestion</div>
                   </div>
 
-                  <div className="bg-white p-4 rounded-xl border border-indigo-200 bg-indigo-50/30">
-                    <div className="text-[11px] font-semibold text-indigo-800 uppercase tracking-wider">Net Propriétaire</div>
+                  <div className="bg-white p-4 rounded-xl border border-primary/20 bg-primary/5">
+                    <div className="text-[11px] font-semibold text-primary uppercase tracking-wider">Net Propriétaire</div>
                     <div className="text-base font-extrabold text-primary mt-1">
                       {formatXOF(ownerStatementsData.totals.global_net_payout || 0)}
                     </div>
-                    <div className="text-[10px] text-indigo-600 mt-0.5">Reversement final</div>
+                    <div className="text-[10px] text-primary/80 mt-0.5">Reversement final</div>
                   </div>
                 </>
               )}
@@ -1345,7 +1345,7 @@ export default function Reports() {
                                     <span className="font-extrabold italic text-slate-900 tracking-wide text-sm">
                                       {s.owner_name.toUpperCase()}
                                     </span>
-                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200/60">
+                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary border border-primary/20">
                                       {s.properties_count} bien(s)
                                     </span>
                                   </div>
@@ -1395,10 +1395,10 @@ export default function Reports() {
                                   e.stopPropagation();
                                   printOwnerSettlementReceipt(s, { month: selectedMonth, isStatement: true });
                                 }}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg text-xs font-bold transition-all shadow-2xs hover:border-indigo-300 cursor-pointer"
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 rounded-lg text-xs font-bold transition-all shadow-2xs hover:border-primary/30 cursor-pointer"
                                 title="Imprimer le bordereau officiel avec le détail complet des locataires"
                               >
-                                <i className="fas fa-print text-indigo-600"></i>
+                                <i className="fas fa-print text-primary"></i>
                                 <span>Bordereau PDF</span>
                               </button>
                             </td>
@@ -1657,7 +1657,7 @@ export default function Reports() {
                             <button
                               type="button"
                               onClick={() => printOwnerSettlementReceipt(item)}
-                              className="px-2.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg text-xs font-bold inline-flex items-center gap-1 transition-colors"
+                              className="px-2.5 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 rounded-lg text-xs font-bold inline-flex items-center gap-1 transition-colors cursor-pointer"
                               title="Imprimer le Bordereau Officiel de Préfinancement"
                             >
                               <i className="fas fa-print"></i> Reçu PDF
@@ -1783,7 +1783,7 @@ export default function Reports() {
                 <button
                   type="button"
                   onClick={handleExportTourneeExcel}
-                  className="px-3.5 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl text-xs font-semibold flex items-center gap-1.5"
+                  className="px-3.5 py-2 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 rounded-xl text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
                   title="Exporter la feuille de tournée pour le suivi des collecteurs terrain"
                 >
                   <i className="fas fa-map-marked-alt"></i> Feuille de Tournée

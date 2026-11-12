@@ -396,7 +396,7 @@ export default function Transactions() {
               }`}
             >
               <i className="fas fa-book"></i> Grand Livre Général
-              <span className={`px-2 py-0.5 rounded-full text-xs ${activeTab === 'ledger' ? 'bg-white/20 text-white' : 'bg-indigo-100 text-indigo-800'}`}>
+              <span className={`px-2 py-0.5 rounded-full text-xs ${activeTab === 'ledger' ? 'bg-white/20 text-white' : 'bg-primary/10 text-primary'}`}>
                 {ledgerData.entries?.length || 0}
               </span>
             </button>
@@ -522,7 +522,7 @@ export default function Transactions() {
                             )}
                             <button
                               onClick={() => setViewTransaction(t)}
-                              className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all"
+                              className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-400 hover:text-primary hover:bg-primary/10 transition-all"
                               title="Voir les détails"
                             >
                               <i className="fas fa-eye"></i>
@@ -679,7 +679,7 @@ export default function Transactions() {
                                   onClick={() => setSelectedSettlementForInstallments(s)}
                                   className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1 ${
                                     s.remaining_to_pay > 0
-                                      ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-sm'
+                                      ? 'bg-primary hover:bg-primary-dark text-white shadow-sm'
                                       : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
                                   }`}
                                   title="Voir l'historique des tranches ou enregistrer un versement partiel"
@@ -690,7 +690,7 @@ export default function Transactions() {
                               )}
                               <button
                                 onClick={() => printOwnerSettlementReceipt(s)}
-                                className="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1"
+                                className="px-2.5 py-1 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1 cursor-pointer"
                                 title="Imprimer le Bordereau / Reçu Officiel PDF"
                               >
                                 <i className="fas fa-print"></i> Bordereau

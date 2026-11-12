@@ -324,7 +324,7 @@ export default function Properties() {
                     <td className="py-4 px-6 text-sm text-slate-600 capitalize">{p.type}</td>
                     <td className="py-4 px-6 text-sm">
                       {ownerName ? (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 font-medium text-xs border border-indigo-100">
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-primary/10 text-primary font-medium text-xs border border-primary/20">
                           <i className="fas fa-user-tie text-[10px]"></i>
                           {ownerName}
                         </span>

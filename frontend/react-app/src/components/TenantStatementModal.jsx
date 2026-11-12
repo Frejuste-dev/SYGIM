@@ -70,9 +70,9 @@ export default function TenantStatementModal({ client, onClose }) {
               </div>
             </div>
 
-            <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl">
-              <span className="text-xs uppercase font-medium text-blue-700">Compte d'Avance Séquestré</span>
-              <div className="mt-1 text-lg font-bold text-blue-900">
+            <div className="p-4 bg-primary/10 border border-primary/20 rounded-xl">
+              <span className="text-xs uppercase font-bold text-primary">Compte d'Avance Séquestré</span>
+              <div className="mt-1 text-lg font-black text-primary">
                 {formatXOF(statement.summary?.creditAdvanceBalance || 0)}
               </div>
             </div>
@@ -83,9 +83,9 @@ export default function TenantStatementModal({ client, onClose }) {
             <button
               type="button"
               onClick={() => setActiveTab('invoices')}
-              className={`pb-2 border-b-2 transition-colors ${
+              className={`pb-2 border-b-2 font-bold transition-colors ${
                 activeTab === 'invoices'
-                  ? 'border-indigo-600 text-indigo-600'
+                  ? 'border-primary text-primary'
                   : 'border-transparent text-slate-500 hover:text-slate-700'
               }`}
             >
@@ -94,9 +94,9 @@ export default function TenantStatementModal({ client, onClose }) {
             <button
               type="button"
               onClick={() => setActiveTab('payments')}
-              className={`pb-2 border-b-2 transition-colors ${
+              className={`pb-2 border-b-2 font-bold transition-colors ${
                 activeTab === 'payments'
-                  ? 'border-indigo-600 text-indigo-600'
+                  ? 'border-primary text-primary'
                   : 'border-transparent text-slate-500 hover:text-slate-700'
               }`}
             >
@@ -105,9 +105,9 @@ export default function TenantStatementModal({ client, onClose }) {
             <button
               type="button"
               onClick={() => setActiveTab('ledger')}
-              className={`pb-2 border-b-2 transition-colors ${
+              className={`pb-2 border-b-2 font-bold transition-colors ${
                 activeTab === 'ledger'
-                  ? 'border-indigo-600 text-indigo-600'
+                  ? 'border-primary text-primary'
                   : 'border-transparent text-slate-500 hover:text-slate-700'
               }`}
             >

@@ -13,7 +13,7 @@ export default function Activity() {
   const getBadgeStyle = (type) => {
     switch (type) {
       case 'auth':
-        return 'bg-blue-50 text-blue-700 border-blue-200';
+        return 'bg-primary/10 text-primary border border-primary/20';
       case 'alert':
         return 'bg-red-50 text-red-700 border-red-200';
       default:

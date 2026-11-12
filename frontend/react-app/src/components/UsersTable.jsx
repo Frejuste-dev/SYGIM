@@ -142,7 +142,7 @@ export default function UsersTable({
                 {filteredUsers.length > 0 ? filteredUsers.map(u => (
                   <tr key={u.id} className="group table-row border-b border-slate-200 hover:bg-slate-50/50 transition-colors">
                     <td className="px-5 py-4 flex items-center gap-3">
-                      <div className="w-9 h-9 flex items-center justify-center bg-indigo-500/20 text-indigo-700 rounded-full text-sm font-bold shrink-0">
+                      <div className="w-9 h-9 flex items-center justify-center bg-primary/10 text-primary rounded-full text-sm font-bold shrink-0">
                         {(((u.firstName || u.first_name || '')[0] || '') + ((u.lastName || u.last_name || '')[0] || '') || (u.username || '').slice(0, 2)).toUpperCase()}
                       </div>
                       <div>
@@ -163,13 +163,13 @@ export default function UsersTable({
                     </td>
                     <td className="px-5 py-4 text-right">
                       <div className="flex items-center justify-end gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => onEdit && onEdit(u)} className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors" title="Modifier">
+                        <button onClick={() => onEdit && onEdit(u)} className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-primary hover:bg-primary/10 transition-colors" title="Modifier">
                           <i className="fas fa-pencil-alt text-sm"></i>
                         </button>
                         <button onClick={() => onToggleStatus && onToggleStatus(u)} className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${u.active || u.active === 1 ? 'text-amber-400 hover:text-amber-600 hover:bg-amber-50' : 'text-emerald-400 hover:text-emerald-600 hover:bg-emerald-50'}`} title={u.active || u.active === 1 ? 'Désactiver' : 'Activer'}>
                           <i className={`fas ${u.active || u.active === 1 ? 'fa-pause' : 'fa-play'} text-sm`}></i>
                         </button>
-                        <button onClick={() => onResetPassword && onResetPassword(u)} className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors" title="Réinitialiser le mot de passe">
+                        <button onClick={() => onResetPassword && onResetPassword(u)} className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-primary hover:bg-primary/10 transition-colors" title="Réinitialiser le mot de passe">
                           <i className="fas fa-key text-sm"></i>
                         </button>
                         <button onClick={() => onDelete && onDelete(u)} className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors" title="Supprimer">

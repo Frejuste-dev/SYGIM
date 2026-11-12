@@ -144,17 +144,32 @@ class ReportService {
         doc.on('end', () => resolve(Buffer.concat(buffers)));
         doc.on('error', reject);
 
-        // Header
-        doc.fontSize(18).text(`SYGIM — Rapport: ${reportType.toUpperCase()}`, { align: 'center' });
-        doc.fontSize(10).text(`Généré le: ${new Date().toLocaleDateString('fr-FR')}`, { align: 'center' });
+        // Header institutionnel SYGIM
+        doc.rect(40, 40, 515, 45).fill('#5B5CE2');
+        doc.fillColor('#ffffff').fontSize(16).font('Helvetica-Bold')
+           .text(`SYGIM — Rapport: ${reportType.toUpperCase()}`, 55, 50);
+        doc.fontSize(9).font('Helvetica')
+           .text(`Généré le: ${new Date().toLocaleDateString('fr-FR')} • Système de Gestion Immobilière`, 55, 70);
+
+        doc.y = 100;
         doc.moveDown();
 
         const fields = Object.keys(data[0]).slice(0, 6);
-        doc.fontSize(9).font('Helvetica-Bold').text(fields.join(' | '), { underline: true });
-        doc.moveDown(0.5);
-        doc.font('Helvetica');
-        data.forEach(item => {
-          doc.text(fields.map(k => String(item[k] ?? '')).join(' | '));
+        const yTh = doc.y;
+        doc.rect(40, yTh, 515, 20).fill('#4A4BD8');
+        doc.fillColor('#ffffff').fontSize(8.5).font('Helvetica-Bold');
+        doc.text(fields.map(f => f.toUpperCase()).join('    |    '), 45, yTh + 5);
+
+        doc.y = yTh + 25;
+        doc.font('Helvetica').fontSize(8);
+        data.forEach((item, idx) => {
+          if (doc.y > 750) doc.addPage();
+          const rowY = doc.y;
+          if (idx % 2 === 1) {
+            doc.rect(40, rowY - 2, 515, 16).fill('#F8FAFC');
+          }
+          doc.fillColor('#0F172A').text(fields.map(k => String(item[k] ?? '')).join('    |    '), 45, rowY);
+          doc.moveDown(0.3);
         });
 
         doc.end();
@@ -239,26 +254,26 @@ class ReportService {
       const formatNum = (n) => new Intl.NumberFormat('fr-FR').format(Number(n) || 0) + ' XOF';
 
       // ── EN-TÊTE DU DOCUMENT ──
-      doc.rect(36, 36, 523, 50).fill('#1e1b4b');
+      doc.rect(36, 36, 523, 50).fill('#5B5CE2');
       doc.fillColor('#ffffff').fontSize(16).font('Helvetica-Bold')
          .text('SYGIM IMMOBILIER', 50, 48);
       doc.fontSize(8).font('Helvetica')
          .text('Gestion Locative, Recouvrement & Administration de Biens • Abidjan, Côte d\'Ivoire', 50, 68);
 
-      doc.fillColor('#fbbf24').fontSize(12).font('Helvetica-Bold')
+      doc.fillColor('#FCD34D').fontSize(12).font('Helvetica-Bold')
          .text('BORDEREAU DE REDDITION DE COMPTES', 300, 48, { width: 245, align: 'right' });
-      doc.fillColor('#ffffff').fontSize(9).font('Helvetica')
+      doc.fillColor('#EEF2FF').fontSize(9).font('Helvetica')
          .text(`Période : ${data.period_label.toUpperCase()}`, 300, 68, { width: 245, align: 'right' });
 
       doc.moveDown(2);
 
       // ── BLOC INFOS BAILLEUR ──
       const yBox = 100;
-      doc.rect(36, yBox, 523, 75).fill('#f8fafc').stroke('#cbd5e1');
-      doc.fillColor('#0f172a').fontSize(10).font('Helvetica-Bold')
+      doc.rect(36, yBox, 523, 75).fill('#F8FAFC').stroke('#CBD5E1');
+      doc.fillColor('#5B5CE2').fontSize(10).font('Helvetica-Bold')
          .text('INFORMATIONS DU BAILLEUR', 48, yBox + 10);
 
-      doc.fontSize(9).font('Helvetica-Bold').text('Propriétaire :', 48, yBox + 28);
+      doc.fillColor('#0F172A').fontSize(9).font('Helvetica-Bold').text('Propriétaire :', 48, yBox + 28);
       doc.font('Helvetica').text(statement.owner_name, 125, yBox + 28);
 
       doc.font('Helvetica-Bold').text('Téléphone :', 48, yBox + 42);
@@ -278,7 +293,7 @@ class ReportService {
 
       // ── TABLEAU DÉTAILLÉ DES LOCATAIRES ──
       const yTable = 190;
-      doc.rect(36, yTable, 523, 22).fill('#334155');
+      doc.rect(36, yTable, 523, 22).fill('#4A4BD8');
       doc.fillColor('#ffffff').fontSize(8).font('Helvetica-Bold');
       doc.text('LOCATAIRE', 42, yTable + 6, { width: 110 });
       doc.text('BIEN IMMOBILIER', 155, yTable + 6, { width: 120 });
@@ -322,8 +337,8 @@ class ReportService {
       const maintenanceDed = Number(statement.maintenance_deductions || 0);
       const totalPayoutToOwner = Math.max(0, statement.total_collected_rent + statement.total_prefinanced - maintenanceDed);
 
-      doc.rect(36, currentY, 523, maintenanceDed > 0 ? 75 : 65).fill('#f1f5f9').stroke('#94a3b8');
-      doc.fillColor('#0f172a').fontSize(9).font('Helvetica-Bold')
+      doc.rect(36, currentY, 523, maintenanceDed > 0 ? 75 : 65).fill('#F8FAFC').stroke('#5B5CE2');
+      doc.fillColor('#5B5CE2').fontSize(9).font('Helvetica-Bold')
          .text('SYNTHÈSE DE LA REDDITION DE COMPTES AU PROPRIÉTAIRE', 48, currentY + 10);
 
       doc.font('Helvetica').fontSize(8.5);

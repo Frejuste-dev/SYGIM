@@ -95,7 +95,7 @@ export const exportToExcel = (data, filename = 'export-sygim', columns = null, t
   }).join('');
 
   const headersHtml = headers.map(h => (
-    `<th style="background:#1e3a8a; color:#ffffff; font-weight:bold; padding:8px 12px; border:1px solid #1e3a8a; text-align:left;">${escapeHtml(h)}</th>`
+    `<th style="background:#5B5CE2; color:#ffffff; font-weight:bold; padding:8px 12px; border:1px solid #4A4BD8; text-align:left;">${escapeHtml(h)}</th>`
   )).join('');
 
   const excelTemplate = `
@@ -118,7 +118,7 @@ export const exportToExcel = (data, filename = 'export-sygim', columns = null, t
       <body style="font-family: Arial, sans-serif; font-size: 12px;">
         <table>
           <tr>
-            <td colspan="${headers.length}" style="font-size:16px; font-weight:bold; color:#1e3a8a; padding:10px 4px;">
+            <td colspan="${headers.length}" style="font-size:16px; font-weight:bold; color:#5B5CE2; padding:10px 4px;">
               SYGIM — ${escapeHtml(title)}
             </td>
           </tr>
@@ -216,14 +216,14 @@ export const exportToPDF = (data, filename = 'rapport-sygim', columns = null, op
           display: flex;
           justify-content: space-between;
           align-items: flex-start;
-          border-bottom: 3px solid #1e3a8a;
+          border-bottom: 3px solid #5B5CE2;
           padding-bottom: 12px;
           margin-bottom: 16px;
         }
         .brand {
           font-size: 22px;
           font-weight: 900;
-          color: #1e3a8a;
+          color: #5B5CE2;
           letter-spacing: 0.5px;
         }
         .brand-sub {
@@ -248,14 +248,14 @@ export const exportToPDF = (data, filename = 'rapport-sygim', columns = null, op
           margin-top: 8px;
         }
         th {
-          background-color: #1e3a8a !important;
+          background-color: #5B5CE2 !important;
           color: #ffffff !important;
           -webkit-print-color-adjust: exact;
           print-color-adjust: exact;
           font-weight: 700;
           text-align: left;
           padding: 8px 10px;
-          border: 1px solid #1e3a8a;
+          border: 1px solid #4A4BD8;
           font-size: 10.5px;
           text-transform: uppercase;
         }
@@ -556,11 +556,11 @@ export const printOwnerSettlementReceipt = (settlement, options = {}) => {
           display: flex;
           justify-content: space-between;
           align-items: flex-start;
-          border-bottom: 3px solid #1e3a8a;
+          border-bottom: 3px solid #5B5CE2;
           padding-bottom: 12px;
           margin-bottom: 16px;
         }
-        .brand { font-size: 26px; font-weight: 900; color: #1e3a8a; letter-spacing: -0.5px; }
+        .brand { font-size: 26px; font-weight: 900; color: #5B5CE2; letter-spacing: -0.5px; }
         .badge {
           display: inline-block;
           padding: 4px 12px;
@@ -599,7 +599,7 @@ export const printOwnerSettlementReceipt = (settlement, options = {}) => {
           font-weight: 800;
           font-size: 11.5px;
           text-transform: uppercase;
-          color: #1e3a8a;
+          color: #5B5CE2;
           margin-bottom: 6px;
           display: flex;
           justify-content: space-between;
@@ -611,7 +611,7 @@ export const printOwnerSettlementReceipt = (settlement, options = {}) => {
           margin-bottom: 16px;
         }
         th {
-          background: #1e3a8a !important;
+          background: #5B5CE2 !important;
           color: #ffffff !important;
           -webkit-print-color-adjust: exact;
           print-color-adjust: exact;
@@ -619,7 +619,7 @@ export const printOwnerSettlementReceipt = (settlement, options = {}) => {
           padding: 6px 8px;
           font-size: 10px;
           text-transform: uppercase;
-          border: 1px solid #1e3a8a;
+          border: 1px solid #4A4BD8;
         }
         td {
           padding: 6px 8px;

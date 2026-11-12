@@ -480,7 +480,7 @@ export default function Owners() {
                     <tr key={o.id} className="hover:bg-slate-50/50 transition-colors">
                       <td className="py-4 px-4 text-sm text-slate-900 font-bold">
                         <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs shrink-0 border border-indigo-100 shadow-2xs">
+                          <div className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs shrink-0 border border-primary/20 shadow-2xs">
                             {(o.last_name || o.first_name || 'P').slice(0, 1).toUpperCase()}
                           </div>
                           <div>
@@ -804,17 +804,17 @@ export default function Owners() {
             </div>
 
             {/* 3. Attribution Multi-Biens Immobiliers & État d'occupation */}
-            <div className="bg-indigo-50/40 p-4 sm:p-5 rounded-2xl border border-indigo-200/80 space-y-3">
+            <div className="bg-primary/5 p-4 sm:p-5 rounded-2xl border border-primary/20 space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2 min-w-0">
-                  <div className="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0">
+                  <div className="w-7 h-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
                     <i className="fas fa-building text-xs"></i>
                   </div>
-                  <label className="text-xs font-bold uppercase tracking-wider text-indigo-950">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-900">
                     Attribuer un ou plusieurs biens à ce propriétaire
                   </label>
                 </div>
-                <span className="shrink-0 whitespace-nowrap px-3 py-1 bg-indigo-600 text-white rounded-full text-xs font-bold shadow-xs">
+                <span className="shrink-0 whitespace-nowrap px-3 py-1 bg-primary text-white rounded-full text-xs font-bold shadow-xs">
                   {form.property_ids.length} sélectionné{form.property_ids.length > 1 ? 's' : ''}
                 </span>
               </div>
@@ -840,7 +840,7 @@ export default function Owners() {
                       <label
                         key={prop.id}
                         className={`flex items-center justify-between gap-3 px-3.5 py-2.5 text-xs cursor-pointer transition-colors ${
-                          isChecked ? 'bg-indigo-50/90 text-indigo-950' : 'hover:bg-slate-50 text-slate-700'
+                          isChecked ? 'bg-primary/10 text-primary font-semibold' : 'hover:bg-slate-50 text-slate-700'
                         }`}
                       >
                         <div className="flex items-center gap-3 min-w-0">

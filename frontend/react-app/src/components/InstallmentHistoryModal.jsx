@@ -174,7 +174,7 @@ export default function InstallmentHistoryModal({ settlement, onClose, onSuccess
                     required
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
-                    className="w-full px-3 py-2 bg-white border-2 border-blue-400 rounded-xl text-sm font-extrabold text-slate-900"
+                    className="w-full px-3 py-2 bg-white border-2 border-primary rounded-xl text-sm font-extrabold text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary/20"
                   />
                 </div>
                 <div>
@@ -182,7 +182,7 @@ export default function InstallmentHistoryModal({ settlement, onClose, onSuccess
                   <select
                     value={paymentMethod}
                     onChange={(e) => setPaymentMethod(e.target.value)}
-                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-sm text-slate-900"
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-primary"
                   >
                     <option value="bank_transfer">Virement bancaire</option>
                     <option value="mobile_money">Mobile Money (Wave/OM/MTN)</option>
@@ -200,7 +200,7 @@ export default function InstallmentHistoryModal({ settlement, onClose, onSuccess
                     placeholder="Ex: VIR-TR2-9012"
                     value={reference}
                     onChange={(e) => setReference(e.target.value)}
-                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-sm text-slate-900"
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-primary"
                   />
                 </div>
                 <div>
@@ -210,7 +210,7 @@ export default function InstallmentHistoryModal({ settlement, onClose, onSuccess
                     placeholder={`Ex: Versement tranche N°${installments.length + 1}`}
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
-                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-sm text-slate-900"
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-primary"
                   />
                 </div>
               </div>
@@ -219,7 +219,7 @@ export default function InstallmentHistoryModal({ settlement, onClose, onSuccess
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-sm flex items-center gap-2"
+                  className="px-4 py-2 bg-primary hover:bg-primary-dark text-white rounded-xl text-xs font-bold shadow-sm shadow-primary/25 flex items-center gap-2 cursor-pointer transition-colors"
                 >
                   <i className={`fas ${submitting ? 'fa-spinner fa-spin' : 'fa-check-circle'}`}></i>
                   {submitting ? 'Enregistrement...' : `Valider la Tranche N°${installments.length + 1}`}
@@ -234,7 +234,7 @@ export default function InstallmentHistoryModal({ settlement, onClose, onSuccess
           <button
             type="button"
             onClick={() => printOwnerSettlementReceipt(settlement)}
-            className="px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl text-xs font-bold flex items-center gap-2 transition-colors"
+            className="px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 rounded-xl text-xs font-bold flex items-center gap-2 transition-colors cursor-pointer"
           >
             <i className="fas fa-print"></i> Imprimer le Bordereau / Reçu PDF
           </button>

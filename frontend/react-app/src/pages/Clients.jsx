@@ -298,7 +298,7 @@ export default function Clients() {
                     <tr key={client.id} className="hover:bg-slate-50/80 transition-colors group">
                       <td className="py-4 px-6">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs shrink-0">
+                          <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs shrink-0">
                             {initials}
                           </div>
                           <div>
@@ -333,7 +333,7 @@ export default function Clients() {
                       </td>
                       <td className="py-4 px-6 text-right">
                         <div className="flex items-center justify-end gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                          <button onClick={() => setSelectedClientForStatement(client)} className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-600 hover:bg-indigo-100 hover:border-indigo-300 transition-all flex items-center justify-center" title="Grand Livre & Relevé Financier">
+                          <button onClick={() => setSelectedClientForStatement(client)} className="w-9 h-9 rounded-xl bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 hover:border-primary/30 transition-all flex items-center justify-center cursor-pointer" title="Grand Livre & Relevé Financier">
                             <i className="fas fa-file-invoice-dollar text-sm"></i>
                           </button>
                           <button onClick={() => openEditModal(client)} className="w-9 h-9 rounded-xl bg-white border border-slate-200 text-slate-500 hover:text-primary hover:border-primary hover:bg-primary/5 transition-all flex items-center justify-center" title="Modifier">

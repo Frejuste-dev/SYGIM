@@ -221,7 +221,7 @@ export default function Manager() {
           <button
             type="button"
             onClick={() => navigate('/admin/reports')}
-            className="inline-flex items-center gap-2 px-3.5 py-2 bg-indigo-50 text-indigo-700 border border-indigo-200 text-sm font-semibold rounded-xl hover:bg-indigo-100 transition-colors shadow-2xs"
+            className="inline-flex items-center gap-2 px-3.5 py-2 bg-primary/10 text-primary border border-primary/20 text-sm font-semibold rounded-xl hover:bg-primary/20 transition-colors shadow-2xs cursor-pointer"
             title="Consulter tous les rapports et bordereaux officiels"
           >
             <i className="fas fa-file-invoice text-sm"></i>
@@ -703,7 +703,7 @@ export default function Manager() {
                 className="p-5 bg-white rounded-xl border border-slate-200 hover:border-primary/40 hover:shadow-md transition-all cursor-pointer group"
               >
                 <div className="flex items-start gap-3.5">
-                  <div className="w-10 h-10 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 group-hover:bg-primary group-hover:text-white transition-colors">
+                  <div className="w-10 h-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0 group-hover:bg-primary group-hover:text-white transition-colors">
                     <i className="fas fa-file-invoice-dollar text-base"></i>
                   </div>
                   <div className="flex-1 min-w-0">
