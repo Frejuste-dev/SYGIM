@@ -48,9 +48,17 @@ const authenticate = (req, res, next) => {
 /**
  * Middleware d'autorisation par rôle
  */
+const normalizeRole = (r) => (r === 'collector_manager' ? 'manager' : r);
+
 const authorize = (...roles) => {
   return (req, res, next) => {
-    if (!roles.includes(req.user.role)) {
+    if (!req.user) {
+      return next(new AppError('Authentification requise.', 401));
+    }
+    const userRole = req.user.role;
+    const normalizedUserRole = normalizeRole(userRole);
+    const hasRole = roles.some((r) => r === userRole || normalizeRole(r) === normalizedUserRole);
+    if (!hasRole) {
       return next(new AppError('Accès interdit. Rôle insuffisant.', 403));
     }
     next();

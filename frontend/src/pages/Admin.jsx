@@ -3,11 +3,14 @@ import { useNavigate, NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { API } from '../api/services';
 import { useConfirm } from '../components/ConfirmContext';
+import { useNotifications } from '../hooks/queries/useNotifications';
 
 export default function Admin() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { confirm } = useConfirm();
+  const { data: notifData = {} } = useNotifications();
+  const unreadCount = notifData.unreadCount || 0;
 
   const handleLogout = async () => {
     await logout();
@@ -23,35 +26,48 @@ export default function Admin() {
 
   const isAdmin = user?.role === 'admin' || user?.role === 'super_admin' || user?.isSuperAdmin;
   const userRole = user?.role?.toLowerCase() || '';
+  const isManager = userRole === 'manager' || userRole === 'collector_manager';
 
   const dashboardPath = userRole === 'collector' || userRole === 'collecteur' 
     ? '/admin/collector' 
-    : userRole === 'collector_manager' || userRole === 'manager' 
+    : isManager 
       ? '/admin/manager' 
       : '/admin/dashboard';
+
+  // Navigation exclusive à 6 menus pour le rôle MANAGER (Section 9)
+  const managerMenuItems = [
+    { name: 'Tableau de bord', path: '/admin/manager', icon: 'fas fa-chart-pie' },
+    { name: 'Gestion des biens', path: '/admin/properties', icon: 'fas fa-building' },
+    { name: 'Gestion des propriétaires', path: '/admin/owners', icon: 'fas fa-user-tie' },
+    { name: 'Attribution des biens', path: '/admin/property-assignments', icon: 'fas fa-handshake' },
+    { name: 'Historique des activités', path: '/admin/activity', icon: 'fas fa-history' },
+    { name: 'Notifications', path: '/admin/notifications', icon: 'fas fa-bell', badge: unreadCount },
+  ];
 
   const navigationSections = [
     {
       title: 'PRINCIPAL',
       items: [
-        { name: 'Tableau de bord', path: dashboardPath, icon: 'fas fa-chart-pie', roles: ['admin', 'super_admin', 'gestionnaire', 'collecteur', 'collector', 'collector_manager', 'director', 'accounting'] },
+        { name: 'Tableau de bord', path: dashboardPath, icon: 'fas fa-chart-pie', roles: ['admin', 'super_admin', 'gestionnaire', 'collecteur', 'collector', 'director', 'accounting'] },
       ]
     },
     {
       title: 'GESTION',
       items: [
         { name: 'Utilisateurs', path: '/admin/users', icon: 'fas fa-users', roles: ['admin', 'super_admin'] },
-        { name: 'Propriétés', path: '/admin/properties', icon: 'fas fa-building', roles: ['admin', 'super_admin', 'gestionnaire', 'director', 'accounting', 'collector_manager'] },
-        { name: 'Locataires', path: '/admin/clients', icon: 'fas fa-user-friends', roles: ['admin', 'super_admin', 'gestionnaire', 'director', 'accounting', 'collector_manager'] },
-        { name: 'Propriétaires', path: '/admin/owners', icon: 'fas fa-user-tie', roles: ['admin', 'super_admin', 'gestionnaire', 'director', 'accounting', 'collector_manager'] },
-        { name: 'Transactions', path: '/admin/transactions', icon: 'fas fa-exchange-alt', roles: ['admin', 'super_admin', 'gestionnaire', 'collector_manager', 'director', 'accounting'] },
+        { name: 'Propriétés', path: '/admin/properties', icon: 'fas fa-building', roles: ['admin', 'super_admin', 'gestionnaire', 'director', 'accounting'] },
+        { name: 'Attribution des biens', path: '/admin/property-assignments', icon: 'fas fa-handshake', roles: ['admin', 'super_admin', 'director'] },
+        { name: 'Locataires', path: '/admin/clients', icon: 'fas fa-user-friends', roles: ['admin', 'super_admin', 'gestionnaire', 'director', 'accounting'] },
+        { name: 'Propriétaires', path: '/admin/owners', icon: 'fas fa-user-tie', roles: ['admin', 'super_admin', 'gestionnaire', 'director', 'accounting'] },
+        { name: 'Transactions', path: '/admin/transactions', icon: 'fas fa-exchange-alt', roles: ['admin', 'super_admin', 'gestionnaire', 'director', 'accounting'] },
       ]
     },
     {
       title: 'ANALYSE',
       items: [
-        { name: 'Rapports', path: '/admin/reports', icon: 'fas fa-file-alt', roles: ['admin', 'super_admin', 'director', 'accounting', 'collector_manager', 'gestionnaire', 'manager'] },
-        { name: 'Journal d\'activité', path: '/admin/activity', icon: 'fas fa-history', roles: ['admin', 'super_admin'] },
+        { name: 'Rapports', path: '/admin/reports', icon: 'fas fa-file-alt', roles: ['admin', 'super_admin', 'director', 'accounting', 'gestionnaire'] },
+        { name: 'Journal d\'activité', path: '/admin/activity', icon: 'fas fa-history', roles: ['admin', 'super_admin', 'director', 'accounting'] },
+        { name: 'Notifications', path: '/admin/notifications', icon: 'fas fa-bell', roles: ['admin', 'super_admin', 'director', 'accounting'], badge: unreadCount },
       ]
     },
     {
@@ -100,22 +116,47 @@ export default function Admin() {
         </div>
         
         <nav className="flex-1 py-4 overflow-y-auto">
-          {navigationSections.map((section, sIdx) => {
-            const visibleItems = section.items.filter(item => item.roles.includes(userRole));
-            if (visibleItems.length === 0) return null;
-            return (
-              <React.Fragment key={section.title}>
-                <div className={`px-6 mb-2 text-[11px] font-bold text-slate-500 uppercase tracking-wider ${sIdx > 0 ? 'mt-6' : 'mt-2'}`}>
-                  {section.title}
-                </div>
-                {visibleItems.map(item => (
-                  <NavLink key={item.path} to={item.path} className={navLinkStyle}>
-                    <i className={`${item.icon} w-4 text-slate-400`}></i> {item.name}
-                  </NavLink>
-                ))}
-              </React.Fragment>
-            );
-          })}
+          {isManager ? (
+            <div>
+              <div className="px-6 mb-2 text-[11px] font-bold text-slate-500 uppercase tracking-wider mt-2">
+                ESPACE MANAGER
+              </div>
+              {managerMenuItems.map((item) => (
+                <NavLink key={item.path} to={item.path} className={navLinkStyle}>
+                  <i className={`${item.icon} w-4 text-slate-400`}></i>
+                  <span className="flex-1">{item.name}</span>
+                  {Boolean(item.badge) && item.badge > 0 && (
+                    <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-500 text-white shadow-2xs">
+                      {item.badge}
+                    </span>
+                  )}
+                </NavLink>
+              ))}
+            </div>
+          ) : (
+            navigationSections.map((section, sIdx) => {
+              const visibleItems = section.items.filter(item => item.roles.includes(userRole));
+              if (visibleItems.length === 0) return null;
+              return (
+                <React.Fragment key={section.title}>
+                  <div className={`px-6 mb-2 text-[11px] font-bold text-slate-500 uppercase tracking-wider ${sIdx > 0 ? 'mt-6' : 'mt-2'}`}>
+                    {section.title}
+                  </div>
+                  {visibleItems.map(item => (
+                    <NavLink key={item.path} to={item.path} className={navLinkStyle}>
+                      <i className={`${item.icon} w-4 text-slate-400`}></i>
+                      <span className="flex-1">{item.name}</span>
+                      {Boolean(item.badge) && item.badge > 0 && (
+                        <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-500 text-white shadow-2xs">
+                          {item.badge}
+                        </span>
+                      )}
+                    </NavLink>
+                  ))}
+                </React.Fragment>
+              );
+            })
+          )}
         </nav>
       </aside>
 
@@ -147,12 +188,19 @@ export default function Admin() {
             <div className="relative">
               <button 
                 className="text-slate-500 hover:text-slate-900 text-lg relative focus:outline-none mr-2"
-                onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
+                onClick={() => {
+                  if (isManager) {
+                    navigate('/admin/notifications');
+                  } else {
+                    setIsNotificationsOpen(!isNotificationsOpen);
+                  }
+                }}
+                title="Notifications"
               >
                 <i className="fas fa-bell"></i>
-                {overdueAlerts.length > 0 && (
+                {(isManager ? unreadCount : overdueAlerts.length) > 0 && (
                   <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-danger text-[10px] font-bold text-white ring-2 ring-white">
-                    {overdueAlerts.length}
+                    {isManager ? unreadCount : overdueAlerts.length}
                   </span>
                 )}
               </button>

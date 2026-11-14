@@ -40,21 +40,21 @@ router.get('/owner/:ownerId', checkRole(['admin', 'director', 'accounting', 'col
 /**
  * @route   POST /api/collectors
  */
-router.post('/', checkRole(['admin', 'director', 'collector_manager']), collectorValidator, collectorController.create);
+router.post('/', checkRole(['admin', 'director']), collectorValidator, collectorController.create);
 
 /**
  * @route   PUT /api/collectors/:id
  */
-router.put('/:id', checkRole(['admin', 'director', 'collector_manager']), collectorValidator, collectorController.update);
+router.put('/:id', checkRole(['admin', 'director']), collectorValidator, collectorController.update);
 
 /**
  * @route   DELETE /api/collectors/:id
  */
-router.delete('/:id', checkRole(['admin', 'director', 'collector_manager']), collectorController.delete);
+router.delete('/:id', checkRole(['admin', 'director']), collectorController.delete);
 
 /**
  * @route   POST /api/collectors/:id/assign-properties
  */
-router.post('/:id/assign-properties', checkRole(['admin', 'director', 'collector_manager']), collectorController.assignProperties);
+router.post('/:id/assign-properties', checkRole(['admin', 'director']), collectorController.assignProperties);
 
 module.exports = router;

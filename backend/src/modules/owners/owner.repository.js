@@ -101,14 +101,8 @@ class OwnerRepository extends BaseRepository {
           WHERE c.user_id = ?
         )`;
         params.push(user.id);
-      } else if (user.role === 'collector_manager') {
-        sql += ` AND o.id IN (
-          SELECT p.owner_id 
-          FROM properties p
-          JOIN collectors c ON c.id = p.collector_id
-          WHERE c.manager_id = ? OR c.user_id = ?
-        )`;
-        params.push(user.id, user.id);
+      } else if (user.role === 'collector_manager' || user.role === 'manager') {
+        // Le rôle Manager gère l'ensemble du parc de propriétaires et de biens
       }
     }
 
@@ -233,6 +227,41 @@ class OwnerRepository extends BaseRepository {
   async findByUserId(userId) {
     const [rows] = await pool.query('SELECT * FROM owners WHERE user_id = ?', [userId]);
     return rows.length > 0 ? rows[0] : null;
+  }
+
+  async findDuplicate({ phone, email, first_name, last_name, firstName, lastName, excludeId = null }) {
+    const cleanPhone = (phone || '').trim();
+    const cleanEmail = (email || '').trim().toLowerCase();
+    const cleanFirst = (first_name || firstName || '').trim().toLowerCase();
+    const cleanLast = (last_name || lastName || '').trim().toLowerCase();
+
+    let sql = 'SELECT id, first_name, last_name, display_name, phone, email FROM owners WHERE 1=1';
+    const params = [];
+    if (excludeId) {
+      sql += ' AND id != ?';
+      params.push(excludeId);
+    }
+
+    const [allOwners] = await pool.query(sql, params);
+    const normPhone = (p) => (p || '').replace(/[\s\.\-\(\)]/g, '').replace(/^(\+225|00225)/, '');
+    const targetNormPhone = normPhone(cleanPhone);
+
+    for (const o of allOwners) {
+      if (cleanEmail && o.email && cleanEmail === o.email.trim().toLowerCase()) {
+        return { duplicateBy: 'email', owner: o };
+      }
+      if (targetNormPhone && o.phone && targetNormPhone === normPhone(o.phone)) {
+        return { duplicateBy: 'phone', owner: o };
+      }
+      if (cleanFirst && cleanLast && o.first_name && o.last_name) {
+        if (cleanFirst === o.first_name.trim().toLowerCase() &&
+            cleanLast === o.last_name.trim().toLowerCase() &&
+            targetNormPhone && o.phone && targetNormPhone === normPhone(o.phone)) {
+          return { duplicateBy: 'name_and_phone', owner: o };
+        }
+      }
+    }
+    return null;
   }
 
   async isAccessibleByUser(ownerId, user) {

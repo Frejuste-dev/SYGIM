@@ -153,7 +153,19 @@ export const API = {
         },
 
         assignTenant: (propertyId, data) =>
-            httpClient.post(`/properties/${propertyId}/assign`, data)
+            httpClient.post(`/properties/${propertyId}/assign`, data),
+
+        assignOwner: (propertyId, data) =>
+            httpClient.post(`/properties/${propertyId}/assign-owner`, data),
+
+        reassignOwner: (propertyId, data) =>
+            httpClient.put(`/properties/${propertyId}/reassign-owner`, data),
+
+        getAssignments: (filters = {}) =>
+            httpClient.get('/properties/assignments', { params: filters }),
+
+        getAssignmentHistory: (filters = {}) =>
+            httpClient.get('/properties/assignments/history', { params: filters })
     },
 
     /**
@@ -300,6 +312,9 @@ export const API = {
         getPerformanceDashboard: (filters = {}) =>
             httpClient.get('/reports/performance-dashboard', { params: filters }),
 
+        getManagerDashboard: (filters = {}) =>
+            httpClient.get('/reports/manager-dashboard', { params: filters }),
+
         getOverdue: (filters = {}) =>
             httpClient.get('/alerts/overdue-payments', { params: { ...filters, format: 'json' } }),
 
@@ -364,5 +379,27 @@ export const API = {
             httpClient.post('/repairs', data),
         settle: (id, data = {}) =>
             httpClient.post(`/repairs/${id}/settle`, data)
+    },
+
+    /**
+     * Activité & Journal d'audit Manager
+     */
+    Activity: {
+        getManagerLogs: (filters = {}) =>
+            httpClient.get('/activity/manager-logs', { params: filters })
+    },
+
+    /**
+     * Notifications Système & Métier
+     */
+    Notifications: {
+        getAll: (filters = {}) =>
+            httpClient.get('/notifications', { params: filters }),
+
+        markAsRead: (id) =>
+            httpClient.patch(`/notifications/${id}/read`),
+
+        markAllAsRead: () =>
+            httpClient.patch('/notifications/read-all')
     }
 };

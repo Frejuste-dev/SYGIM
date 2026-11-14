@@ -67,14 +67,8 @@ function MiniSparkline({ data = [], color = '#0ea5e9' }) {
   );
 }
 
-export default function FinancialKpisRow({ financialKpis = {}, portfolioKpis = {} }) {
+export default function FinancialKpisRow({ financialKpis = {} }) {
   const { revenue = {}, collections = {}, prefinancing = {}, target = {} } = financialKpis;
-  const {
-    registeredProperties = {},
-    assignedProperties = {},
-    recoveryRate = {},
-    registeredOwners = {},
-  } = portfolioKpis;
 
   const targetAchieved = Number(target.achievedRate || 0);
   const isTargetOver = targetAchieved >= 100;
@@ -213,93 +207,6 @@ export default function FinancialKpisRow({ financialKpis = {}, portfolioKpis = {
             <span className="font-medium text-slate-700 tabular-nums">
               {formatAmount(target.targetAmount || 0)} FCFA
             </span>
-          </div>
-        </div>
-      </div>
-
-      {/* 4 CARTES SECONDAIRES PORTEFEUILLE & PARC (Maquette 1) */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        {/* Biens enregistrés */}
-        <div className="bg-slate-50/70 border border-slate-200/70 rounded-xl p-4 flex items-center justify-between">
-          <div>
-            <div className="text-xs font-medium text-slate-500 uppercase tracking-wider">
-              Biens enregistrés
-            </div>
-            <div className="mt-1 flex items-baseline gap-2">
-              <span className="text-xl font-bold text-slate-900 tabular-nums">
-                {registeredProperties.total || 0}
-              </span>
-              {(registeredProperties.newInPeriod || 0) > 0 && (
-                <span className="text-xs text-emerald-600 font-semibold">
-                  +{registeredProperties.newInPeriod} récents
-                </span>
-              )}
-            </div>
-          </div>
-          <div className="w-9 h-9 rounded-lg bg-sky-100 text-sky-700 flex items-center justify-center shrink-0">
-            <i className="fas fa-building text-sm"></i>
-          </div>
-        </div>
-
-        {/* Biens attribués / Occupés */}
-        <div className="bg-slate-50/70 border border-slate-200/70 rounded-xl p-4 flex items-center justify-between">
-          <div>
-            <div className="text-xs font-medium text-slate-500 uppercase tracking-wider">
-              Biens attribués
-            </div>
-            <div className="mt-1 flex items-baseline gap-2">
-              <span className="text-xl font-bold text-slate-900 tabular-nums">
-                {assignedProperties.occupied || 0}
-              </span>
-              <span className="text-xs text-slate-500 font-medium">
-                ({assignedProperties.occupancyRate || 0}% occupés)
-              </span>
-            </div>
-          </div>
-          <div className="w-9 h-9 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
-            <i className="fas fa-key text-sm"></i>
-          </div>
-        </div>
-
-        {/* Taux de recouvrement */}
-        <div className="bg-slate-50/70 border border-slate-200/70 rounded-xl p-4 flex items-center justify-between">
-          <div>
-            <div className="text-xs font-medium text-slate-500 uppercase tracking-wider">
-              Taux de recouvrement
-            </div>
-            <div className="mt-1 flex items-baseline gap-2">
-              <span className="text-xl font-bold text-slate-900 tabular-nums">
-                {Number(recoveryRate.rate || 0).toFixed(1)}%
-              </span>
-              <span className="text-xs text-slate-500 font-medium">
-                (cible {recoveryRate.target || 95}%)
-              </span>
-            </div>
-          </div>
-          <div className="w-9 h-9 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center shrink-0">
-            <i className="fas fa-percent text-sm"></i>
-          </div>
-        </div>
-
-        {/* Propriétaires enregistrés */}
-        <div className="bg-slate-50/70 border border-slate-200/70 rounded-xl p-4 flex items-center justify-between">
-          <div>
-            <div className="text-xs font-medium text-slate-500 uppercase tracking-wider">
-              Bailleurs enregistrés
-            </div>
-            <div className="mt-1 flex items-baseline gap-2">
-              <span className="text-xl font-bold text-slate-900 tabular-nums">
-                {registeredOwners.total || 0}
-              </span>
-              {(registeredOwners.newInPeriod || 0) > 0 && (
-                <span className="text-xs text-emerald-600 font-semibold">
-                  +{registeredOwners.newInPeriod} récents
-                </span>
-              )}
-            </div>
-          </div>
-          <div className="w-9 h-9 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
-            <i className="fas fa-user-tie text-sm"></i>
           </div>
         </div>
       </div>

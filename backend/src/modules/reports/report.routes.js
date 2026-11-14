@@ -29,6 +29,12 @@ router.get('/kpis', reportController.getKpis);
 router.get('/performance-dashboard', reportController.getPerformanceDashboard);
 
 /**
+ * @route   GET /api/reports/manager-dashboard
+ * @desc    Tableau de bord minimaliste du Manager (Section 6 & Maquette 1)
+ */
+router.get('/manager-dashboard', reportController.getManagerDashboard);
+
+/**
  * @route   GET /api/reports/dashboard
  */
 router.get('/dashboard', reportValidator, reportController.getDashboard);

@@ -89,10 +89,9 @@ export default function PerformanceDashboardView() {
         </div>
       )}
 
-      {/* 2. Ligne des KPIs Financiers et Portefeuille */}
+      {/* 2. Ligne des KPIs Financiers */}
       <FinancialKpisRow
         financialKpis={financialKpis}
-        portfolioKpis={portfolioKpis}
       />
 
       {/* 3. Section Centrale : Courbe Évolution N vs N-1 & TOP 5 Agents */}
