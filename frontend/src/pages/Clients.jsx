@@ -241,87 +241,120 @@ export default function Clients() {
 
   return (
     <div className="space-y-6">
-      {/* HEADER */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      {/* 1. HEADER */}
+      <div className="bg-white border border-slate-200/80 rounded-xl shadow-xs p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Locataires</h1>
-          <p className="text-slate-500 text-sm mt-1">Suivez les locataires, leurs informations de contact et leurs statuts de paiement.</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-slate-900">Locataires &amp; Situation Locative</h2>
+          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">Suivi des locataires, coordonnées de contact, occupation et statuts des loyers</p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <button onClick={handleExportClientsExcel} className="px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-lg text-sm font-semibold flex items-center gap-1.5 transition-colors">
-            <i className="fas fa-file-excel"></i> Excel
-          </button>
-          <button onClick={handleExportClientsPDF} className="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-sm font-semibold flex items-center gap-1.5 transition-colors">
-            <i className="fas fa-file-pdf"></i> PDF
-          </button>
-          <button onClick={openCreateModal} className="bg-primary text-white rounded-lg px-4 py-2 hover:bg-primary-dark transition-colors font-medium text-sm flex items-center shadow-sm">
-            <i className="fas fa-plus mr-2"></i> Ajouter un locataire
+        <div className="flex items-center gap-2.5 shrink-0 flex-nowrap">
+          {/* Groupe d'exportation segmenté compact */}
+          <div className="inline-flex items-center rounded-lg border border-slate-200 bg-slate-50/80 p-0.5 shadow-2xs">
+            <button
+              type="button"
+              onClick={handleExportClientsExcel}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-semibold text-slate-700 hover:text-emerald-700 hover:bg-white transition-colors cursor-pointer"
+              title="Exporter la liste des locataires en Excel"
+            >
+              <i className="fas fa-file-excel text-emerald-600"></i>
+              <span className="hidden sm:inline">Excel</span>
+            </button>
+            <div className="h-4 w-px bg-slate-200"></div>
+            <button
+              type="button"
+              onClick={handleExportClientsPDF}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-semibold text-slate-700 hover:text-rose-700 hover:bg-white transition-colors cursor-pointer"
+              title="Exporter le relevé des locataires en PDF"
+            >
+              <i className="fas fa-file-pdf text-rose-600"></i>
+              <span className="hidden sm:inline">PDF</span>
+            </button>
+          </div>
+
+          <button
+            type="button"
+            onClick={openCreateModal}
+            className="h-9 px-3.5 bg-primary hover:bg-primary-dark text-white rounded-lg text-xs font-bold transition-all shadow-2xs inline-flex items-center gap-1.5 whitespace-nowrap cursor-pointer"
+          >
+            <i className="fas fa-plus text-xs"></i>
+            <span>Nouveau locataire</span>
           </button>
         </div>
       </div>
 
-      {/* STATS */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* 2. STATS */}
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <StatsCard label="Total locataires" value={stats.totalClients || 0} icon="fa-users" color="var(--primary)" />
-        <StatsCard label="À jour" value={paidCount} icon="fa-check-circle" color="var(--success)" />
+        <StatsCard label="À jour (Payé)" value={paidCount} icon="fa-check-circle" color="var(--success)" />
         <StatsCard label="En retard / Attente" value={overdueCount} icon="fa-exclamation-triangle" color="var(--danger)" />
         <StatsCard label="Créance totale" value={formatXOF(totalOwed, { compact: false })} icon="fa-wallet" color="var(--warning)" />
       </div>
 
-      {/* OUTILS ET FILTRES */}
-      <div className="flex flex-col sm:flex-row gap-4 items-center justify-between bg-white p-4 rounded-xl shadow-sm border border-slate-200">
-        <div className="relative w-full md:w-96">
-          <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
-          <input type="text" placeholder="Rechercher (nom, téléphone, email)..." value={searchTerm}
+      {/* 3. OUTILS ET FILTRES */}
+      <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-2xs flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between mb-6">
+        <div className="relative flex-1">
+          <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+          <input 
+            type="text" 
+            placeholder="Rechercher par nom, téléphone, email, bien..." 
+            value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" />
+            className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-slate-700 transition-all" 
+          />
         </div>
-        <div className="w-full sm:w-auto flex items-center gap-2">
-          <select value={statusFilter} onChange={(e) => handleFilterChange('status', e.target.value)}
-            className="w-full sm:w-auto px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-slate-700">
+        <div className="flex items-center gap-2.5 shrink-0">
+          <select 
+            value={statusFilter} 
+            onChange={(e) => handleFilterChange('status', e.target.value)}
+            className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer shadow-2xs"
+          >
             {STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
         </div>
       </div>
 
-      {/* TABLEAU */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+      {/* 4. TABLEAU */}
+      <div className="bg-white border border-slate-200/80 rounded-xl shadow-xs overflow-hidden">
         <div className="overflow-x-auto min-w-0">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50 border-y border-slate-200 text-slate-500 text-xs uppercase tracking-wider">
-                <th className="py-3 px-6 font-semibold">Identité</th>
-                <th className="py-3 px-6 font-semibold">Contact</th>
-                <th className="py-3 px-6 font-semibold text-right">Loyer</th>
-                <th className="py-3 px-6 font-semibold">Statut</th>
-                <th className="py-3 px-6 font-semibold text-right">Actions</th>
+                <th className="py-3.5 px-4 font-semibold whitespace-nowrap">Locataire &amp; Bien</th>
+                <th className="py-3.5 px-4 font-semibold whitespace-nowrap">Contact</th>
+                <th className="py-3.5 px-4 font-semibold text-right whitespace-nowrap">Loyer Mensuel</th>
+                <th className="py-3.5 px-4 font-semibold text-center whitespace-nowrap">Statut Paiement</th>
+                <th className="py-3.5 px-4 font-semibold text-right whitespace-nowrap min-w-[130px]">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-100 text-sm">
               {loading ? (
                 <TableSkeleton rows={5} columns={5} />
               ) : clients.length === 0 ? (
                 <tr>
                   <td colSpan="5" className="py-12 text-center text-slate-500">
-                    <div className="bg-slate-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
-                      <i className="fas fa-users-slash text-slate-400 text-xl"></i>
+                    <div className="bg-slate-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3 text-slate-400 text-xl">
+                      <i className="fas fa-users-slash"></i>
                     </div>
-                    {clientsEmptyMessage}
+                    <p className="text-slate-600 font-medium">{clientsEmptyMessage}</p>
                   </td>
                 </tr>
               ) : (
                 clients.map(client => {
                   const initials = `${client.first_name?.[0] || ''}${client.last_name?.[0] || ''}`.toUpperCase() || '?';
                   return (
-                    <tr key={client.id} className="hover:bg-slate-50/80 transition-colors group">
-                      <td className="py-4 px-6">
+                    <tr key={client.id} className="hover:bg-slate-50/70 transition-colors">
+                      <td className="py-3.5 px-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs shrink-0">
+                          <div className="w-8 h-8 rounded-full bg-primary/10 text-primary border border-primary/20 flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs">
                             {initials}
                           </div>
-                          <div>
-                            <div className="font-semibold text-slate-900">{client.first_name} {client.last_name}</div>
-                            <div className="text-xs text-slate-500">{client.property_name || 'Aucun bien assigné'}</div>
+                          <div className="min-w-0">
+                            <div className="font-semibold text-slate-900 truncate max-w-[180px]" title={`${client.first_name || ''} ${client.last_name || ''}`.trim()}>
+                              {client.first_name} {client.last_name}
+                            </div>
+                            <div className="text-xs text-slate-500 truncate max-w-[180px]" title={client.property_name || 'Aucun bien assigné'}>
+                              {client.property_name || 'Aucun bien assigné'}
+                            </div>
                             {client.collector_name && (
                               <div className="text-[11px] text-blue-600 font-medium flex items-center gap-1 mt-0.5">
                                 <i className="fas fa-motorcycle text-[10px]"></i>
@@ -331,34 +364,56 @@ export default function Clients() {
                           </div>
                         </div>
                       </td>
-                      <td className="py-4 px-6">
-                        <div className="text-sm text-slate-700">{client.phone || '-'}</div>
-                        <div className="text-xs text-slate-500 truncate max-w-[150px]" title={client.email}>{client.email || '-'}</div>
+                      <td className="py-3.5 px-4 whitespace-nowrap">
+                        <div className="text-xs font-medium text-slate-700">{client.phone || '—'}</div>
+                        <div className="text-xs text-slate-400 truncate max-w-[160px]" title={client.email}>{client.email || '—'}</div>
                       </td>
-                      <td className="py-4 px-6 text-right tabular-nums">
-                        <div className="font-medium text-slate-900">{formatXOF(client.amount_due, { compact: false })}</div>
-                        {client.amount_paid > 0 && <div className="text-xs text-emerald-600">{formatXOF(client.amount_paid, { compact: false })} payé</div>}
+                      <td className="py-3.5 px-4 text-right tabular-nums whitespace-nowrap">
+                        <div className="font-bold text-slate-900 text-xs">{formatXOF(client.amount_due, { compact: false })}</div>
+                        {client.amount_paid > 0 && (
+                          <div className="text-[11px] text-emerald-600 font-medium">
+                            {formatXOF(client.amount_paid, { compact: false })} payé
+                          </div>
+                        )}
                       </td>
-                      <td className="py-4 px-6">
-                      {(() => { const s = formatStatus(client.status); return (
-                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${s.twClass}`}>
-                          {client.status === 'paid' && <i className="fas fa-check-circle mr-1.5 text-[10px]"></i>}
-                          {client.status === 'partial' && <i className="fas fa-adjust mr-1.5 text-[10px]"></i>}
-                          {(client.status === 'late' || client.status === 'overdue') && <i className="fas fa-exclamation-circle mr-1.5 text-[10px]"></i>}
-                          {s.label || client.status || 'Inconnu'}
-                        </span>
-                      ); })()}
+                      <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                        {(() => {
+                          const s = formatStatus(client.status);
+                          return (
+                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${s.twClass}`}>
+                              {client.status === 'paid' && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>}
+                              {client.status === 'partial' && <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0"></span>}
+                              {(client.status === 'late' || client.status === 'overdue') && <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0"></span>}
+                              {s.label || client.status || 'Inconnu'}
+                            </span>
+                          );
+                        })()}
                       </td>
-                      <td className="py-4 px-6 text-right">
-                        <div className="flex items-center justify-end gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                          <button onClick={() => setSelectedClientForStatement(client)} className="w-9 h-9 rounded-xl bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 hover:border-primary/30 transition-all flex items-center justify-center cursor-pointer" title="Grand Livre & Relevé Financier">
-                            <i className="fas fa-file-invoice-dollar text-sm"></i>
+                      <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedClientForStatement(client)}
+                            className="w-8 h-8 rounded-lg inline-flex items-center justify-center text-primary bg-primary/10 hover:bg-primary hover:text-white border border-primary/20 transition-all cursor-pointer shadow-2xs"
+                            title="Grand Livre & Relevé Financier"
+                          >
+                            <i className="fas fa-file-invoice-dollar text-xs"></i>
                           </button>
-                          <button onClick={() => openEditModal(client)} className="w-9 h-9 rounded-xl bg-white border border-slate-200 text-slate-500 hover:text-primary hover:border-primary hover:bg-primary/5 transition-all flex items-center justify-center" title="Modifier">
-                            <i className="fas fa-pen text-sm"></i>
+                          <button
+                            type="button"
+                            onClick={() => openEditModal(client)}
+                            className="w-8 h-8 rounded-lg inline-flex items-center justify-center text-slate-500 hover:text-primary hover:bg-primary/10 border border-slate-200 bg-white transition-colors cursor-pointer"
+                            title="Modifier ce locataire"
+                          >
+                            <i className="fas fa-pen text-xs"></i>
                           </button>
-                          <button onClick={() => handleDelete(client)} className="w-9 h-9 rounded-xl bg-white border border-slate-200 text-slate-500 hover:text-rose-600 hover:border-rose-200 hover:bg-rose-50 transition-all flex items-center justify-center" title="Supprimer">
-                            <i className="fas fa-trash text-sm"></i>
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(client)}
+                            className="w-8 h-8 rounded-lg inline-flex items-center justify-center text-slate-500 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 bg-white transition-colors cursor-pointer"
+                            title="Supprimer ce locataire"
+                          >
+                            <i className="fas fa-trash text-xs"></i>
                           </button>
                         </div>
                       </td>
