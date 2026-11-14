@@ -297,6 +297,9 @@ export const API = {
         getMonthly: (filters = {}) =>
             httpClient.get('/reports/monthly', { params: { ...filters, format: 'json' } }),
 
+        getPerformanceDashboard: (filters = {}) =>
+            httpClient.get('/reports/performance-dashboard', { params: filters }),
+
         getOverdue: (filters = {}) =>
             httpClient.get('/alerts/overdue-payments', { params: { ...filters, format: 'json' } }),
 

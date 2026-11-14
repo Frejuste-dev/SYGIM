@@ -54,6 +54,15 @@ class ReportController {
     }
   }
 
+  async getPerformanceDashboard(req, res, next) {
+    try {
+      const data = await reportService.getPerformanceDashboard(req.query);
+      res.status(200).json(ApiResponse.success(data));
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async exportCsv(req, res, next) {
     try {
       const csv = await reportService.exportToCsv(req.params.type, req.query);

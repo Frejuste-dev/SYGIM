@@ -12,6 +12,7 @@ import TableSkeleton from '../components/ui/TableSkeleton';
 import { formatXOF, formatDate, formatMethod } from '../utils/formatters';
 import { exportToExcel, exportToPDF, printOwnerSettlementReceipt } from '../utils/exportUtils';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts';
+import PerformanceDashboardView from '../components/accounting/performance/PerformanceDashboardView';
 
 const PAYOUT_MODE_BADGES = {
   full: { label: 'Paiement intégral', cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
@@ -32,7 +33,7 @@ export default function AccountingDashboard() {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
 
-  const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'pending_validation' | 'settlements' | 'ledger'
+  const [activeTab, setActiveTab] = useState('performance'); // 'performance' | 'overview' | 'pending_validation' | 'settlements' | 'ledger'
   const [showPayoutModal, setShowPayoutModal] = useState(false);
   const [selectedOwnerForPayout, setSelectedOwnerForPayout] = useState(null);
   const [selectedSettlementForInstallments, setSelectedSettlementForInstallments] = useState(null);
@@ -385,6 +386,23 @@ export default function AccountingDashboard() {
       {/* BARRE D'ONGLETS COMPTABLES */}
       <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 pb-2">
         <button
+          onClick={() => setActiveTab('performance')}
+          className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 ${
+            activeTab === 'performance'
+              ? 'bg-primary text-white shadow-sm'
+              : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+          }`}
+        >
+          <i className="fas fa-chart-line"></i> Performance & Analytique
+          <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold ${
+            activeTab === 'performance'
+              ? 'bg-white/20 text-white'
+              : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+          }`}>
+            Nouveau
+          </span>
+        </button>
+        <button
           onClick={() => setActiveTab('overview')}
           className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 ${
             activeTab === 'overview'
@@ -438,6 +456,11 @@ export default function AccountingDashboard() {
           </span>
         </button>
       </div>
+
+      {/* ONGLET 0 : PERFORMANCE & ANALYTIQUE (Shopify Analytics Light Mode) */}
+      {activeTab === 'performance' && (
+        <PerformanceDashboardView />
+      )}
 
       {/* ONGLET 1 : VUE D'ENSEMBLE */}
       {activeTab === 'overview' && (
