@@ -1,6 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
+import { useDebounce } from '../hooks/useDebounce';
 
 export default function Activity() {
+  const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearch = useDebounce(searchTerm, 300);
+  const [typeFilter, setTypeFilter] = useState('all');
+
   // Mock data pour la démo
   const [logs] = useState([
     { id: 1, type: 'auth', message: 'Connexion réussie', date: '2026-08-15', time: '09:00', user: 'Admin' },
@@ -9,6 +14,22 @@ export default function Activity() {
     { id: 4, type: 'auth', message: 'Déconnexion', date: '2026-08-14', time: '18:00', user: 'Admin' },
     { id: 5, type: 'action', message: 'Modification des paramètres système', date: '2026-08-13', time: '11:15', user: 'Super Admin' },
   ]);
+
+  const filteredLogs = useMemo(() => {
+    return logs.filter(log => {
+      const matchType = typeFilter === 'all' || log.type === typeFilter;
+      if (!matchType) return false;
+
+      if (!debouncedSearch.trim()) return true;
+      const q = debouncedSearch.toLowerCase();
+      return (
+        log.message.toLowerCase().includes(q) ||
+        log.user.toLowerCase().includes(q) ||
+        log.type.toLowerCase().includes(q) ||
+        log.date.includes(q)
+      );
+    });
+  }, [logs, debouncedSearch, typeFilter]);
 
   const getBadgeStyle = (type) => {
     switch (type) {
@@ -32,24 +53,41 @@ export default function Activity() {
   return (
     <div className="flex flex-col min-h-full">
       {/* EN-TÊTE */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Journal d'activité</h1>
           <p className="text-slate-500 text-sm mt-1">Historique des actions et événements du système</p>
         </div>
-        <div className="flex items-center gap-3 mt-4 md:mt-0">
+        <div className="flex flex-wrap items-center gap-3">
           <div className="relative">
             <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
             <input 
               type="text" 
-              placeholder="Rechercher..." 
-              className="pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 w-64"
+              placeholder="Rechercher par action, utilisateur..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9 pr-8 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 w-64 text-slate-800"
             />
+            {searchTerm && (
+              <button
+                type="button"
+                onClick={() => setSearchTerm('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer text-xs"
+              >
+                <i className="fas fa-times-circle"></i>
+              </button>
+            )}
           </div>
-          <button className="bg-white border border-slate-200 text-slate-700 rounded-lg px-4 py-2 hover:bg-slate-50 transition-colors text-sm font-medium flex items-center gap-2">
-            <i className="fas fa-filter text-slate-400"></i>
-            Filtres
-          </button>
+          <select
+            value={typeFilter}
+            onChange={(e) => setTypeFilter(e.target.value)}
+            className="bg-white border border-slate-200 text-slate-700 rounded-lg px-3 py-2 text-sm font-medium focus:outline-none focus:border-primary cursor-pointer shadow-2xs"
+          >
+            <option value="all">Tous les types ({logs.length})</option>
+            <option value="auth">Authentification (auth)</option>
+            <option value="action">Actions métier (action)</option>
+            <option value="alert">Alertes système (alert)</option>
+          </select>
         </div>
       </div>
 
@@ -66,7 +104,7 @@ export default function Activity() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {logs.map((log) => (
+              {filteredLogs.map((log) => (
                 <tr key={log.id} className="hover:bg-slate-50/50 transition-colors">
                   <td className="py-4 px-6">
                     <div className="text-sm font-medium text-slate-900">{log.date}</div>
@@ -91,10 +129,13 @@ export default function Activity() {
                   </td>
                 </tr>
               ))}
-              {logs.length === 0 && (
+              {filteredLogs.length === 0 && (
                 <tr>
                   <td colSpan="4" className="py-12 text-center text-slate-500">
-                    Aucune activité enregistrée.
+                    <div className="flex flex-col items-center justify-center">
+                      <i className="fas fa-search text-slate-300 text-3xl mb-2"></i>
+                      <p>Aucune activité ne correspond à votre recherche.</p>
+                    </div>
                   </td>
                 </tr>
               )}
@@ -104,7 +145,9 @@ export default function Activity() {
         
         {/* PAGINATION */}
         <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
-          <span className="text-sm text-slate-500">Affichage de 1 à 5 sur 5 entrées</span>
+          <span className="text-sm text-slate-500">
+            Affichage de {filteredLogs.length} sur {logs.length} entrée{logs.length > 1 ? 's' : ''}
+          </span>
           <div className="flex items-center gap-2">
             <button className="px-3 py-1.5 text-sm font-medium text-slate-500 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-50" disabled>Précédent</button>
             <button className="px-3 py-1.5 text-sm font-medium text-white bg-primary rounded-lg">1</button>

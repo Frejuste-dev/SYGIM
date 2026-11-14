@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { CONFIG } from '../api/config';
 
 const DEFAULT_SETTINGS = {
@@ -40,7 +41,7 @@ export default function Settings() {
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Paramètres</h1>
           <p className="text-slate-500 text-sm mt-1">Personnalisez votre espace de travail et vos préférences</p>
         </div>
-        <a href="/admin/profile" className="flex items-center gap-3 bg-white border border-slate-200 px-4 py-2.5 rounded-lg shadow-sm hover:bg-slate-50 transition-colors mt-4 md:mt-0">
+        <Link to="/admin/profile" className="flex items-center gap-3 bg-white border border-slate-200 px-4 py-2.5 rounded-lg shadow-sm hover:bg-slate-50 transition-colors mt-4 md:mt-0">
           <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center">
             <i className="fas fa-user"></i>
           </div>
@@ -49,7 +50,7 @@ export default function Settings() {
             <div className="text-xs text-slate-500">Identité & Sécurité</div>
           </div>
           <i className="fas fa-chevron-right text-slate-400 ml-2 text-xs"></i>
-        </a>
+        </Link>
       </div>
 
       {/* ALERT SAVED */}

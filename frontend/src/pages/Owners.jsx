@@ -3,13 +3,14 @@ import { useOwners, useOwnerStats, useCreateOwner, useUpdateOwner, useDeleteOwne
 import { useProperties } from '../hooks/queries/useProperties';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
+import { useDebounce } from '../hooks/useDebounce';
 import { useToast } from '../components/ToastContext';
 import { useConfirm } from '../components/ConfirmContext';
 import { API } from '../api/services';
 import StatsCard from '../components/StatsCard';
-import FilterBar from '../components/FilterBar';
 import Modal from '../components/Modal';
 import OwnerPayoutModal from '../components/OwnerPayoutModal';
+import TableSkeleton from '../components/ui/TableSkeleton';
 import { formatXOF } from '../utils/formatters';
 import { exportToExcel, exportToPDF } from '../utils/exportUtils';
 
@@ -85,7 +86,10 @@ const EMPTY_FORM = () => ({
 
 export default function Owners() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const searchTerm = searchParams.get('search') || '';
+  const urlSearch = searchParams.get('search') || '';
+  const [searchTerm, setSearchTerm] = useState(urlSearch);
+  const debouncedSearch = useDebounce(searchTerm, 350);
+
   const page = parseInt(searchParams.get('page') || '1', 10);
   const limit = 25;
 
@@ -95,6 +99,26 @@ export default function Owners() {
   const { showToast } = useToast();
   const { confirm } = useConfirm();
 
+  useEffect(() => {
+    const currentParam = searchParams.get('search') || '';
+    if (debouncedSearch !== currentParam) {
+      const newParams = new URLSearchParams(searchParams);
+      if (debouncedSearch) {
+        newParams.set('search', debouncedSearch);
+      } else {
+        newParams.delete('search');
+      }
+      newParams.delete('page');
+      setSearchParams(newParams, { replace: true });
+    }
+  }, [debouncedSearch]);
+
+  useEffect(() => {
+    if (urlSearch !== searchTerm) {
+      setSearchTerm(urlSearch);
+    }
+  }, [urlSearch]);
+
   const handleFilterChange = (key, value) => {
     const newParams = new URLSearchParams(searchParams);
     if (value) {
@@ -103,10 +127,10 @@ export default function Owners() {
       newParams.delete(key);
     }
     if (key !== 'page') newParams.delete('page');
-    setSearchParams(newParams);
+    setSearchParams(newParams, { replace: true });
   };
 
-  const { data: queryResult = {}, isLoading: loading } = useOwners({ page, limit, search: searchTerm });
+  const { data: queryResult = {}, isLoading: loading } = useOwners({ page, limit, search: debouncedSearch });
   const owners = Array.isArray(queryResult) ? queryResult : (queryResult?.data || []);
   const pagination = queryResult?.pagination || {};
   const isLastPage = pagination.hasNext === false || pagination.hasNextPage === false;
@@ -393,11 +417,16 @@ export default function Owners() {
         {/* Barre de Recherche et Filtre d'occupation */}
         <div className="p-4 border-b border-slate-100 flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
           <div className="flex-1">
-            <FilterBar
-              searchPlaceholder="Rechercher par nom, téléphone ou email..."
-              searchValue={searchTerm}
-              onSearchChange={(val) => handleFilterChange('search', val)}
-            />
+            <div className="relative w-full">
+              <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+              <input
+                type="text"
+                placeholder="Rechercher par nom, téléphone ou email..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-slate-700"
+              />
+            </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <label htmlFor="owner-property-filter" className="text-xs font-semibold text-slate-500 whitespace-nowrap">
@@ -420,9 +449,22 @@ export default function Owners() {
 
         <div className="overflow-x-auto">
           {loading ? (
-            <div className="p-8 text-center text-slate-500">
-              <i className="fas fa-spinner fa-spin mr-2"></i>Chargement des propriétaires et de leurs biens...
-            </div>
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr>
+                  <th className="bg-slate-50 border-y border-slate-200 text-slate-500 text-xs uppercase tracking-wider py-3.5 px-4 font-semibold">Propriétaire</th>
+                  <th className="bg-slate-50 border-y border-slate-200 text-slate-500 text-xs uppercase tracking-wider py-3.5 px-4 font-semibold">Contact</th>
+                  <th className="bg-slate-50 border-y border-slate-200 text-slate-500 text-xs uppercase tracking-wider py-3.5 px-4 font-semibold min-w-[320px]">
+                    Biens &amp; État du Parc (Loué / Vacant / Réparation)
+                  </th>
+                  <th className="bg-slate-50 border-y border-slate-200 text-slate-500 text-xs uppercase tracking-wider py-3.5 px-4 font-semibold">Modalités de reversement</th>
+                  <th className="bg-slate-50 border-y border-slate-200 text-slate-500 text-xs uppercase tracking-wider py-3.5 px-4 font-semibold text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                <TableSkeleton rows={5} columns={5} />
+              </tbody>
+            </table>
           ) : filteredOwners.length === 0 ? (
             <div className="p-12 text-center">
               <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-400 text-2xl">
@@ -506,7 +548,7 @@ export default function Owners() {
                             {ownerProps.length} bien{ownerProps.length > 1 ? 's' : ''} au total
                           </span>
                           {totalPortfolioRent > 0 && (
-                            <span className="text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">
+                            <span className="text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200 tabular-nums">
                               {formatXOF(totalPortfolioRent)}/mois
                             </span>
                           )}

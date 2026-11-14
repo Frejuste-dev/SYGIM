@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useDebounce } from '../hooks/useDebounce';
 import { useTransactions, useTransactionStats } from '../hooks/queries/useTransactions';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../components/ToastContext';
@@ -11,6 +12,7 @@ import ReceiptTemplate from '../components/ReceiptTemplate';
 import Modal from '../components/Modal';
 import OwnerPayoutModal from '../components/OwnerPayoutModal';
 import InstallmentHistoryModal from '../components/InstallmentHistoryModal';
+import TableSkeleton from '../components/ui/TableSkeleton';
 
 const STATUS_OPTIONS = [
   { value: '', label: 'Tous les statuts' },
@@ -72,13 +74,38 @@ export default function Transactions() {
   const [isValidatingTx, setIsValidatingTx] = useState(false);
 
   const [searchParams, setSearchParams] = useSearchParams();
-  const searchTerm = searchParams.get('search') || '';
+  const urlSearch = searchParams.get('search') || '';
+  const [searchTerm, setSearchTerm] = useState(urlSearch);
+  const debouncedSearch = useDebounce(searchTerm, 350);
+
   const statusFilter = searchParams.get('status') || '';
   const methodFilter = searchParams.get('method') || '';
   const dateFrom = searchParams.get('dateFrom') || '';
   const dateTo = searchParams.get('dateTo') || '';
   const page = parseInt(searchParams.get('page') || '1', 10);
   const limit = 25;
+
+  // Synchronisation du paramètre de recherche délayé vers l'URL
+  useEffect(() => {
+    const currentParam = searchParams.get('search') || '';
+    if (debouncedSearch !== currentParam) {
+      const newParams = new URLSearchParams(searchParams);
+      if (debouncedSearch) {
+        newParams.set('search', debouncedSearch);
+      } else {
+        newParams.delete('search');
+      }
+      newParams.delete('page');
+      setSearchParams(newParams, { replace: true });
+    }
+  }, [debouncedSearch]);
+
+  // Synchronisation si l'URL change en externe (précédent/suivant)
+  useEffect(() => {
+    if (urlSearch !== searchTerm) {
+      setSearchTerm(urlSearch);
+    }
+  }, [urlSearch]);
 
   const handleFilterChange = (key, value) => {
     const newParams = new URLSearchParams(searchParams);
@@ -88,12 +115,12 @@ export default function Transactions() {
       newParams.delete(key);
     }
     if (key !== 'page') newParams.delete('page');
-    setSearchParams(newParams);
+    setSearchParams(newParams, { replace: true });
   };
 
   const filters = {
     page, limit,
-    search: searchTerm,
+    search: debouncedSearch,
     status: statusFilter,
     method: methodFilter,
     dateFrom, dateTo
@@ -422,7 +449,7 @@ export default function Transactions() {
                 type="text"
                 placeholder="Rechercher par référence, client..."
                 value={searchTerm}
-                onChange={(e) => handleFilterChange('search', e.target.value)}
+                onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
               />
             </div>
@@ -468,7 +495,7 @@ export default function Transactions() {
                     <th className="py-3 px-6 font-semibold">Réf.</th>
                     <th className="py-3 px-6 font-semibold">Date</th>
                     <th className="py-3 px-6 font-semibold">Client</th>
-                    <th className="py-3 px-6 font-semibold">Montant</th>
+                    <th className="py-3 px-6 font-semibold text-right">Montant</th>
                     <th className="py-3 px-6 font-semibold">Moyen</th>
                     <th className="py-3 px-6 font-semibold">Statut</th>
                     <th className="py-3 px-6 font-semibold text-right">Actions</th>
@@ -476,19 +503,14 @@ export default function Transactions() {
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {loading ? (
-                    <tr>
-                      <td colSpan="7" className="py-12 text-center text-slate-500">
-                        <i className="fas fa-spinner fa-spin text-primary text-xl mb-3 block"></i>
-                        Chargement des transactions...
-                      </td>
-                    </tr>
+                    <TableSkeleton rows={6} columns={7} />
                   ) : transactions.length > 0 ? (
                     transactions.map(t => (
                       <tr key={t.id || t.reference || Math.random()} className="group hover:bg-slate-50/80 transition-colors">
                         <td className="py-4 px-6 text-slate-700 font-mono text-xs">{t.reference || '-'}</td>
                         <td className="py-4 px-6 text-xs text-slate-600">{formatDate(t.date || t.created_at)}</td>
                         <td className="py-4 px-6 text-sm text-slate-900 font-medium">{t.client_name || t.client || '-'}</td>
-                        <td className="py-4 px-6 text-sm text-slate-900 font-bold">{formatXOF(t.amount, { compact: false })}</td>
+                        <td className="py-4 px-6 text-sm text-slate-900 font-bold text-right tabular-nums">{formatXOF(t.amount, { compact: false })}</td>
                         <td className="py-4 px-6 text-sm text-slate-700">{formatMethod(t.method)}</td>
                         <td className="py-4 px-6">
                           {(() => {
@@ -622,20 +644,16 @@ export default function Transactions() {
                     <th className="py-3 px-4">Propriétaire & Bien(s)</th>
                     <th className="py-3 px-4">Période / Échéance</th>
                     <th className="py-3 px-4">Mode & Moyen</th>
-                    <th className="py-3 px-4">Net à Reverser</th>
-                    <th className="py-3 px-4">Montant Versé</th>
-                    <th className="py-3 px-4">Reste à Payer</th>
+                    <th className="py-3 px-4 text-right">Net à Reverser</th>
+                    <th className="py-3 px-4 text-right">Montant Versé</th>
+                    <th className="py-3 px-4 text-right">Reste à Payer</th>
                     <th className="py-3 px-4">Statut</th>
                     <th className="py-3 px-4 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {loadingFinancial ? (
-                    <tr>
-                      <td colSpan="9" className="py-12 text-center text-slate-500">
-                        <i className="fas fa-spinner fa-spin mr-2"></i> Chargement...
-                      </td>
-                    </tr>
+                    <TableSkeleton rows={5} columns={9} />
                   ) : settlements.length === 0 ? (
                     <tr>
                       <td colSpan="9" className="py-12 text-center text-slate-500">Aucun paiement propriétaire enregistré.</td>
@@ -662,9 +680,9 @@ export default function Transactions() {
                             </span>
                             <div className="text-xs text-slate-500 mt-1">{formatMethod(s.payment_method || 'bank_transfer')}</div>
                           </td>
-                          <td className="py-3.5 px-4 font-medium text-slate-800">{formatXOF(s.net_amount, { compact: false })}</td>
-                          <td className="py-3.5 px-4 font-bold text-emerald-700">{formatXOF(s.amount_paid || s.net_amount, { compact: false })}</td>
-                          <td className="py-3.5 px-4 font-semibold text-rose-600">
+                          <td className="py-3.5 px-4 font-medium text-slate-800 text-right tabular-nums">{formatXOF(s.net_amount, { compact: false })}</td>
+                          <td className="py-3.5 px-4 font-bold text-emerald-700 text-right tabular-nums">{formatXOF(s.amount_paid || s.net_amount, { compact: false })}</td>
+                          <td className="py-3.5 px-4 font-semibold text-rose-600 text-right tabular-nums">
                             {s.remaining_to_pay > 0 ? formatXOF(s.remaining_to_pay, { compact: false }) : '0 FCFA'}
                           </td>
                           <td className="py-3.5 px-4">
@@ -779,13 +797,13 @@ export default function Transactions() {
                         <td className="py-3 px-4 font-medium text-slate-900">{e.third_party}</td>
                         <td className="py-3 px-4 text-xs text-slate-600">{e.property_name}</td>
                         <td className="py-3 px-4 text-xs text-slate-600 max-w-xs truncate" title={e.description}>{e.description}</td>
-                        <td className="py-3 px-4 text-right font-bold text-emerald-600">
+                        <td className="py-3 px-4 text-right font-bold text-emerald-600 tabular-nums">
                           {e.credit > 0 ? `+${formatXOF(e.credit, { compact: false })}` : '-'}
                         </td>
-                        <td className="py-3 px-4 text-right font-bold text-rose-600">
+                        <td className="py-3 px-4 text-right font-bold text-rose-600 tabular-nums">
                           {e.debit > 0 ? `-${formatXOF(e.debit, { compact: false })}` : '-'}
                         </td>
-                        <td className="py-3 px-4 text-right font-extrabold text-slate-900 bg-slate-50/60">
+                        <td className="py-3 px-4 text-right font-extrabold text-slate-900 bg-slate-50/60 tabular-nums">
                           {formatXOF(e.running_balance, { compact: false })}
                         </td>
                       </tr>

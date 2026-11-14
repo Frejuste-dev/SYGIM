@@ -1,13 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useProperties, usePropertyStats, useCreateProperty, useUpdateProperty, useDeleteProperty } from '../hooks/queries/useProperties';
 import { useOwners } from '../hooks/queries/useOwners';
 import { useSearchParams } from 'react-router-dom';
+import { useDebounce } from '../hooks/useDebounce';
 import { useToast } from '../components/ToastContext';
 import { useConfirm } from '../components/ConfirmContext';
-import AppHeader from '../components/AppHeader';
 import StatsCard from '../components/StatsCard';
-import FilterBar from '../components/FilterBar';
 import Modal from '../components/Modal';
+import TableSkeleton from '../components/ui/TableSkeleton';
 import { formatXOF, formatStatus } from '../utils/formatters';
 import { exportToExcel, exportToPDF } from '../utils/exportUtils';
 
@@ -21,7 +21,10 @@ const EMPTY_FORM = () => ({
 
 export default function Properties() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const searchTerm = searchParams.get('search') || '';
+  const urlSearch = searchParams.get('search') || '';
+  const [searchTerm, setSearchTerm] = useState(urlSearch);
+  const debouncedSearch = useDebounce(searchTerm, 350);
+
   const typeFilter = searchParams.get('type') || '';
   const statusFilter = searchParams.get('status') || '';
   const page = parseInt(searchParams.get('page') || '1', 10);
@@ -29,6 +32,26 @@ export default function Properties() {
 
   const { showToast } = useToast();
   const { confirm } = useConfirm();
+
+  useEffect(() => {
+    const currentParam = searchParams.get('search') || '';
+    if (debouncedSearch !== currentParam) {
+      const newParams = new URLSearchParams(searchParams);
+      if (debouncedSearch) {
+        newParams.set('search', debouncedSearch);
+      } else {
+        newParams.delete('search');
+      }
+      newParams.delete('page');
+      setSearchParams(newParams, { replace: true });
+    }
+  }, [debouncedSearch]);
+
+  useEffect(() => {
+    if (urlSearch !== searchTerm) {
+      setSearchTerm(urlSearch);
+    }
+  }, [urlSearch]);
 
   const handleFilterChange = (key, value) => {
     const newParams = new URLSearchParams(searchParams);
@@ -38,10 +61,10 @@ export default function Properties() {
       newParams.delete(key);
     }
     if (key !== 'page') newParams.delete('page');
-    setSearchParams(newParams);
+    setSearchParams(newParams, { replace: true });
   };
 
-  const { data: queryResult = {}, isLoading: loading } = useProperties({ page, limit, search: searchTerm, type: typeFilter, status: statusFilter });
+  const { data: queryResult = {}, isLoading: loading } = useProperties({ page, limit, search: debouncedSearch, type: typeFilter, status: statusFilter });
   const properties = Array.isArray(queryResult) ? queryResult : (queryResult?.data || []);
   const pagination = queryResult?.pagination || {};
   const isLastPage = pagination.hasNextPage === false;
@@ -62,7 +85,7 @@ export default function Properties() {
   const filteredProperties = properties; // Backend is filtering
 
 
-  const { data: statsData = {} } = usePropertyStats({ search: searchTerm, type: typeFilter, status: statusFilter });
+  const { data: statsData = {} } = usePropertyStats({ search: debouncedSearch, type: typeFilter, status: statusFilter });
 
   const stats = [
     { label: 'Total', value: statsData.total || 0, icon: 'fa-hotel', color: 'var(--primary)' },
@@ -258,7 +281,7 @@ export default function Properties() {
             type="text" 
             placeholder="Rechercher par nom, adresse..." 
             value={searchTerm}
-            onChange={(e) => handleFilterChange('search', e.target.value)}
+            onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 outline-none text-sm transition-all" 
           />
         </div>
@@ -297,14 +320,16 @@ export default function Properties() {
                 <th className="py-3 px-6 font-semibold">Propriétaire</th>
                 <th className="py-3 px-6 font-semibold">Adresse</th>
                 <th className="py-3 px-6 font-semibold">Statut</th>
-                <th className="py-3 px-6 font-semibold">Valeur</th>
-                <th className="py-3 px-6 font-semibold">Loyer</th>
+                <th className="py-3 px-6 font-semibold text-right">Valeur</th>
+                <th className="py-3 px-6 font-semibold text-right">Loyer</th>
                 <th className="py-3 px-6 font-semibold">Commission</th>
                 <th className="py-3 px-6 font-semibold text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredProperties.length > 0 ? filteredProperties.map(p => {
+              {loading ? (
+                <TableSkeleton rows={5} columns={9} />
+              ) : filteredProperties.length > 0 ? filteredProperties.map(p => {
                 const pStatus = formatStatus(p.status);
                 const ownerObj = owners.find(o => Number(o.id) === Number(p.owner_id));
                 const ownerName = ownerObj
@@ -338,10 +363,10 @@ export default function Properties() {
                         {pStatus.label}
                       </span>
                     </td>
-                    <td className="py-4 px-6 text-sm font-medium text-slate-900">
+                    <td className="py-4 px-6 text-sm font-medium text-slate-900 text-right tabular-nums">
                       {formatXOF(p.value, { compact: false })}
                     </td>
-                    <td className="py-4 px-6 text-sm font-medium text-slate-900">
+                    <td className="py-4 px-6 text-sm font-medium text-slate-900 text-right tabular-nums">
                       {formatXOF(p.rent, { compact: false })}
                     </td>
                     <td className="py-4 px-6 text-sm">

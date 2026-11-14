@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { API } from '../api/services';
+import { useModalEscape } from '../hooks/useModalEscape';
 import { formatXOF } from '../utils/formatters';
 
 const PAYMENT_METHODS = [
@@ -18,6 +19,7 @@ const PAYOUT_MODES = [
 const EMPTY_LIST = [];
 
 export default function OwnerPayoutModal({ isOpen, onClose, preselectedOwner = null, ownersSummary = null, onSuccess }) {
+  useModalEscape(isOpen, onClose);
   const [fetchedOwners, setFetchedOwners] = useState(EMPTY_LIST);
   const effectiveOwners = (Array.isArray(ownersSummary) && ownersSummary.length > 0) ? ownersSummary : fetchedOwners;
   const now = new Date();

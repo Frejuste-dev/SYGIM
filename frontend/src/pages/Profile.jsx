@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { API } from '../api/services';
-import AppHeader from '../components/AppHeader';
 
 const INIT_PROFILE = { displayName: '', firstName: '', lastName: '', email: '', phone: '' };
 
@@ -26,6 +26,7 @@ function toSnake(form) {
 }
 
 export default function Profile() {
+  const navigate = useNavigate();
   const { user, setUser } = useAuth();
   const [profile, setProfile] = useState(INIT_PROFILE);
   const [profileSaving, setProfileSaving] = useState(false);
@@ -97,7 +98,7 @@ export default function Profile() {
       if (res?.success) {
         setPwMsg('Mot de passe modifié avec succès. Vous allez être déconnecté(e).');
         setPwForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
-        setTimeout(() => window.location.href = '/login', 3000);
+        setTimeout(() => navigate('/login', { replace: true }), 3000);
       } else {
         setPwError(res?.message || res?.error || 'Erreur lors du changement.');
       }

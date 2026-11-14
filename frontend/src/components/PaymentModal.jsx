@@ -12,7 +12,7 @@ const INPUT_CLS = 'w-full px-4 py-3 bg-white border border-slate-300 rounded-xl 
 const LABEL_CLS = 'block text-xs uppercase tracking-wider font-bold text-slate-600 mb-1.5';
 
 export default function PaymentModal({ isOpen, onClose, client, onProceedToSignature }) {
-  const [amount, setAmount] = useState(0);
+  const [amount, setAmount] = useState('');
   const [method, setMethod] = useState('');
   const [reference, setReference] = useState('');
   const [validationError, setValidationError] = useState('');
@@ -49,9 +49,9 @@ export default function PaymentModal({ isOpen, onClose, client, onProceedToSigna
     const net = Math.max(0, effRem - repDed);
 
     if (client.suggestedAmount !== undefined) {
-      setAmount(client.suggestedAmount);
+      setAmount(String(client.suggestedAmount));
     } else {
-      setAmount(net > 0 ? net : (effRem > 0 ? effRem : clientRem));
+      setAmount(String(net > 0 ? net : (effRem > 0 ? effRem : clientRem)));
     }
     setMethod('mobile_money'); // Défaut terrain Côte d'Ivoire
     setReference('');
@@ -72,17 +72,20 @@ export default function PaymentModal({ isOpen, onClose, client, onProceedToSigna
   const firstName = client.first_name ?? client.firstName ?? '';
   const property = client.property ?? client.propertyName ?? client.property_title ?? client.address ?? 'Bien non renseigné';
 
+  const numericAmount = Number(amount) || 0;
+  const isValidAmount = Boolean(amount !== '' && !isNaN(numericAmount) && numericAmount > 0);
+
   const handleValidate = () => {
     if (!method) {
       setValidationError('Sélectionnez un mode de paiement pour continuer.');
       return;
     }
-    if (!amount || amount <= 0) {
+    if (!isValidAmount) {
       setValidationError('Le montant doit être supérieur à 0.');
       return;
     }
     setValidationError('');
-    onProceedToSignature({ amount, method, reference: reference.trim() || `REC-${Date.now()}` });
+    onProceedToSignature({ amount: numericAmount, method, reference: reference.trim() || `REC-${Date.now()}` });
   };
 
   return (
@@ -193,7 +196,11 @@ export default function PaymentModal({ isOpen, onClose, client, onProceedToSigna
                 min="0"
                 step="1000"
                 value={amount}
-                onChange={e => { setAmount(parseInt(e.target.value, 10) || 0); setValidationError(''); }}
+                onChange={e => {
+                  const val = e.target.value;
+                  setAmount(val);
+                  setValidationError('');
+                }}
                 className={`${INPUT_CLS} text-xl font-black text-center text-slate-900 tracking-wide`}
               />
             </div>
@@ -204,7 +211,7 @@ export default function PaymentModal({ isOpen, onClose, client, onProceedToSigna
                 {repairDeduction > 0 && netCollectible > 0 && (
                   <button
                     type="button"
-                    onClick={() => { setAmount(netCollectible); setValidationError(''); }}
+                    onClick={() => { setAmount(String(netCollectible)); setValidationError(''); }}
                     className="px-3 py-1.5 text-xs font-bold bg-amber-500 text-white shadow-sm rounded-xl hover:bg-amber-600 active:scale-95 transition whitespace-nowrap"
                   >
                     <i className="fas fa-wrench text-[10px] mr-1"></i> Loyer net ({formatXOF(netCollectible)})
@@ -212,7 +219,7 @@ export default function PaymentModal({ isOpen, onClose, client, onProceedToSigna
                 )}
                 <button
                   type="button"
-                  onClick={() => { setAmount(remaining); setValidationError(''); }}
+                  onClick={() => { setAmount(String(remaining)); setValidationError(''); }}
                   className="px-3 py-1.5 text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl hover:bg-emerald-100 active:scale-95 transition whitespace-nowrap"
                 >
                   <i className="fas fa-check-double text-[10px] mr-1"></i> Tout solder ({formatXOF(remaining)})
@@ -220,7 +227,7 @@ export default function PaymentModal({ isOpen, onClose, client, onProceedToSigna
                 {remaining >= 20000 && (
                   <button
                     type="button"
-                    onClick={() => { setAmount(Math.round(remaining / 2)); setValidationError(''); }}
+                    onClick={() => { setAmount(String(Math.round(remaining / 2))); setValidationError(''); }}
                     className="px-3 py-1.5 text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200 rounded-xl hover:bg-slate-200 active:scale-95 transition whitespace-nowrap"
                   >
                     50% ({formatXOF(Math.round(remaining / 2))})
@@ -229,10 +236,10 @@ export default function PaymentModal({ isOpen, onClose, client, onProceedToSigna
               </div>
             )}
 
-            {amount > 0 && amount < remaining && (
+            {numericAmount > 0 && numericAmount < remaining && (
               <p className="text-xs text-amber-600 mt-1.5 flex items-center gap-1 font-medium">
                 <i className="fas fa-info-circle"></i>
-                Paiement partiel : reste {formatXOF(remaining - amount, { compact: false })} après validation.
+                Paiement partiel : reste {formatXOF(remaining - numericAmount, { compact: false })} après validation.
               </p>
             )}
           </div>
@@ -302,7 +309,7 @@ export default function PaymentModal({ isOpen, onClose, client, onProceedToSigna
           <button
             type="button"
             onClick={handleValidate}
-            disabled={!method || !amount}
+            disabled={!method || !isValidAmount}
             className="flex-[2] sm:flex-initial inline-flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-bold text-white bg-emerald-600 rounded-xl hover:bg-emerald-700 transition-colors shadow-md shadow-emerald-600/25 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
           >
             <i className="fas fa-pen-nib text-xs"></i>
