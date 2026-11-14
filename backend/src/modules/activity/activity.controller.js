@@ -5,7 +5,13 @@ class ActivityController {
   async getManagerLogs(req, res, next) {
     try {
       const result = await activityService.getManagerLogs(req.query);
-      return ApiResponse.success(res, result.data, 'Historique des activités récupéré', 200, result.pagination);
+      return res.json(ApiResponse.paginated(
+        result.data,
+        result.pagination.page,
+        result.pagination.limit,
+        result.pagination.total,
+        'Historique des activités récupéré'
+      ));
     } catch (err) {
       next(err);
     }

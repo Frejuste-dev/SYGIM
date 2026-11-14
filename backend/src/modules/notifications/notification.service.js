@@ -1,10 +1,10 @@
 const notificationRepository = require('./notification.repository');
 
 class NotificationService {
-  async getNotifications(userId, filters = {}) {
+  async getNotifications(user, filters = {}) {
     const [notifications, unreadCount] = await Promise.all([
-      notificationRepository.findByUserId(userId, filters),
-      notificationRepository.countUnread(userId),
+      notificationRepository.findByUserId(user, filters),
+      notificationRepository.countUnread(user),
     ]);
     return {
       notifications,

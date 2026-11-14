@@ -4,10 +4,10 @@ const ApiResponse = require('../../utils/responses/ApiResponse');
 class NotificationController {
   async getNotifications(req, res, next) {
     try {
-      const result = await notificationService.getNotifications(req.user.id, req.query);
-      return ApiResponse.success(res, result.notifications, 'Notifications récupérées', 200, {
+      const result = await notificationService.getNotifications(req.user, req.query);
+      return res.json(ApiResponse.success(result.notifications, 'Notifications récupérées', 200, {
         unreadCount: result.unreadCount,
-      });
+      }));
     } catch (err) {
       next(err);
     }
@@ -16,7 +16,7 @@ class NotificationController {
   async markAsRead(req, res, next) {
     try {
       const success = await notificationService.markAsRead(req.params.id, req.user.id);
-      return ApiResponse.success(res, { success }, 'Notification marquée comme lue');
+      return res.json(ApiResponse.success({ success }, 'Notification marquée comme lue'));
     } catch (err) {
       next(err);
     }
@@ -25,7 +25,7 @@ class NotificationController {
   async markAllAsRead(req, res, next) {
     try {
       const count = await notificationService.markAllAsRead(req.user.id);
-      return ApiResponse.success(res, { count }, `${count} notification(s) marquée(s) comme lue(s)`);
+      return res.json(ApiResponse.success({ count }, `${count} notification(s) marquée(s) comme lue(s)`));
     } catch (err) {
       next(err);
     }

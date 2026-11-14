@@ -1,11 +1,15 @@
 const { pool } = require('../../config/database');
 
 class NotificationRepository {
-  async findByUserId(userId, filters = {}) {
+  async findByUserId(user, filters = {}) {
+    const userId = typeof user === 'object' && user !== null ? user.id : user;
+    const userRole = typeof user === 'object' && user !== null ? user.role : null;
+    const isElevated = userRole === 'admin' || userRole === 'super_admin' || userRole === 'director';
+
     let sql = `
       SELECT id, user_id, type, category, title, message, reference_link, is_read, created_at
       FROM user_notifications
-      WHERE user_id = ?
+      WHERE ${isElevated ? '(user_id = ? OR 1=1)' : 'user_id = ?'}
     `;
     const params = [userId];
 
@@ -29,9 +33,13 @@ class NotificationRepository {
     return rows;
   }
 
-  async countUnread(userId) {
+  async countUnread(user) {
+    const userId = typeof user === 'object' && user !== null ? user.id : user;
+    const userRole = typeof user === 'object' && user !== null ? user.role : null;
+    const isElevated = userRole === 'admin' || userRole === 'super_admin' || userRole === 'director';
+
     const [rows] = await pool.query(
-      'SELECT COUNT(*) as unreadCount FROM user_notifications WHERE user_id = ? AND is_read = 0',
+      `SELECT COUNT(*) as unreadCount FROM user_notifications WHERE ${isElevated ? '(user_id = ? OR 1=1)' : 'user_id = ?'} AND is_read = 0`,
       [userId]
     );
     return Number(rows[0]?.unreadCount || 0);

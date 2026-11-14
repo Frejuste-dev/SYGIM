@@ -52,7 +52,7 @@ class PropertyController extends BaseController {
     try {
       const { owner_id, notes } = req.body;
       const data = await this.service.assignOwner(req.params.id, owner_id, req.user, notes);
-      return ApiResponse.success(res, data, 'Bien immobilier attribué avec succès au propriétaire');
+      return res.json(ApiResponse.success(data, 'Bien immobilier attribué avec succès au propriétaire'));
     } catch (error) {
       next(error);
     }
@@ -62,7 +62,7 @@ class PropertyController extends BaseController {
     try {
       const { new_owner_id, notes } = req.body;
       const data = await this.service.reassignOwner(req.params.id, new_owner_id, req.user, notes);
-      return ApiResponse.success(res, data, 'Bien immobilier réattribué avec succès');
+      return res.json(ApiResponse.success(data, 'Bien immobilier réattribué avec succès'));
     } catch (error) {
       next(error);
     }
@@ -71,7 +71,7 @@ class PropertyController extends BaseController {
   async getAssignments(req, res, next) {
     try {
       const result = await this.service.getAssignments(req.query);
-      return ApiResponse.success(res, result.data, 'Liste des attributions récupérée', 200, result.pagination);
+      return res.json(ApiResponse.paginated(result.data, result.pagination.page, result.pagination.limit, result.pagination.total, 'Liste des attributions récupérée'));
     } catch (error) {
       next(error);
     }
@@ -80,7 +80,7 @@ class PropertyController extends BaseController {
   async getAssignmentHistory(req, res, next) {
     try {
       const data = await this.service.getAssignmentHistory(req.query);
-      return ApiResponse.success(res, data, 'Historique des attributions récupéré');
+      return res.json(ApiResponse.success(data, 'Historique des attributions récupéré'));
     } catch (error) {
       next(error);
     }
