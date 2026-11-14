@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useProperties, usePropertyStats, useCreateProperty, useUpdateProperty, useDeleteProperty } from '../hooks/queries/useProperties';
 import { useOwners } from '../hooks/queries/useOwners';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useDebounce } from '../hooks/useDebounce';
 import { useToast } from '../components/ToastContext';
 import { useConfirm } from '../components/ConfirmContext';
@@ -20,6 +20,7 @@ const EMPTY_FORM = () => ({
 });
 
 export default function Properties() {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const urlSearch = searchParams.get('search') || '';
   const [searchTerm, setSearchTerm] = useState(urlSearch);
@@ -145,6 +146,10 @@ export default function Properties() {
     e.preventDefault();
     if (!form.name || !form.address) {
       setFormError('Le nom et l\'adresse sont obligatoires.');
+      return;
+    }
+    if (!form.owner_id) {
+      setFormError('Le propriétaire bailleur est obligatoire pour enregistrer un bien.');
       return;
     }
     setFormError('');
@@ -344,7 +349,7 @@ export default function Properties() {
                 <th className="py-3 px-6 font-semibold">Type</th>
                 <th className="py-3 px-6 font-semibold">Propriétaire</th>
                 <th className="py-3 px-6 font-semibold">Zone & Adresse</th>
-                <th className="py-3 px-6 font-semibold">Statut</th>
+                <th className="py-3 px-6 font-semibold">Attribution Locataire</th>
                 <th className="py-3 px-6 font-semibold text-right">Valeur</th>
                 <th className="py-3 px-6 font-semibold text-right">Loyer</th>
                 <th className="py-3 px-6 font-semibold">Commission</th>
@@ -404,10 +409,30 @@ export default function Properties() {
                       )}
                       <div className="truncate text-slate-500 text-xs" title={p.address}>{p.address}</div>
                     </td>
-                    <td className="py-4 px-6">
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-medium border ${pStatus.twClass}`}>
-                        {pStatus.label}
-                      </span>
+                    <td className="py-4 px-6 text-sm">
+                      {p.status === 'loue' || p.tenant_name || p.tenant_first_name ? (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 font-semibold text-xs border border-emerald-200" title={`Locataire : ${p.tenant_name || `${p.tenant_last_name || ''} ${p.tenant_first_name || ''}`.trim()}`}>
+                          <i className="fas fa-key text-[10px] text-emerald-600"></i>
+                          <span className="max-w-[150px] truncate">
+                            Attribué ({p.tenant_name || `${p.tenant_last_name || ''} ${p.tenant_first_name || ''}`.trim() || 'Loué'})
+                          </span>
+                        </span>
+                      ) : (
+                        <div className="inline-flex items-center gap-2">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 font-medium text-xs border border-amber-200">
+                            <i className="fas fa-door-open text-[10px] text-amber-600"></i>
+                            Non attribué (Vacant)
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => navigate(`/admin/property-assignments?propertyId=${p.id}`)}
+                            className="px-2 py-0.5 text-[11px] font-semibold text-primary bg-primary/10 hover:bg-primary hover:text-white rounded-md transition-colors whitespace-nowrap cursor-pointer"
+                            title="Attribuer à un locataire"
+                          >
+                            Attribuer
+                          </button>
+                        </div>
+                      )}
                     </td>
                     <td className="py-4 px-6 text-sm font-medium text-slate-900 text-right tabular-nums">
                       {formatXOF(p.value, { compact: false })}
@@ -759,15 +784,16 @@ export default function Properties() {
               </div>
               <div>
                 <label htmlFor="owner_id" className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
-                  Propriétaire rattaché
+                  Propriétaire bailleur <span className="text-rose-500">*</span>
                 </label>
                 <select
                   id="owner_id"
+                  required
                   value={form.owner_id}
                   onChange={(e) => setForm({ ...form, owner_id: e.target.value })}
                   className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-medium text-slate-900 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer"
                 >
-                  <option value="">-- Aucun propriétaire (Non attribué) --</option>
+                  <option value="">-- Sélectionner un propriétaire obligatoire --</option>
                   {owners.map(o => (
                     <option key={o.id} value={o.id}>
                       {o.display_name || `${o.first_name || ''} ${o.last_name || ''}`.trim() || `Propriétaire #${o.id}`} {o.phone ? `(${o.phone})` : ''}

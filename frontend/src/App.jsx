@@ -106,7 +106,7 @@ export default function App() {
                             <Route 
                                 path="clients" 
                                 element={
-                                    <ProtectedRoute allowedRoles={['admin', 'super_admin', 'director', 'accounting', 'collector_manager', 'gestionnaire']}>
+                                    <ProtectedRoute allowedRoles={['admin', 'super_admin', 'director', 'accounting', 'collector_manager', 'gestionnaire', 'manager']}>
                                         <Clients />
                                     </ProtectedRoute>
                                 } 

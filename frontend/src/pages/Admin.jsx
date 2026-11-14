@@ -34,11 +34,12 @@ export default function Admin() {
       ? '/admin/manager' 
       : '/admin/dashboard';
 
-  // Navigation exclusive à 6 menus pour le rôle MANAGER (Section 9)
+  // Navigation exclusive à 7 menus pour le rôle MANAGER
   const managerMenuItems = [
     { name: 'Tableau de bord', path: '/admin/manager', icon: 'fas fa-chart-pie' },
     { name: 'Gestion des biens', path: '/admin/properties', icon: 'fas fa-building' },
     { name: 'Gestion des propriétaires', path: '/admin/owners', icon: 'fas fa-user-tie' },
+    { name: 'Gestion des locataires', path: '/admin/clients', icon: 'fas fa-users' },
     { name: 'Attribution des biens', path: '/admin/property-assignments', icon: 'fas fa-handshake' },
     { name: 'Historique des activités', path: '/admin/activity', icon: 'fas fa-history' },
     { name: 'Notifications', path: '/admin/notifications', icon: 'fas fa-bell', badge: unreadCount },

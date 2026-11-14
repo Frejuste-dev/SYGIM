@@ -71,7 +71,9 @@ class PropertyController extends BaseController {
   async getAssignments(req, res, next) {
     try {
       const result = await this.service.getAssignments(req.query);
-      return res.json(ApiResponse.paginated(result.data, result.pagination.page, result.pagination.limit, result.pagination.total, 'Liste des attributions récupérée'));
+      const response = ApiResponse.paginated(result.data, result.pagination.page, result.pagination.limit, result.pagination.total, 'Liste des attributions récupérée');
+      response.kpis = result.kpis;
+      return res.json(response);
     } catch (error) {
       next(error);
     }

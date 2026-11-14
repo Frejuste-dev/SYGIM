@@ -11,6 +11,7 @@ export const usePropertyAssignments = (filters = {}) => {
       const data = unwrapData(res);
       return {
         assignments: Array.isArray(data) ? data : (data?.data || []),
+        kpis: res?.kpis || data?.kpis || { unassignedCount: 0, assignedCount: 0, historyCount: 0 },
         pagination: res?.pagination || { page: 1, limit: 50, total: 0, totalPages: 1 },
       };
     },
@@ -25,6 +26,51 @@ export const usePropertyAssignmentHistory = (filters = {}) => {
     queryFn: () => API.Properties.getAssignmentHistory(filters).then(unwrapData),
     staleTime: 30_000,
     placeholderData: (prev) => prev,
+  });
+};
+
+export const useAssignTenant = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ propertyId, ...data }) =>
+      API.Properties.assignTenant(propertyId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['properties'] });
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
+      queryClient.invalidateQueries({ queryKey: ['reports', 'manager-dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['activity'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    },
+  });
+};
+
+export const useReplaceTenant = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ clientId, ...data }) =>
+      API.Clients.replace(clientId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['properties'] });
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
+      queryClient.invalidateQueries({ queryKey: ['reports', 'manager-dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['activity'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    },
+  });
+};
+
+export const useDepartTenant = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ clientId, ...data }) =>
+      API.Clients.depart(clientId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['properties'] });
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
+      queryClient.invalidateQueries({ queryKey: ['reports', 'manager-dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['activity'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    },
   });
 };
 

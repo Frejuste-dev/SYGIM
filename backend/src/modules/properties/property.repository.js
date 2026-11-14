@@ -222,27 +222,41 @@ class PropertyRepository extends BaseRepository {
              p.owner_id, p.assigned_at, p.assigned_by,
              COALESCE(o.display_name, CONCAT(o.first_name, ' ', o.last_name)) AS owner_name,
              o.phone AS owner_phone, o.email AS owner_email,
+             c.id AS tenant_id,
+             CONCAT(c.first_name, ' ', c.last_name) AS tenant_name,
+             c.first_name AS tenant_first_name,
+             c.last_name AS tenant_last_name,
+             c.phone AS tenant_phone,
+             c.email AS tenant_email,
+             c.amount_due AS tenant_rent,
+             c.status AS tenant_status,
+             c.contract_start AS tenant_contract_start,
              COALESCE(u.display_name, u.username) AS assigned_by_name
       FROM properties p
       LEFT JOIN owners o ON p.owner_id = o.id
+      LEFT JOIN clients c ON c.id = (
+        SELECT c2.id FROM clients c2 
+        WHERE (c2.id = p.tenant_id OR c2.property_id = p.id) AND c2.status != 'inactive' 
+        ORDER BY c2.id DESC LIMIT 1
+      )
       LEFT JOIN users u ON p.assigned_by = u.id
       WHERE 1=1
     `;
     const params = [];
 
     if (filters.assignmentStatus === 'assigned') {
-      sql += ' AND p.owner_id IS NOT NULL';
+      sql += " AND (p.status = 'loue' OR p.tenant_id IS NOT NULL OR c.id IS NOT NULL)";
     } else if (filters.assignmentStatus === 'unassigned') {
-      sql += ' AND p.owner_id IS NULL';
+      sql += " AND (p.status != 'loue' AND p.tenant_id IS NULL AND c.id IS NULL)";
     }
 
     if (filters.search) {
-      sql += ' AND (p.name LIKE ? OR p.reference_code LIKE ? OR p.zone LIKE ? OR p.address LIKE ? OR o.first_name LIKE ? OR o.last_name LIKE ? OR o.phone LIKE ?)';
+      sql += ' AND (p.name LIKE ? OR p.reference_code LIKE ? OR p.zone LIKE ? OR p.address LIKE ? OR o.first_name LIKE ? OR o.last_name LIKE ? OR c.first_name LIKE ? OR c.last_name LIKE ? OR c.phone LIKE ?)';
       const s = `%${filters.search}%`;
-      params.push(s, s, s, s, s, s, s);
+      params.push(s, s, s, s, s, s, s, s, s);
     }
 
-    sql += ' ORDER BY CASE WHEN p.owner_id IS NULL THEN 0 ELSE 1 END, p.assigned_at DESC, p.created_at DESC';
+    sql += " ORDER BY CASE WHEN (p.status = 'loue' OR p.tenant_id IS NOT NULL OR c.id IS NOT NULL) THEN 1 ELSE 0 END, p.id DESC";
 
     const page = Math.max(1, parseInt(filters.page || 1, 10));
     const limit = Math.max(1, Math.min(100, parseInt(filters.limit || 50, 10)));
@@ -260,37 +274,67 @@ class PropertyRepository extends BaseRepository {
       SELECT COUNT(*) as total
       FROM properties p
       LEFT JOIN owners o ON p.owner_id = o.id
+      LEFT JOIN clients c ON c.id = (
+        SELECT c2.id FROM clients c2 
+        WHERE (c2.id = p.tenant_id OR c2.property_id = p.id) AND c2.status != 'inactive' 
+        ORDER BY c2.id DESC LIMIT 1
+      )
       WHERE 1=1
     `;
     const params = [];
 
     if (filters.assignmentStatus === 'assigned') {
-      sql += ' AND p.owner_id IS NOT NULL';
+      sql += " AND (p.status = 'loue' OR p.tenant_id IS NOT NULL OR c.id IS NOT NULL)";
     } else if (filters.assignmentStatus === 'unassigned') {
-      sql += ' AND p.owner_id IS NULL';
+      sql += " AND (p.status != 'loue' AND p.tenant_id IS NULL AND c.id IS NULL)";
     }
 
     if (filters.search) {
-      sql += ' AND (p.name LIKE ? OR p.reference_code LIKE ? OR p.zone LIKE ? OR p.address LIKE ? OR o.first_name LIKE ? OR o.last_name LIKE ? OR o.phone LIKE ?)';
+      sql += ' AND (p.name LIKE ? OR p.reference_code LIKE ? OR p.zone LIKE ? OR p.address LIKE ? OR o.first_name LIKE ? OR o.last_name LIKE ? OR c.first_name LIKE ? OR c.last_name LIKE ? OR c.phone LIKE ?)';
       const s = `%${filters.search}%`;
-      params.push(s, s, s, s, s, s, s);
+      params.push(s, s, s, s, s, s, s, s, s);
     }
 
     const [rows] = await pool.query(sql, params);
     return Number(rows[0]?.total || 0);
   }
 
+  async getAssignmentKPIs() {
+    const [kpiRows] = await pool.query(`
+      SELECT 
+        COUNT(CASE WHEN (p.status != 'loue' AND p.tenant_id IS NULL AND c.id IS NULL) THEN 1 END) AS unassignedCount,
+        COUNT(CASE WHEN (p.status = 'loue' OR p.tenant_id IS NOT NULL OR c.id IS NOT NULL) THEN 1 END) AS assignedCount
+      FROM properties p
+      LEFT JOIN clients c ON c.id = (
+        SELECT c2.id FROM clients c2 
+        WHERE (c2.id = p.tenant_id OR c2.property_id = p.id) AND c2.status != 'inactive' 
+        ORDER BY c2.id DESC LIMIT 1
+      )
+    `);
+    const [histRows] = await pool.query('SELECT COUNT(*) as historyCount FROM property_tenant_assignments');
+    return {
+      unassignedCount: Number(kpiRows[0]?.unassignedCount || 0),
+      assignedCount: Number(kpiRows[0]?.assignedCount || 0),
+      historyCount: Number(histRows[0]?.historyCount || 0),
+    };
+  }
+
   async findAssignmentHistory(filters = {}) {
     let sql = `
-      SELECT h.id, h.property_id, h.previous_owner_id, h.new_owner_id, h.action_type, h.notes, h.created_at,
+      SELECT h.id, h.property_id, h.owner_id, h.previous_client_id, h.new_client_id, h.action_type,
+             COALESCE(h.rent_amount, p.rent) AS rent_amount, h.notes, h.created_at,
              p.reference_code AS property_ref, p.name AS property_name, p.zone AS property_zone,
-             COALESCE(prev_o.display_name, CONCAT(prev_o.first_name, ' ', prev_o.last_name)) AS previous_owner_name,
-             COALESCE(new_o.display_name, CONCAT(new_o.first_name, ' ', new_o.last_name)) AS new_owner_name,
+             COALESCE(o.display_name, CONCAT(o.first_name, ' ', o.last_name)) AS owner_name,
+             CONCAT(prev_c.last_name, ' ', prev_c.first_name) AS previous_tenant_name,
+             prev_c.phone AS previous_tenant_phone,
+             CONCAT(new_c.last_name, ' ', new_c.first_name) AS new_tenant_name,
+             new_c.phone AS new_tenant_phone,
              COALESCE(u.display_name, u.username) AS performed_by_name
-      FROM property_owner_assignments h
+      FROM property_tenant_assignments h
       JOIN properties p ON h.property_id = p.id
-      LEFT JOIN owners prev_o ON h.previous_owner_id = prev_o.id
-      JOIN owners new_o ON h.new_owner_id = new_o.id
+      LEFT JOIN owners o ON COALESCE(h.owner_id, p.owner_id) = o.id
+      LEFT JOIN clients prev_c ON h.previous_client_id = prev_c.id
+      LEFT JOIN clients new_c ON h.new_client_id = new_c.id
       LEFT JOIN users u ON h.performed_by = u.id
       WHERE 1=1
     `;
@@ -300,14 +344,14 @@ class PropertyRepository extends BaseRepository {
       sql += ' AND h.property_id = ?';
       params.push(filters.propertyId);
     }
-    if (filters.ownerId) {
-      sql += ' AND (h.previous_owner_id = ? OR h.new_owner_id = ?)';
-      params.push(filters.ownerId, filters.ownerId);
+    if (filters.actionType) {
+      sql += ' AND h.action_type = ?';
+      params.push(filters.actionType);
     }
     if (filters.search) {
-      sql += ' AND (p.name LIKE ? OR p.reference_code LIKE ? OR new_o.first_name LIKE ? OR new_o.last_name LIKE ?)';
+      sql += ' AND (p.name LIKE ? OR p.reference_code LIKE ? OR o.first_name LIKE ? OR o.last_name LIKE ? OR prev_c.last_name LIKE ? OR prev_c.first_name LIKE ? OR new_c.last_name LIKE ? OR new_c.first_name LIKE ?)';
       const s = `%${filters.search}%`;
-      params.push(s, s, s, s);
+      params.push(s, s, s, s, s, s, s, s);
     }
 
     sql += ' ORDER BY h.created_at DESC';

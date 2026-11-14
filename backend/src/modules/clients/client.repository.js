@@ -259,8 +259,24 @@ class ClientRepository extends BaseRepository {
         ]
       );
 
+      // 5. Historiser dans property_tenant_assignments
+      await conn.query(
+        `INSERT INTO property_tenant_assignments 
+         (property_id, owner_id, previous_client_id, new_client_id, action_type, rent_amount, performed_by, notes, created_at)
+         VALUES (?, ?, ?, ?, 'REASSIGNMENT', ?, ?, ?, NOW())`,
+        [
+          property.id,
+          property.owner_id || null,
+          oldId,
+          newTenantId,
+          data.newRent || property.rent || null,
+          data.performedBy || null,
+          data.departureReason || 'Changement de locataire'
+        ]
+      );
+
       await conn.commit();
-      return { newTenantId };
+      return { newTenantId, newTenantName };
     } catch (error) {
       await conn.rollback();
       throw error;
@@ -269,12 +285,12 @@ class ClientRepository extends BaseRepository {
     }
   }
 
-  async departTenant(id, { departureDate, departureReason, departureNotes }) {
+  async departTenant(id, { departureDate, departureReason, departureNotes, performedBy }) {
     const conn = await pool.getConnection();
     try {
       await conn.beginTransaction();
 
-      const [clientRows] = await conn.query('SELECT property_id, first_name, last_name, collector_id FROM clients WHERE id = ?', [id]);
+      const [clientRows] = await conn.query('SELECT property_id, first_name, last_name, collector_id, owner_id, amount_due FROM clients WHERE id = ?', [id]);
       if (clientRows.length === 0) throw new Error('NOT_FOUND');
       const client = clientRows[0];
 
@@ -291,16 +307,18 @@ class ClientRepository extends BaseRepository {
       );
 
       // Libérer le bien associé (mettre le statut en vacant et supprimer l'association)
-      if (client.property_id) {
+      let propertyId = client.property_id;
+      if (propertyId) {
         await conn.query(
           "UPDATE properties SET status = 'vacant', tenant_id = NULL WHERE id = ? OR tenant_id = ?",
-          [client.property_id, id]
+          [propertyId, id]
         );
       } else {
-        await conn.query(
-          "UPDATE properties SET status = 'vacant', tenant_id = NULL WHERE tenant_id = ?",
-          [id]
-        );
+        const [pRows] = await conn.query("SELECT id FROM properties WHERE tenant_id = ?", [id]);
+        if (pRows.length > 0) {
+          propertyId = pRows[0].id;
+          await conn.query("UPDATE properties SET status = 'vacant', tenant_id = NULL WHERE id = ?", [propertyId]);
+        }
       }
 
       // Historiser dans les transactions
@@ -315,6 +333,19 @@ class ClientRepository extends BaseRepository {
           client.collector_id || null
         ]
       );
+
+      // Historiser dans property_tenant_assignments
+      if (propertyId) {
+        const [propRows] = await conn.query('SELECT owner_id, rent FROM properties WHERE id = ?', [propertyId]);
+        const ownerId = propRows[0]?.owner_id || client.owner_id || null;
+        const rentAmount = propRows[0]?.rent || client.amount_due || null;
+        await conn.query(
+          `INSERT INTO property_tenant_assignments 
+           (property_id, owner_id, previous_client_id, new_client_id, action_type, rent_amount, performed_by, notes, created_at)
+           VALUES (?, ?, ?, NULL, 'DEPARTURE', ?, ?, ?, NOW())`,
+          [propertyId, ownerId, id, rentAmount, performedBy || null, departureReason || 'Départ locataire']
+        );
+      }
 
       await conn.commit();
       return true;

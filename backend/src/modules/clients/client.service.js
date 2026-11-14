@@ -1,6 +1,8 @@
 const BaseService = require('../../core/BaseService');
 const ClientRepository = require('./client.repository');
 const AppError = require('../../utils/errors/AppError');
+const ManagerAuditService = require('../../services/ManagerAuditService');
+const { pool } = require('../../config/database');
 
 class ClientService extends BaseService {
   constructor() {
@@ -15,7 +17,7 @@ class ClientService extends BaseService {
     if (!user || !user.role) {
       return;
     }
-    if (['admin', 'director', 'accounting'].includes(user.role)) {
+    if (['admin', 'director', 'accounting', 'manager', 'collector_manager', 'gestionnaire'].includes(user.role)) {
       return;
     }
 
@@ -171,6 +173,46 @@ class ClientService extends BaseService {
 
     try {
       const newId = await this.repository.createWithPropertyUpdate(clientData);
+
+      // Si un bien est directement associé, insérer dans l'historique d'attribution locataire
+      if (clientData.property_id) {
+        try {
+          await pool.query(
+            `INSERT INTO property_tenant_assignments 
+             (property_id, owner_id, previous_client_id, new_client_id, action_type, rent_amount, performed_by, notes, created_at)
+             VALUES (?, ?, NULL, ?, 'INITIAL_ASSIGNMENT', ?, ?, ?, NOW())`,
+            [
+              clientData.property_id,
+              clientData.owner_id || null,
+              newId,
+              clientData.amount_due || null,
+              user?.id || null,
+              'Attribution lors de la création du locataire'
+            ]
+          );
+        } catch (histErr) {
+          console.warn('[ClientService] Historisation attribution échouée:', histErr.message);
+        }
+      }
+
+      await ManagerAuditService.logAction({
+        userId: user?.id,
+        operationType: 'CREATE_TENANT',
+        operationLabel: 'Création locataire',
+        propertyId: clientData.property_id || null,
+        ownerId: clientData.owner_id || null,
+        targetSummary: `Locataire : ${lastName} ${firstName}`.trim(),
+        description: `Nouveau locataire ${lastName} ${firstName || ''} créé avec succès.${clientData.property_name ? ' Affecté au bien ' + clientData.property_name + '.' : ''}`,
+        newValues: clientData,
+        status: 'SUCCESS',
+        notification: {
+          type: 'SUCCESS',
+          category: 'CLIENT',
+          title: 'Nouveau locataire enregistré',
+          message: `Le locataire ${lastName} ${firstName || ''} a été enregistré dans le système.`,
+        },
+      });
+
       return { id: newId, lastName: lastName, firstName: firstName };
     } catch (error) {
       if (error.code === 'ER_DUP_ENTRY') {
@@ -230,7 +272,26 @@ class ClientService extends BaseService {
       throw AppError.badRequest('Aucun champ à modifier');
     }
 
-    return await super.update(id, clientData, user);
+    const updated = await super.update(id, clientData, user);
+
+    await ManagerAuditService.logAction({
+      userId: user?.id,
+      operationType: 'UPDATE_TENANT',
+      operationLabel: 'Modification locataire',
+      propertyId: clientData.property_id || null,
+      targetSummary: `Locataire #${id}`,
+      description: `Mise à jour des informations du locataire #${id}.`,
+      newValues: clientData,
+      status: 'SUCCESS',
+      notification: {
+        type: 'INFO',
+        category: 'CLIENT',
+        title: 'Dossier locataire mis à jour',
+        message: `Les informations du locataire #${id} ont été actualisées.`,
+      },
+    });
+
+    return updated;
   }
 
   async replaceTenant(oldId, data, user) {
@@ -249,7 +310,33 @@ class ClientService extends BaseService {
     }
     const property = propRows[0];
 
+    data.performedBy = user?.id || null;
     const result = await this.repository.replaceTenantAtomic(oldId, data, oldClient, property);
+
+    const oldName = `${oldClient.last_name} ${oldClient.first_name || ''}`.trim();
+    const newName = result.newTenantName || 'Nouveau locataire';
+    const propRef = property.reference_code || `BIEN-${property.id}`;
+
+    await ManagerAuditService.logAction({
+      userId: user?.id,
+      operationType: 'REASSIGN_PROPERTY',
+      operationLabel: 'Changement de locataire',
+      propertyId: property.id,
+      propertyRef: propRef,
+      ownerId: property.owner_id || null,
+      targetSummary: `${propRef} / Nouveau locataire : ${newName}`,
+      description: `Changement de locataire sur le bien ${propRef} : ${oldName} remplacé par ${newName}.${data.departureReason ? ' Motif départ: ' + data.departureReason : ''}`,
+      oldValues: { oldTenantId: oldId, tenantName: oldName },
+      newValues: { newTenantId: result.newTenantId, newTenantName: newName, rent: data.newRent || property.rent },
+      status: 'SUCCESS',
+      notification: {
+        type: 'INFO',
+        category: 'ASSIGNMENT',
+        title: 'Changement de locataire',
+        message: `Le bien ${propRef} a été réattribué à ${newName} (départ de ${oldName}).`,
+      },
+    });
+
     return { oldTenantId: oldId, newTenantId: result.newTenantId, propertyId: property.id };
   }
 
@@ -268,7 +355,29 @@ class ClientService extends BaseService {
     await this.repository.departTenant(id, {
       departureDate,
       departureReason,
-      departureNotes
+      departureNotes,
+      performedBy: user?.id || null
+    });
+
+    const tenantName = `${existing.last_name} ${existing.first_name || ''}`.trim();
+    const propRef = existing.property_name || (existing.property_id ? `BIEN-${existing.property_id}` : 'Bien');
+
+    await ManagerAuditService.logAction({
+      userId: user?.id,
+      operationType: 'DEPART_TENANT',
+      operationLabel: 'Libération du bien',
+      propertyId: existing.property_id || null,
+      targetSummary: `Départ locataire : ${tenantName} / Bien libéré`,
+      description: `Départ du locataire ${tenantName} enregistré (${departureReason}). Le bien associé a été remis en statut disponible (vacant).`,
+      oldValues: { tenantId: id, name: tenantName, propertyId: existing.property_id, amountDue: existing.amount_due },
+      newValues: { status: 'inactive', departureDate, departureReason, departureNotes },
+      status: 'SUCCESS',
+      notification: {
+        type: 'WARNING',
+        category: 'ASSIGNMENT',
+        title: 'Bien libéré (Départ locataire)',
+        message: `Le locataire ${tenantName} a quitté le bien. Ce dernier est désormais vacant et prêt à être réattribué.`,
+      },
     });
 
     return { id, status: 'inactive', departureDate, departureReason };

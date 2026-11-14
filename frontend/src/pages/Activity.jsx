@@ -10,8 +10,11 @@ const OPERATION_TYPES = [
   { value: 'UPDATE_PROPERTY', label: 'Modification bien' },
   { value: 'CREATE_OWNER', label: 'Création propriétaire' },
   { value: 'UPDATE_OWNER', label: 'Modification propriétaire' },
-  { value: 'ASSIGN_PROPERTY', label: 'Attribution de bien' },
-  { value: 'REASSIGN_PROPERTY', label: 'Réattribution de bien' },
+  { value: 'CREATE_TENANT', label: 'Création locataire' },
+  { value: 'UPDATE_TENANT', label: 'Modification locataire' },
+  { value: 'ASSIGN_PROPERTY', label: 'Attribution bien à locataire' },
+  { value: 'REASSIGN_PROPERTY', label: 'Changement de locataire' },
+  { value: 'DEPART_TENANT', label: 'Libération du bien' },
 ];
 
 export default function Activity() {
@@ -304,7 +307,9 @@ export default function Activity() {
                       <td className="px-4 py-3">
                         <span
                           className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                            log.operation_type?.startsWith('CREATE')
+                            log.operation_type === 'DEPART_TENANT'
+                              ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                              : log.operation_type?.startsWith('CREATE')
                               ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                               : log.operation_type?.startsWith('ASSIGN')
                               ? 'bg-sky-50 text-sky-700 border border-sky-200'

@@ -203,14 +203,16 @@ class PropertyService extends BaseService {
     const page  = parseInt(filters.page  || 1,  10);
     const limit = parseInt(filters.limit || 50,  10);
 
-    const [data, total] = await Promise.all([
+    const [data, total, kpis] = await Promise.all([
       this.repository.findAssignments(filters),
       this.repository.countAssignments(filters),
+      this.repository.getAssignmentKPIs(),
     ]);
 
     const totalPages = Math.ceil(total / limit);
     return {
       data,
+      kpis,
       pagination: {
         page,
         limit,
@@ -355,7 +357,43 @@ class PropertyService extends BaseService {
         ]
       );
 
+      // Historiser dans property_tenant_assignments
+      await conn.query(
+        `INSERT INTO property_tenant_assignments 
+         (property_id, owner_id, previous_client_id, new_client_id, action_type, rent_amount, performed_by, notes, created_at)
+         VALUES (?, ?, NULL, ?, 'INITIAL_ASSIGNMENT', ?, ?, ?, NOW())`,
+        [propertyId, prop.owner_id || null, tenantId, rent, user?.id || null, data.notes || 'Attribution directe par le Manager']
+      );
+
       await conn.commit();
+
+      const propRef = prop.reference_code || `BIEN-${propertyId}`;
+      let ownerName = null;
+      if (prop.owner_id) {
+        const owner = await OwnerRepository.findById(prop.owner_id);
+        ownerName = owner?.display_name || (owner ? `${owner.first_name || ''} ${owner.last_name || ''}`.trim() : null);
+      }
+
+      await ManagerAuditService.logAction({
+        userId: user?.id,
+        operationType: 'ASSIGN_PROPERTY',
+        operationLabel: 'Attribution bien à locataire',
+        propertyId,
+        propertyRef: propRef,
+        ownerId: prop.owner_id || null,
+        ownerName: ownerName,
+        targetSummary: `${propRef} ➔ Locataire : ${tName}`,
+        description: `Attribution du bien ${propRef} (${prop.name}) au locataire ${tName} (Loyer: ${rent} FCFA).`,
+        newValues: { propertyId, tenantId, rent, startDate },
+        status: 'SUCCESS',
+        notification: {
+          type: 'SUCCESS',
+          category: 'ASSIGNMENT',
+          title: 'Bien attribué à un locataire',
+          message: `Le bien ${propRef} a été attribué avec succès à ${tName}.`,
+        },
+      });
+
       return { propertyId, tenantId, status: 'loue' };
     } catch (err) {
       await conn.rollback();

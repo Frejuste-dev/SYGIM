@@ -1770,16 +1770,16 @@ class ReportRepository {
       pool.query('SELECT COUNT(*) as total FROM properties'),
       pool.query('SELECT COUNT(*) as count FROM properties WHERE created_at BETWEEN ? AND ?', [`${startStr} 00:00:00`, `${endStr} 23:59:59`]),
       pool.query('SELECT COUNT(*) as count FROM properties WHERE created_at BETWEEN ? AND ?', [`${prevStartStr} 00:00:00`, `${prevEndStr} 23:59:59`]),
-      pool.query('SELECT COUNT(*) as total FROM properties WHERE owner_id IS NOT NULL'),
+      pool.query("SELECT COUNT(*) as total FROM properties WHERE status = 'loue' OR tenant_id IS NOT NULL"),
       pool.query(
-        `SELECT COUNT(*) as count FROM properties 
-         WHERE owner_id IS NOT NULL AND (assigned_at BETWEEN ? AND ? OR (assigned_at IS NULL AND created_at BETWEEN ? AND ?))`,
-        [`${startStr} 00:00:00`, `${endStr} 23:59:59`, `${startStr} 00:00:00`, `${endStr} 23:59:59`]
+        `SELECT COUNT(*) as count FROM property_tenant_assignments 
+         WHERE action_type IN ('INITIAL_ASSIGNMENT', 'REASSIGNMENT') AND created_at BETWEEN ? AND ?`,
+        [`${startStr} 00:00:00`, `${endStr} 23:59:59`]
       ),
       pool.query(
-        `SELECT COUNT(*) as count FROM properties 
-         WHERE owner_id IS NOT NULL AND (assigned_at BETWEEN ? AND ? OR (assigned_at IS NULL AND created_at BETWEEN ? AND ?))`,
-        [`${prevStartStr} 00:00:00`, `${prevEndStr} 23:59:59`, `${prevStartStr} 00:00:00`, `${prevEndStr} 23:59:59`]
+        `SELECT COUNT(*) as count FROM property_tenant_assignments 
+         WHERE action_type IN ('INITIAL_ASSIGNMENT', 'REASSIGNMENT') AND created_at BETWEEN ? AND ?`,
+        [`${prevStartStr} 00:00:00`, `${prevEndStr} 23:59:59`]
       ),
       pool.query('SELECT COUNT(*) as total FROM owners'),
       pool.query('SELECT COUNT(*) as count FROM owners WHERE created_at BETWEEN ? AND ?', [`${startStr} 00:00:00`, `${endStr} 23:59:59`]),
