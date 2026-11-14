@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { API } from '../api/services';
+import { useModalEscape } from '../hooks/useModalEscape';
 import { formatXOF, formatDate, formatMethod } from '../utils/formatters';
 import { printOwnerSettlementReceipt } from '../utils/exportUtils';
 import { useToast } from './ToastContext';
 
 export default function InstallmentHistoryModal({ settlement, onClose, onSuccess }) {
+  useModalEscape(Boolean(settlement), onClose);
   const { showToast } = useToast();
   const remaining = Math.max(0, Number(settlement?.remaining_to_pay || 0));
 

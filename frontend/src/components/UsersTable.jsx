@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import TableSkeleton from './ui/TableSkeleton';
 
 const ROLE_LABELS = {
   admin: 'Administrateur',
@@ -121,9 +122,23 @@ export default function UsersTable({
 
       {/* 3. Le Tableau */}
       {loading ? (
-        <div className="text-center py-16 text-slate-500">
-          <i className="fas fa-circle-notch fa-spin fa-2x text-primary mb-4"></i>
-          <p>Chargement des utilisateurs...</p>
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200">
+          <div className="w-full">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-200">
+                  <th className="bg-slate-50 border-b border-slate-200 text-slate-500 text-xs uppercase tracking-wider py-3 px-4 font-semibold">Utilisateur</th>
+                  <th className="bg-slate-50 border-b border-slate-200 text-slate-500 text-xs uppercase tracking-wider py-3 px-4 font-semibold">Identifiant</th>
+                  <th className="bg-slate-50 border-b border-slate-200 text-slate-500 text-xs uppercase tracking-wider py-3 px-4 font-semibold">Rôle</th>
+                  <th className="bg-slate-50 border-b border-slate-200 text-slate-500 text-xs uppercase tracking-wider py-3 px-4 font-semibold">Statut</th>
+                  <th className="bg-slate-50 border-b border-slate-200 text-slate-500 text-xs uppercase tracking-wider py-3 px-4 font-semibold text-right w-48">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                <TableSkeleton rows={5} columns={5} />
+              </tbody>
+            </table>
+          </div>
         </div>
       ) : (
         <div className="bg-white rounded-xl shadow-sm border border-slate-200">

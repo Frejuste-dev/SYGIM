@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import useModalEscape from '../hooks/useModalEscape';
 
 const EMPTY_FORM = {
   username: '', password: '', firstName: '', lastName: '',
@@ -10,19 +11,14 @@ export default function UserFormModal({ isOpen, onClose, onSubmit }) {
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  useModalEscape(isOpen, onClose);
+
   useEffect(() => {
     if (!isOpen) return;
     setForm({ ...EMPTY_FORM });
     setError('');
     setSubmitting(false);
   }, [isOpen]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [isOpen, onClose]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

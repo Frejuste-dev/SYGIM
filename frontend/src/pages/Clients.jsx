@@ -9,6 +9,7 @@ import { useConfirm } from '../components/ConfirmContext';
 import StatsCard from '../components/StatsCard';
 import Modal from '../components/Modal';
 import TenantStatementModal from '../components/TenantStatementModal';
+import TableSkeleton from '../components/ui/TableSkeleton';
 import { formatXOF, formatStatus } from '../utils/formatters';
 import { exportToExcel, exportToPDF } from '../utils/exportUtils';
 
@@ -291,19 +292,14 @@ export default function Clients() {
               <tr className="bg-slate-50 border-y border-slate-200 text-slate-500 text-xs uppercase tracking-wider">
                 <th className="py-3 px-6 font-semibold">Identité</th>
                 <th className="py-3 px-6 font-semibold">Contact</th>
-                <th className="py-3 px-6 font-semibold">Loyer</th>
+                <th className="py-3 px-6 font-semibold text-right">Loyer</th>
                 <th className="py-3 px-6 font-semibold">Statut</th>
                 <th className="py-3 px-6 font-semibold text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading ? (
-                <tr>
-                  <td colSpan="5" className="py-12 text-center text-slate-500">
-                    <i className="fas fa-spinner fa-spin text-primary text-xl mb-3 block"></i>
-                    Chargement des locataires...
-                  </td>
-                </tr>
+                <TableSkeleton rows={5} columns={5} />
               ) : clients.length === 0 ? (
                 <tr>
                   <td colSpan="5" className="py-12 text-center text-slate-500">
@@ -339,7 +335,7 @@ export default function Clients() {
                         <div className="text-sm text-slate-700">{client.phone || '-'}</div>
                         <div className="text-xs text-slate-500 truncate max-w-[150px]" title={client.email}>{client.email || '-'}</div>
                       </td>
-                      <td className="py-4 px-6">
+                      <td className="py-4 px-6 text-right tabular-nums">
                         <div className="font-medium text-slate-900">{formatXOF(client.amount_due, { compact: false })}</div>
                         {client.amount_paid > 0 && <div className="text-xs text-emerald-600">{formatXOF(client.amount_paid, { compact: false })} payé</div>}
                       </td>

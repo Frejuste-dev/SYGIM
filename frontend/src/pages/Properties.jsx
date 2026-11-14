@@ -7,6 +7,7 @@ import { useToast } from '../components/ToastContext';
 import { useConfirm } from '../components/ConfirmContext';
 import StatsCard from '../components/StatsCard';
 import Modal from '../components/Modal';
+import TableSkeleton from '../components/ui/TableSkeleton';
 import { formatXOF, formatStatus } from '../utils/formatters';
 import { exportToExcel, exportToPDF } from '../utils/exportUtils';
 
@@ -319,14 +320,16 @@ export default function Properties() {
                 <th className="py-3 px-6 font-semibold">Propriétaire</th>
                 <th className="py-3 px-6 font-semibold">Adresse</th>
                 <th className="py-3 px-6 font-semibold">Statut</th>
-                <th className="py-3 px-6 font-semibold">Valeur</th>
-                <th className="py-3 px-6 font-semibold">Loyer</th>
+                <th className="py-3 px-6 font-semibold text-right">Valeur</th>
+                <th className="py-3 px-6 font-semibold text-right">Loyer</th>
                 <th className="py-3 px-6 font-semibold">Commission</th>
                 <th className="py-3 px-6 font-semibold text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredProperties.length > 0 ? filteredProperties.map(p => {
+              {loading ? (
+                <TableSkeleton rows={5} columns={9} />
+              ) : filteredProperties.length > 0 ? filteredProperties.map(p => {
                 const pStatus = formatStatus(p.status);
                 const ownerObj = owners.find(o => Number(o.id) === Number(p.owner_id));
                 const ownerName = ownerObj
@@ -360,10 +363,10 @@ export default function Properties() {
                         {pStatus.label}
                       </span>
                     </td>
-                    <td className="py-4 px-6 text-sm font-medium text-slate-900">
+                    <td className="py-4 px-6 text-sm font-medium text-slate-900 text-right tabular-nums">
                       {formatXOF(p.value, { compact: false })}
                     </td>
-                    <td className="py-4 px-6 text-sm font-medium text-slate-900">
+                    <td className="py-4 px-6 text-sm font-medium text-slate-900 text-right tabular-nums">
                       {formatXOF(p.rent, { compact: false })}
                     </td>
                     <td className="py-4 px-6 text-sm">

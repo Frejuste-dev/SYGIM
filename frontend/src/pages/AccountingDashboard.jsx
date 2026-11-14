@@ -8,6 +8,7 @@ import { useToast } from '../components/ToastContext';
 import Modal from '../components/Modal';
 import OwnerPayoutModal from '../components/OwnerPayoutModal';
 import InstallmentHistoryModal from '../components/InstallmentHistoryModal';
+import TableSkeleton from '../components/ui/TableSkeleton';
 import { formatXOF, formatDate, formatMethod } from '../utils/formatters';
 import { exportToExcel, exportToPDF, printOwnerSettlementReceipt } from '../utils/exportUtils';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts';
@@ -621,7 +622,7 @@ export default function AccountingDashboard() {
                         <td className="py-3 px-4 text-slate-600">{formatDate(tx.date || tx.createdAt)}</td>
                         <td className="py-3 px-4 font-medium text-slate-900">{tx.client_name || tx.client || '-'}</td>
                         <td className="py-3 px-4 text-slate-600">{formatMethod(tx.method)}</td>
-                        <td className="py-3 px-4 text-right font-bold text-emerald-600">+{formatXOF(tx.amount, { compact: false })}</td>
+                        <td className="py-3 px-4 text-right font-bold text-emerald-600 tabular-nums">+{formatXOF(tx.amount, { compact: false })}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -724,7 +725,7 @@ export default function AccountingDashboard() {
                         <td className="py-3.5 px-4 text-xs font-medium text-slate-600">
                           {formatMethod(t.method)}
                         </td>
-                        <td className="py-3.5 px-4 text-right font-black text-amber-800 text-base">
+                        <td className="py-3.5 px-4 text-right font-black text-amber-800 text-base tabular-nums">
                           {formatXOF(t.amount, { compact: false })}
                         </td>
                         <td className="py-3.5 px-4 text-center">
@@ -799,20 +800,16 @@ export default function AccountingDashboard() {
                   <th className="py-3 px-4">Propriétaire & Bien(s)</th>
                   <th className="py-3 px-4">Période / Date</th>
                   <th className="py-3 px-4">Mode & Moyen</th>
-                  <th className="py-3 px-4">Net Dû</th>
-                  <th className="py-3 px-4">Versé</th>
-                  <th className="py-3 px-4">Reste</th>
+                  <th className="py-3 px-4 text-right">Net Dû</th>
+                  <th className="py-3 px-4 text-right">Versé</th>
+                  <th className="py-3 px-4 text-right">Reste</th>
                   <th className="py-3 px-4">Statut</th>
                   <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {loadingFinancial ? (
-                  <tr>
-                    <td colSpan="9" className="py-12 text-center text-slate-500">
-                      <i className="fas fa-spinner fa-spin mr-2"></i> Chargement des règlements propriétaires...
-                    </td>
-                  </tr>
+                  <TableSkeleton rows={5} columns={9} />
                 ) : settlements.length === 0 ? (
                   <tr>
                     <td colSpan="9" className="py-12 text-center text-slate-500">
@@ -843,9 +840,9 @@ export default function AccountingDashboard() {
                           </span>
                           <div className="text-xs text-slate-500 mt-1">{formatMethod(s.payment_method || 'bank_transfer')}</div>
                         </td>
-                        <td className="py-3.5 px-4 font-medium text-slate-800">{formatXOF(s.net_amount, { compact: false })}</td>
-                        <td className="py-3.5 px-4 font-bold text-emerald-700">{formatXOF(s.amount_paid || s.net_amount, { compact: false })}</td>
-                        <td className="py-3.5 px-4 font-semibold text-rose-600">
+                        <td className="py-3.5 px-4 font-medium text-slate-800 text-right tabular-nums">{formatXOF(s.net_amount, { compact: false })}</td>
+                        <td className="py-3.5 px-4 font-bold text-emerald-700 text-right tabular-nums">{formatXOF(s.amount_paid || s.net_amount, { compact: false })}</td>
+                        <td className="py-3.5 px-4 font-semibold text-rose-600 text-right tabular-nums">
                           {s.remaining_to_pay > 0 ? formatXOF(s.remaining_to_pay, { compact: false }) : '0 FCFA'}
                         </td>
                         <td className="py-3.5 px-4">
@@ -948,13 +945,13 @@ export default function AccountingDashboard() {
                       <td className="py-3 px-4 font-medium text-slate-900">{e.third_party}</td>
                       <td className="py-3 px-4 text-xs text-slate-600">{e.property_name}</td>
                       <td className="py-3 px-4 text-xs text-slate-600 max-w-xs truncate" title={e.description}>{e.description}</td>
-                      <td className="py-3 px-4 text-right font-bold text-emerald-600">
+                      <td className="py-3 px-4 text-right font-bold text-emerald-600 tabular-nums">
                         {e.credit > 0 ? `+${formatXOF(e.credit, { compact: false })}` : '-'}
                       </td>
-                      <td className="py-3 px-4 text-right font-bold text-rose-600">
+                      <td className="py-3 px-4 text-right font-bold text-rose-600 tabular-nums">
                         {e.debit > 0 ? `-${formatXOF(e.debit, { compact: false })}` : '-'}
                       </td>
-                      <td className="py-3 px-4 text-right font-extrabold text-slate-900 bg-slate-50/60">
+                      <td className="py-3 px-4 text-right font-extrabold text-slate-900 bg-slate-50/60 tabular-nums">
                         {formatXOF(e.running_balance, { compact: false })}
                       </td>
                     </tr>

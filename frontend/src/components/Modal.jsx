@@ -1,15 +1,10 @@
-import React, { useEffect } from 'react';
+import React from 'react';
+import useModalEscape from '../hooks/useModalEscape';
 
 export default function Modal({ title, subtitle, icon = 'fa-layer-group', onClose, children, maxWidth, variant }) {
   const isCollector = variant === 'collector';
 
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape' && onClose) onClose();
-    };
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
+  useModalEscape(true, onClose);
 
   return (
     <div

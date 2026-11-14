@@ -10,6 +10,7 @@ import { API } from '../api/services';
 import StatsCard from '../components/StatsCard';
 import Modal from '../components/Modal';
 import OwnerPayoutModal from '../components/OwnerPayoutModal';
+import TableSkeleton from '../components/ui/TableSkeleton';
 import { formatXOF } from '../utils/formatters';
 import { exportToExcel, exportToPDF } from '../utils/exportUtils';
 
@@ -448,9 +449,22 @@ export default function Owners() {
 
         <div className="overflow-x-auto">
           {loading ? (
-            <div className="p-8 text-center text-slate-500">
-              <i className="fas fa-spinner fa-spin mr-2"></i>Chargement des propriétaires et de leurs biens...
-            </div>
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr>
+                  <th className="bg-slate-50 border-y border-slate-200 text-slate-500 text-xs uppercase tracking-wider py-3.5 px-4 font-semibold">Propriétaire</th>
+                  <th className="bg-slate-50 border-y border-slate-200 text-slate-500 text-xs uppercase tracking-wider py-3.5 px-4 font-semibold">Contact</th>
+                  <th className="bg-slate-50 border-y border-slate-200 text-slate-500 text-xs uppercase tracking-wider py-3.5 px-4 font-semibold min-w-[320px]">
+                    Biens &amp; État du Parc (Loué / Vacant / Réparation)
+                  </th>
+                  <th className="bg-slate-50 border-y border-slate-200 text-slate-500 text-xs uppercase tracking-wider py-3.5 px-4 font-semibold">Modalités de reversement</th>
+                  <th className="bg-slate-50 border-y border-slate-200 text-slate-500 text-xs uppercase tracking-wider py-3.5 px-4 font-semibold text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                <TableSkeleton rows={5} columns={5} />
+              </tbody>
+            </table>
           ) : filteredOwners.length === 0 ? (
             <div className="p-12 text-center">
               <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-400 text-2xl">
@@ -534,7 +548,7 @@ export default function Owners() {
                             {ownerProps.length} bien{ownerProps.length > 1 ? 's' : ''} au total
                           </span>
                           {totalPortfolioRent > 0 && (
-                            <span className="text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">
+                            <span className="text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200 tabular-nums">
                               {formatXOF(totalPortfolioRent)}/mois
                             </span>
                           )}

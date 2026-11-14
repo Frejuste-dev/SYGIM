@@ -29,32 +29,32 @@ export function transactionSearchDate(transaction) {
 }
 
 const METHOD_MAP = {
-  cash: "Especes",
+  cash: "Espèces",
   mobile_money: "Mobile Money",
   bank_transfer: "Virement bancaire",
-  cheque: "Cheque",
-  check: "Cheque",
+  cheque: "Chèque",
+  check: "Chèque",
   card: "Carte bancaire",
 };
 
 export function formatMethod(methodKey) {
-  if (!methodKey) return "Especes";
+  if (!methodKey) return "Espèces";
   return METHOD_MAP[methodKey] || methodKey;
 }
 
 const STATUS_MAP = {
-  paid:         { label: "Paye",         badgeClass: "paid",    twClass: "bg-emerald-50 text-emerald-700 border-emerald-200" },
-  processed:    { label: "Traite",        badgeClass: "paid",    twClass: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+  paid:         { label: "Payé",          badgeClass: "paid",    twClass: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+  processed:    { label: "Traité",        badgeClass: "paid",    twClass: "bg-emerald-50 text-emerald-700 border-emerald-200" },
   partial:      { label: "Partiel",       badgeClass: "partial", twClass: "bg-sky-50 text-sky-700 border-sky-200" },
   pending:      { label: "En attente",    badgeClass: "pending", twClass: "bg-amber-50 text-amber-700 border-amber-200" },
-  overdue:      { label: "Non paye",      badgeClass: "overdue", twClass: "bg-rose-50 text-rose-700 border-rose-200" },
+  overdue:      { label: "Impayé",        badgeClass: "overdue", twClass: "bg-rose-50 text-rose-700 border-rose-200" },
   late:         { label: "En retard",     badgeClass: "overdue", twClass: "bg-rose-50 text-rose-700 border-rose-200" },
-  cancelled:    { label: "Annule",        badgeClass: "",        twClass: "bg-slate-50 text-slate-500 border-slate-200" },
-  refunded:     { label: "Rembourse",     badgeClass: "",        twClass: "bg-slate-50 text-slate-500 border-slate-200" },
+  cancelled:    { label: "Annulé",        badgeClass: "",        twClass: "bg-slate-50 text-slate-500 border-slate-200" },
+  refunded:     { label: "Remboursé",     badgeClass: "",        twClass: "bg-slate-50 text-slate-500 border-slate-200" },
   inactive:     { label: "Inactif",       badgeClass: "",        twClass: "bg-slate-50 text-slate-400 border-slate-200" },
-  loue:         { label: "Loue",          badgeClass: "paid",    twClass: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+  loue:         { label: "Loué",          badgeClass: "paid",    twClass: "bg-emerald-50 text-emerald-700 border-emerald-200" },
   vacant:       { label: "Vacant",        badgeClass: "overdue", twClass: "bg-rose-50 text-rose-700 border-rose-200" },
-  en_renovation:{ label: "En renovation", badgeClass: "info",    twClass: "bg-sky-50 text-sky-700 border-sky-200" },
+  en_renovation:{ label: "En rénovation", badgeClass: "info",    twClass: "bg-sky-50 text-sky-700 border-sky-200" },
   vendu:        { label: "Vendu",         badgeClass: "warning", twClass: "bg-amber-50 text-amber-700 border-amber-200" },
 };
 
