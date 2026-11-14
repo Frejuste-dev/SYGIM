@@ -293,16 +293,33 @@ export default function PropertyAssignments() {
           </div>
         </div>
 
-        {/* Barre de recherche */}
-        <div className="relative w-full sm:w-72">
-          <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
-          <input
-            type="text"
-            placeholder="Rechercher bien, référence, locataire..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-2xs"
-          />
+        {/* Barre de recherche et action rapide */}
+        <div className="flex items-center gap-2.5 w-full sm:w-auto">
+          <div className="relative flex-1 sm:w-64">
+            <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+            <input
+              type="text"
+              placeholder="Rechercher bien, référence, locataire..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-9 pr-3 py-2 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-2xs"
+            />
+          </div>
+          {kpis.unassignedCount > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('unassigned');
+                const firstVacant = properties.find(p => p.status === 'vacant' || p.status === 'disponible');
+                if (firstVacant) handleOpenAssign(firstVacant);
+              }}
+              className="h-9 px-3.5 bg-primary hover:bg-primary-dark text-white rounded-lg text-xs font-bold transition-all shadow-2xs inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer"
+              title="Attribuer un bien disponible à un locataire"
+            >
+              <i className="fas fa-plus text-xs"></i>
+              <span>Attribuer un bien</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -434,7 +451,7 @@ export default function PropertyAssignments() {
                   <th className="py-3 px-6 font-semibold">Propriétaire bailleur</th>
                   <th className="py-3 px-6 font-semibold text-right">Loyer mensuel</th>
                   <th className="py-3 px-6 font-semibold text-center">Statut</th>
-                  <th className="py-3 px-6 font-semibold text-right">Action</th>
+                  <th className="py-3.5 px-6 font-semibold text-right whitespace-nowrap min-w-[140px]">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-sm">
@@ -500,11 +517,12 @@ export default function PropertyAssignments() {
                           Vacant
                         </span>
                       </td>
-                      <td className="py-4 px-6 text-right">
+                      <td className="py-4 px-6 text-right whitespace-nowrap">
                         <button
                           type="button"
                           onClick={() => handleOpenAssign(p)}
-                          className="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-primary text-white hover:bg-primary-dark transition-all shadow-2xs flex items-center gap-1.5 ml-auto cursor-pointer"
+                          className="h-8 px-3 rounded-lg text-xs font-bold bg-primary hover:bg-primary-dark text-white transition-all shadow-2xs inline-flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
+                          title={`Attribuer ${p.name} à un locataire`}
                         >
                           <i className="fas fa-key text-[10px]"></i>
                           <span>Attribuer ce bien</span>
@@ -545,7 +563,7 @@ export default function PropertyAssignments() {
                   <th className="py-3 px-6 font-semibold">Locataire actuel</th>
                   <th className="py-3 px-6 font-semibold text-right">Loyer mensuel</th>
                   <th className="py-3 px-6 font-semibold text-center">Statut bail</th>
-                  <th className="py-3 px-6 font-semibold text-right">Actions</th>
+                  <th className="py-3.5 px-6 font-semibold text-right whitespace-nowrap min-w-[180px]">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-sm">
@@ -607,12 +625,12 @@ export default function PropertyAssignments() {
                           Loué (Actif)
                         </span>
                       </td>
-                      <td className="py-4 px-6 text-right">
-                        <div className="flex items-center justify-end gap-2">
+                      <td className="py-4 px-6 text-right whitespace-nowrap">
+                        <div className="inline-flex items-center justify-end gap-1.5">
                           <button
                             type="button"
                             onClick={() => handleOpenReassign(p)}
-                            className="px-2.5 py-1.5 rounded-lg text-xs font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 transition-colors cursor-pointer flex items-center gap-1"
+                            className="h-8 px-2.5 rounded-lg text-xs font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 transition-colors cursor-pointer inline-flex items-center gap-1.5 shadow-2xs whitespace-nowrap"
                             title="Remplacer le locataire"
                           >
                             <i className="fas fa-user-pen text-[10px]"></i>
@@ -621,7 +639,7 @@ export default function PropertyAssignments() {
                           <button
                             type="button"
                             onClick={() => handleOpenDepart(p)}
-                            className="px-2.5 py-1.5 rounded-lg text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition-colors cursor-pointer flex items-center gap-1"
+                            className="h-8 px-2.5 rounded-lg text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition-colors cursor-pointer inline-flex items-center gap-1.5 shadow-2xs whitespace-nowrap"
                             title="Enregistrer le départ et libérer le bien"
                           >
                             <i className="fas fa-arrow-right-from-bracket text-[10px]"></i>
