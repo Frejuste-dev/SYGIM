@@ -1095,6 +1095,520 @@ class ReportRepository {
       statements
     };
   }
+
+  /**
+   * Tableau de bord analytique et dynamique de suivi des performances (Espace Comptabilité & Direction)
+   */
+  async getPerformanceDashboard({ granularity = 'month', startDate, endDate } = {}) {
+    // 1. Résolution des plages de dates N et N-1
+    let start, end;
+    if (startDate && endDate) {
+      start = new Date(`${startDate}T00:00:00Z`);
+      end = new Date(`${endDate}T23:59:59Z`);
+    } else if (granularity === 'quarter') {
+      start = new Date('2026-10-01T00:00:00Z');
+      end = new Date('2026-12-31T23:59:59Z');
+    } else if (granularity === 'year') {
+      start = new Date('2026-01-01T00:00:00Z');
+      end = new Date('2026-12-31T23:59:59Z');
+    } else if (granularity === 'day') {
+      const d = startDate || '2026-11-14';
+      start = new Date(`${d}T00:00:00Z`);
+      end = new Date(`${d}T23:59:59Z`);
+    } else {
+      // 'month' par défaut (Novembre 2026)
+      start = new Date('2026-11-01T00:00:00Z');
+      end = new Date('2026-11-30T23:59:59Z');
+    }
+
+    const startStr = start.toISOString().slice(0, 10);
+    const endStr = end.toISOString().slice(0, 10);
+    const daysCount = Math.max(1, Math.round((end - start) / (24 * 3600 * 1000)));
+
+    let prevStart, prevEnd;
+    if (granularity === 'year' || daysCount >= 360) {
+      prevStart = new Date(Date.UTC(start.getUTCFullYear() - 1, start.getUTCMonth(), start.getUTCDate()));
+      prevEnd = new Date(Date.UTC(end.getUTCFullYear() - 1, end.getUTCMonth(), end.getUTCDate()));
+    } else if (granularity === 'quarter' || (daysCount >= 85 && daysCount <= 95)) {
+      prevStart = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() - 3, start.getUTCDate()));
+      prevEnd = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth() - 3, end.getUTCDate()));
+    } else if (granularity === 'month' || (daysCount >= 28 && daysCount <= 31 && start.getUTCDate() === 1)) {
+      const lastDayPrevMonth = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), 0)).getUTCDate();
+      prevStart = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() - 1, 1));
+      prevEnd = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() - 1, lastDayPrevMonth));
+    } else {
+      prevEnd = new Date(start.getTime() - 24 * 3600 * 1000);
+      prevStart = new Date(prevEnd.getTime() - (daysCount - 1) * 24 * 3600 * 1000);
+    }
+
+    const prevStartStr = prevStart.toISOString().slice(0, 10);
+    const prevEndStr = prevEnd.toISOString().slice(0, 10);
+
+    const calcEvolution = (curr, prev) => {
+      const current = Number(curr) || 0;
+      const previous = Number(prev) || 0;
+      if (previous === 0) {
+        return {
+          percent: current > 0 ? 100 : 0,
+          trend: current > 0 ? 'up' : 'stable'
+        };
+      }
+      const pct = Math.round(((current - previous) / previous) * 1000) / 10;
+      return {
+        percent: pct,
+        trend: pct > 0 ? 'up' : pct < 0 ? 'down' : 'stable'
+      };
+    };
+
+    // 2. Requête Recouvrements Globaux N & N-1
+    const [[txSummaryRow]] = await db.query(
+      `SELECT
+         COALESCE(SUM(CASE WHEN t.date BETWEEN ? AND ? THEN t.amount ELSE 0 END), 0) AS currentCollections,
+         COALESCE(SUM(CASE WHEN t.date BETWEEN ? AND ? THEN t.amount ELSE 0 END), 0) AS prevCollections,
+         COUNT(CASE WHEN t.date BETWEEN ? AND ? THEN 1 END) AS currentOperationsCount,
+         COUNT(CASE WHEN t.date BETWEEN ? AND ? THEN 1 END) AS prevOperationsCount,
+         COUNT(DISTINCT CASE WHEN t.date BETWEEN ? AND ? THEN t.client_id END) AS currentUniqueClients
+       FROM transactions t
+       WHERE t.status IN ('processed', 'paid', 'completed', 'partial', 'partiel')`,
+      [startStr, endStr, prevStartStr, prevEndStr, startStr, endStr, prevStartStr, prevEndStr, startStr, endStr]
+    );
+
+    const currentCollections = Number(txSummaryRow?.currentCollections || 0);
+    const prevCollections = Number(txSummaryRow?.prevCollections || 0);
+    const currentOperationsCount = Number(txSummaryRow?.currentOperationsCount || 0);
+    const currentUniqueClients = Number(txSummaryRow?.currentUniqueClients || 0);
+
+    // 3. Ventilation par canal de paiement sur la période N
+    const [methodRows] = await db.query(
+      `SELECT
+         method,
+         COUNT(*) AS count,
+         COALESCE(SUM(amount), 0) AS totalAmount
+       FROM transactions
+       WHERE status IN ('processed', 'paid', 'completed', 'partial', 'partiel')
+         AND date BETWEEN ? AND ?
+       GROUP BY method`,
+      [startStr, endStr]
+    );
+
+    const operationsByMethod = {
+      cash: { count: 0, amount: 0 },
+      mobile_money: { count: 0, amount: 0 },
+      bank_transfer: { count: 0, amount: 0 },
+      cheque: { count: 0, amount: 0 }
+    };
+
+    methodRows.forEach(m => {
+      const key = m.method === 'check' ? 'cheque' : m.method;
+      if (operationsByMethod[key]) {
+        operationsByMethod[key].count += Number(m.count || 0);
+        operationsByMethod[key].amount += Number(m.totalAmount || 0);
+      } else {
+        operationsByMethod.cash.count += Number(m.count || 0);
+        operationsByMethod.cash.amount += Number(m.totalAmount || 0);
+      }
+    });
+
+    // 4. Chiffre d'Affaires & Préfinancements (owner_settlements) N & N-1
+    let currentCommission = 0;
+    let prevCommission = 0;
+    let currentPrefinancing = 0;
+    let prevPrefinancing = 0;
+    let currentPrefinancingCount = 0;
+
+    try {
+      const [[osSummaryRow]] = await db.query(
+        `SELECT
+           COALESCE(SUM(CASE WHEN DATE(COALESCE(payout_date, period_start, created_at)) BETWEEN ? AND ? THEN agency_commission ELSE 0 END), 0) AS currentCommission,
+           COALESCE(SUM(CASE WHEN DATE(COALESCE(payout_date, period_start, created_at)) BETWEEN ? AND ? THEN agency_commission ELSE 0 END), 0) AS prevCommission,
+           COALESCE(SUM(CASE WHEN (is_prefinanced = 1 OR payout_mode = 'prefinancing' OR UPPER(status) IN ('PREFINANCED', 'REIMBURSED')) AND DATE(COALESCE(payout_date, period_start, created_at)) BETWEEN ? AND ? THEN amount_paid ELSE 0 END), 0) AS currentPrefinancing,
+           COALESCE(SUM(CASE WHEN (is_prefinanced = 1 OR payout_mode = 'prefinancing' OR UPPER(status) IN ('PREFINANCED', 'REIMBURSED')) AND DATE(COALESCE(payout_date, period_start, created_at)) BETWEEN ? AND ? THEN amount_paid ELSE 0 END), 0) AS prevPrefinancing,
+           COUNT(CASE WHEN (is_prefinanced = 1 OR payout_mode = 'prefinancing' OR UPPER(status) IN ('PREFINANCED', 'REIMBURSED')) AND DATE(COALESCE(payout_date, period_start, created_at)) BETWEEN ? AND ? THEN 1 END) AS currentPrefinancingCount
+         FROM owner_settlements`,
+        [startStr, endStr, prevStartStr, prevEndStr, startStr, endStr, prevStartStr, prevEndStr, startStr, endStr]
+      );
+
+      if (osSummaryRow) {
+        currentCommission = Number(osSummaryRow.currentCommission || 0);
+        prevCommission = Number(osSummaryRow.prevCommission || 0);
+        currentPrefinancing = Number(osSummaryRow.currentPrefinancing || 0);
+        prevPrefinancing = Number(osSummaryRow.prevPrefinancing || 0);
+        currentPrefinancingCount = Number(osSummaryRow.currentPrefinancingCount || 0);
+      }
+    } catch {
+      // Table optionnelle
+    }
+
+    // Si les commissions en settlement sont à 0, estimer le CA agence à 10% des encaissements
+    if (currentCommission === 0 && currentCollections > 0) {
+      currentCommission = Math.round(currentCollections * 0.10);
+    }
+    if (prevCommission === 0 && prevCollections > 0) {
+      prevCommission = Math.round(prevCollections * 0.10);
+    }
+
+    // 5. Objectif financier et impayés (Clients)
+    const [[clientSummaryRow]] = await db.query(
+      `SELECT
+         COALESCE(SUM(amount_due), 0) AS totalExpectedRent,
+         COALESCE(SUM(GREATEST(0, amount_due - COALESCE(amount_paid, 0))), 0) AS totalArrears
+       FROM clients
+       WHERE status != 'departed'`
+    );
+
+    const targetAmount = Number(clientSummaryRow?.totalExpectedRent || 20000000);
+    const remainingToCollect = Number(clientSummaryRow?.totalArrears || 0);
+    const achievementRate = targetAmount > 0 ? Math.round((currentCollections / targetAmount) * 1000) / 10 : 0;
+    const differenceAmount = currentCollections - targetAmount;
+    const isExceeded = currentCollections >= targetAmount;
+
+    // 6. KPIs Portefeuille (Biens & Propriétaires)
+    const [[propertySummaryRow]] = await db.query(
+      `SELECT
+         COUNT(*) AS totalProperties,
+         SUM(CASE WHEN status IN ('loue', 'partiel') OR tenant_id IS NOT NULL THEN 1 ELSE 0 END) AS occupiedCount,
+         SUM(CASE WHEN created_at BETWEEN ? AND ? THEN 1 ELSE 0 END) AS newPropertiesCount,
+         SUM(CASE WHEN created_at BETWEEN ? AND ? THEN 1 ELSE 0 END) AS prevNewPropertiesCount
+       FROM properties`,
+      [startStr, endStr, prevStartStr, prevEndStr]
+    );
+
+    const totalProperties = Number(propertySummaryRow?.totalProperties || 0);
+    const occupiedCount = Number(propertySummaryRow?.occupiedCount || 0);
+    const newPropertiesInPeriod = Number(propertySummaryRow?.newPropertiesCount || 0);
+    const prevNewProperties = Number(propertySummaryRow?.prevNewPropertiesCount || 0);
+    const occupancyRate = totalProperties > 0 ? Math.round((occupiedCount / totalProperties) * 100) : 0;
+
+    const [[ownerSummaryRow]] = await db.query(
+      `SELECT
+         COUNT(*) AS totalOwners,
+         SUM(CASE WHEN created_at BETWEEN ? AND ? THEN 1 ELSE 0 END) AS newOwnersCount,
+         SUM(CASE WHEN created_at BETWEEN ? AND ? THEN 1 ELSE 0 END) AS prevNewOwnersCount
+       FROM owners`,
+      [startStr, endStr, prevStartStr, prevEndStr]
+    );
+
+    const totalOwners = Number(ownerSummaryRow?.totalOwners || 0);
+    const newOwnersInPeriod = Number(ownerSummaryRow?.newOwnersCount || 0);
+    const prevNewOwners = Number(ownerSummaryRow?.prevNewOwnersCount || 0);
+
+    // 7. Performance des Récolteurs N & N-1
+    const [collectorStatsRows] = await db.query(
+      `SELECT
+         c.id,
+         CONCAT(COALESCE(c.first_name, ''), ' ', COALESCE(c.last_name, '')) AS fullName,
+         c.phone,
+         c.zone,
+         COALESCE(SUM(CASE WHEN t.date BETWEEN ? AND ? THEN t.amount ELSE 0 END), 0) AS currentCollected,
+         COUNT(CASE WHEN t.date BETWEEN ? AND ? THEN t.id END) AS currentOperationsCount,
+         COALESCE(SUM(CASE WHEN t.date BETWEEN ? AND ? THEN t.amount ELSE 0 END), 0) AS prevCollected,
+         (SELECT COALESCE(SUM(cl.amount_due), 0) FROM clients cl WHERE cl.collector_id = c.id AND cl.status != 'departed') AS targetAmount
+       FROM collectors c
+       LEFT JOIN transactions t ON t.collector_id = c.id AND t.status IN ('processed', 'paid', 'completed', 'partial', 'partiel')
+       WHERE c.active = 1 OR c.active IS NULL
+       GROUP BY c.id, c.first_name, c.last_name, c.phone, c.zone
+       ORDER BY currentCollected DESC`,
+      [startStr, endStr, startStr, endStr, prevStartStr, prevEndStr]
+    );
+
+    const activeCollectors = collectorStatsRows.filter(c => Number(c.currentCollected) > 0 || Number(c.currentOperationsCount) > 0);
+    const avgPerOperation = currentOperationsCount > 0 ? Math.round(currentCollections / currentOperationsCount) : 0;
+    const avgPerCollector = activeCollectors.length > 0 ? Math.round(currentCollections / activeCollectors.length) : 0;
+
+    const allCollectorsTable = collectorStatsRows.map((c, index) => {
+      const curCol = Number(c.currentCollected || 0);
+      const prvCol = Number(c.prevCollected || 0);
+      const tgt = Number(c.targetAmount || 0);
+      const evo = calcEvolution(curCol, prvCol);
+      return {
+        rank: index + 1,
+        id: c.id,
+        fullName: c.fullName.trim() || `Agent #${c.id}`,
+        zone: c.zone || 'Toutes zones',
+        phone: c.phone || '—',
+        totalCollected: curCol,
+        prevCollected: prvCol,
+        operationsCount: Number(c.currentOperationsCount || 0),
+        targetAmount: tgt,
+        recoveryRate: tgt > 0 ? Math.round((curCol / tgt) * 100) : 0,
+        sharePercent: currentCollections > 0 ? Math.round((curCol / currentCollections) * 1000) / 10 : 0,
+        evolutionPercent: evo.percent,
+        trend: evo.trend
+      };
+    });
+
+    const topCollectors = allCollectorsTable.slice(0, 5);
+
+    // 8. Génération des Intervalles Temporels (timeSeries)
+    // Selon la durée : S1..S5 pour le mois, jours pour <= 14j, mois pour trimestre/année
+    const timeSeries = [];
+    if (daysCount <= 14) {
+      // Intervalles journaliers
+      const cur = new Date(start);
+      const pCur = new Date(prevStart);
+      while (cur <= end) {
+        const dStr = cur.toISOString().slice(0, 10);
+        const pStr = pCur.toISOString().slice(0, 10);
+        const label = cur.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
+        const subLabel = cur.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric' });
+
+        timeSeries.push({
+          label,
+          subLabel,
+          dStr,
+          pStr,
+          revenue: 0,
+          prevRevenue: 0,
+          collections: 0,
+          prevCollections: 0,
+          prefinancing: 0,
+          prevPrefinancing: 0,
+          prefinancingCount: 0,
+          newPropertiesCount: 0
+        });
+
+        cur.setUTCDate(cur.getUTCDate() + 1);
+        pCur.setUTCDate(pCur.getUTCDate() + 1);
+      }
+    } else if (daysCount > 100) {
+      // 12 mois pour l'année
+      for (let m = 0; m < 12; m++) {
+        const mDate = new Date(Date.UTC(start.getUTCFullYear(), m, 1));
+        const lastDay = new Date(Date.UTC(start.getUTCFullYear(), m + 1, 0)).getUTCDate();
+        const dStrStart = `${start.getUTCFullYear()}-${String(m + 1).padStart(2, '0')}-01`;
+        const dStrEnd = `${start.getUTCFullYear()}-${String(m + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+
+        const pStrStart = `${prevStart.getUTCFullYear()}-${String(m + 1).padStart(2, '0')}-01`;
+        const pStrEnd = `${prevStart.getUTCFullYear()}-${String(m + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+
+        timeSeries.push({
+          label: mDate.toLocaleDateString('fr-FR', { month: 'short' }),
+          subLabel: mDate.toLocaleDateString('fr-FR', { month: 'long' }),
+          dStrStart,
+          dStrEnd,
+          pStrStart,
+          pStrEnd,
+          revenue: 0,
+          prevRevenue: 0,
+          collections: 0,
+          prevCollections: 0,
+          prefinancing: 0,
+          prevPrefinancing: 0,
+          prefinancingCount: 0,
+          newPropertiesCount: 0
+        });
+      }
+    } else {
+      // 5 Semaines S1..S5 (standard mois ou personnalisée)
+      const weeks = [
+        { label: 'S1', subLabel: '01 - 07', startDay: 1, endDay: 7 },
+        { label: 'S2', subLabel: '08 - 14', startDay: 8, endDay: 14 },
+        { label: 'S3', subLabel: '15 - 21', startDay: 15, endDay: 21 },
+        { label: 'S4', subLabel: '22 - 28', startDay: 22, endDay: 28 },
+        { label: 'S5', subLabel: '29 - Fin', startDay: 29, endDay: 31 }
+      ];
+
+      weeks.forEach(w => {
+        const dStrStart = `${startStr.slice(0, 8)}${String(w.startDay).padStart(2, '0')}`;
+        const dStrEnd = `${startStr.slice(0, 8)}${String(Math.min(w.endDay, end.getUTCDate())).padStart(2, '0')}`;
+
+        const pStrStart = `${prevStartStr.slice(0, 8)}${String(w.startDay).padStart(2, '0')}`;
+        const pStrEnd = `${prevStartStr.slice(0, 8)}${String(Math.min(w.endDay, prevEnd.getUTCDate())).padStart(2, '0')}`;
+
+        timeSeries.push({
+          label: w.label,
+          subLabel: w.subLabel,
+          dStrStart,
+          dStrEnd,
+          pStrStart,
+          pStrEnd,
+          revenue: 0,
+          prevRevenue: 0,
+          collections: 0,
+          prevCollections: 0,
+          prefinancing: 0,
+          prevPrefinancing: 0,
+          prefinancingCount: 0,
+          newPropertiesCount: 0
+        });
+      });
+    }
+
+    // Récupérer les transactions par intervalle
+    const [txIntervalRows] = await db.query(
+      `SELECT
+         DATE(date) AS txDate,
+         COALESCE(SUM(amount), 0) AS totalAmount
+       FROM transactions
+       WHERE status IN ('processed', 'paid', 'completed', 'partial', 'partiel')
+         AND ((date BETWEEN ? AND ?) OR (date BETWEEN ? AND ?))
+       GROUP BY DATE(date)`,
+      [startStr, endStr, prevStartStr, prevEndStr]
+    );
+
+    const txMap = {};
+    txIntervalRows.forEach(r => {
+      const d = r.txDate instanceof Date ? r.txDate.toISOString().slice(0, 10) : String(r.txDate).slice(0, 10);
+      txMap[d] = Number(r.totalAmount || 0);
+    });
+
+    // Récupérer les préfinancements par intervalle
+    const [prefIntervalRows] = await db.query(
+      `SELECT
+         DATE(COALESCE(payout_date, period_start, created_at)) AS prefDate,
+         COALESCE(SUM(amount_paid), 0) AS totalPref,
+         COUNT(*) AS prefCount
+       FROM owner_settlements
+       WHERE (is_prefinanced = 1 OR payout_mode = 'prefinancing' OR UPPER(status) IN ('PREFINANCED', 'REIMBURSED'))
+         AND ((DATE(COALESCE(payout_date, period_start, created_at)) BETWEEN ? AND ?)
+           OR (DATE(COALESCE(payout_date, period_start, created_at)) BETWEEN ? AND ?))
+       GROUP BY prefDate`,
+      [startStr, endStr, prevStartStr, prevEndStr]
+    );
+
+    const prefMap = {};
+    prefIntervalRows.forEach(r => {
+      const d = r.prefDate instanceof Date ? r.prefDate.toISOString().slice(0, 10) : String(r.prefDate).slice(0, 10);
+      prefMap[d] = {
+        amount: Number(r.totalPref || 0),
+        count: Number(r.prefCount || 0)
+      };
+    });
+
+    // Remplir les séries temporelles
+    timeSeries.forEach(pt => {
+      if (pt.dStr) {
+        // Journalier
+        pt.collections = txMap[pt.dStr] || 0;
+        pt.prevCollections = txMap[pt.pStr] || 0;
+        pt.prefinancing = prefMap[pt.dStr]?.amount || 0;
+        pt.prefinancingCount = prefMap[pt.dStr]?.count || 0;
+        pt.prevPrefinancing = prefMap[pt.pStr]?.amount || 0;
+      } else {
+        // Intervalle de dates (Semaines ou Mois)
+        Object.keys(txMap).forEach(d => {
+          if (d >= pt.dStrStart && d <= pt.dStrEnd) pt.collections += txMap[d];
+          if (d >= pt.pStrStart && d <= pt.pStrEnd) pt.prevCollections += txMap[d];
+        });
+        Object.keys(prefMap).forEach(d => {
+          if (d >= pt.dStrStart && d <= pt.dStrEnd) {
+            pt.prefinancing += prefMap[d].amount;
+            pt.prefinancingCount += prefMap[d].count;
+          }
+          if (d >= pt.pStrStart && d <= pt.pStrEnd) {
+            pt.prevPrefinancing += prefMap[d].amount;
+          }
+        });
+      }
+      pt.revenue = Math.round(pt.collections * 0.10);
+      pt.prevRevenue = Math.round(pt.prevCollections * 0.10);
+      delete pt.dStr;
+      delete pt.pStr;
+      delete pt.dStrStart;
+      delete pt.dStrEnd;
+      delete pt.pStrStart;
+      delete pt.pStrEnd;
+    });
+
+    // Sparklines
+    const revenueSparkline = timeSeries.map(pt => pt.revenue);
+    const collectionsSparkline = timeSeries.map(pt => pt.collections);
+    const prefinancingSparkline = timeSeries.map(pt => pt.prefinancing);
+
+    const revenueEvo = calcEvolution(currentCommission, prevCommission);
+    const collectionsEvo = calcEvolution(currentCollections, prevCollections);
+    const prefinancingEvo = calcEvolution(currentPrefinancing, prevPrefinancing);
+    const propertiesEvo = calcEvolution(newPropertiesInPeriod, prevNewProperties);
+    const ownersEvo = calcEvolution(newOwnersInPeriod, prevNewOwners);
+    const occupancyEvo = calcEvolution(occupancyRate, occupancyRate);
+
+    return {
+      period: {
+        startDate: startStr,
+        endDate: endStr,
+        prevStartDate: prevStartStr,
+        prevEndDate: prevEndStr,
+        granularity,
+        daysCount
+      },
+      financialKpis: {
+        revenue: {
+          current: currentCommission,
+          previous: prevCommission,
+          evolutionPercent: revenueEvo.percent,
+          trend: revenueEvo.trend,
+          sparkline: revenueSparkline
+        },
+        collections: {
+          current: currentCollections,
+          previous: prevCollections,
+          evolutionPercent: collectionsEvo.percent,
+          trend: collectionsEvo.trend,
+          sparkline: collectionsSparkline
+        },
+        prefinancing: {
+          current: currentPrefinancing,
+          previous: prevPrefinancing,
+          count: currentPrefinancingCount,
+          evolutionPercent: prefinancingEvo.percent,
+          trend: prefinancingEvo.trend,
+          sparkline: prefinancingSparkline
+        },
+        target: {
+          targetAmount,
+          realizedAmount: currentCollections,
+          achievementRate,
+          differenceAmount,
+          isExceeded
+        }
+      },
+      portfolioKpis: {
+        registeredProperties: {
+          total: totalProperties,
+          newInPeriod: newPropertiesInPeriod,
+          prevNewInPeriod: prevNewProperties,
+          evolutionPercent: propertiesEvo.percent,
+          trend: propertiesEvo.trend
+        },
+        assignedProperties: {
+          occupiedCount,
+          totalCount: totalProperties,
+          occupancyRate,
+          prevOccupancyRate: occupancyRate,
+          evolutionPercent: occupancyEvo.percent,
+          trend: occupancyEvo.trend
+        },
+        collectionRate: {
+          currentRate: achievementRate,
+          prevRate: 0,
+          evolutionPercent: collectionsEvo.percent,
+          trend: collectionsEvo.trend
+        },
+        registeredOwners: {
+          total: totalOwners,
+          newInPeriod: newOwnersInPeriod,
+          prevNewInPeriod: prevNewOwners,
+          evolutionPercent: ownersEvo.percent,
+          trend: ownersEvo.trend
+        }
+      },
+      timeSeries,
+      topCollectors,
+      complementaryDetails: {
+        operationsCount: {
+          total: currentOperationsCount,
+          ...operationsByMethod
+        },
+        avgPerOperation,
+        avgPerCollector,
+        uniqueClientsCount: currentUniqueClients,
+        prefinancingCount: currentPrefinancingCount,
+        remainingToCollect,
+        collectionRate: achievementRate,
+        allCollectorsTable
+      }
+    };
+  }
 }
 
 module.exports = new ReportRepository();

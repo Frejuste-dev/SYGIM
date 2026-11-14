@@ -71,3 +71,12 @@ export const useReportOwnerStatements = (params = {}, options = {}) => {
     enabled: options.enabled !== undefined ? options.enabled : true,
   });
 };
+
+export const usePerformanceDashboard = (params = {}) => {
+  return useQuery({
+    queryKey: ['reports', 'performance-dashboard', params],
+    queryFn: () => API.Reports.getPerformanceDashboard(params).then(unwrapData),
+    staleTime: 60_000,
+    placeholderData: (prev) => prev,
+  });
+};

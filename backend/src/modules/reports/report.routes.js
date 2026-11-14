@@ -23,6 +23,12 @@ router.use(checkRole(['admin', 'super_admin', 'director', 'accounting', 'gestion
 router.get('/kpis', reportController.getKpis);
 
 /**
+ * @route   GET /api/reports/performance-dashboard
+ * @desc    Tableau de bord dynamique de suivi des performances financières & opérationnelles
+ */
+router.get('/performance-dashboard', reportController.getPerformanceDashboard);
+
+/**
  * @route   GET /api/reports/dashboard
  */
 router.get('/dashboard', reportValidator, reportController.getDashboard);

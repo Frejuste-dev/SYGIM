@@ -86,6 +86,21 @@ class ReportService {
     return await reportRepository.getPrefinancingReport(filters);
   }
 
+  /**
+   * Tableau de bord analytique et dynamique de suivi des performances
+   */
+  async getPerformanceDashboard(filters = {}) {
+    const cacheKey = this._getCacheKey('performance_dashboard', filters);
+    const cached = await cacheService.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    const data = await reportRepository.getPerformanceDashboard(filters);
+    await cacheService.set(cacheKey, data, 15);
+    return data;
+  }
+
   async _getExportRows(reportType, filters = {}) {
     if (reportType === 'collectors') {
       return await reportRepository.getCollectorPerformance(filters);
