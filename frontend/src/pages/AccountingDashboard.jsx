@@ -756,56 +756,54 @@ export default function AccountingDashboard() {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse text-sm">
+                <table className="w-full text-left border-collapse text-xs sm:text-sm">
                   <thead>
                     <tr className="bg-slate-50/70 border-b border-slate-200/80 text-slate-500 text-[11px] font-bold uppercase tracking-wider">
-                      <th className="py-3.5 px-4 font-semibold whitespace-nowrap">Réf. &amp; Date</th>
-                      <th className="py-3.5 px-4 font-semibold whitespace-nowrap">Collecteur (Porteur)</th>
-                      <th className="py-3.5 px-4 font-semibold whitespace-nowrap">Locataire &amp; Bien</th>
-                      <th className="py-3.5 px-4 font-semibold whitespace-nowrap">Moyen</th>
-                      <th className="py-3.5 px-4 text-right font-semibold whitespace-nowrap">Montant Reçu</th>
-                      <th className="py-3.5 px-4 text-center font-semibold whitespace-nowrap">Statut</th>
-                      <th className="py-3.5 px-4 text-right font-semibold whitespace-nowrap min-w-[150px]">Action Comptable</th>
+                      <th className="py-2.5 px-2.5 font-semibold whitespace-nowrap">Réf. &amp; Date</th>
+                      <th className="py-2.5 px-2.5 font-semibold whitespace-nowrap">Collecteur</th>
+                      <th className="py-2.5 px-2.5 font-semibold">Locataire &amp; Bien</th>
+                      <th className="py-2.5 px-2.5 font-semibold whitespace-nowrap">Moyen</th>
+                      <th className="py-2.5 px-2.5 text-right font-semibold whitespace-nowrap">Montant</th>
+                      <th className="py-2.5 px-2.5 text-center font-semibold whitespace-nowrap">Statut</th>
+                      <th className="py-2.5 px-2 text-right font-semibold whitespace-nowrap w-[76px]">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {pendingTransactions.map(t => (
                       <tr key={t.id} className="hover:bg-amber-50/30 transition-colors">
-                        <td className="py-3.5 px-4 whitespace-nowrap">
+                        <td className="py-2.5 px-2.5 whitespace-nowrap">
                           <div className="font-mono text-xs font-bold text-slate-900">{t.reference || `TX-${t.id}`}</div>
-                          <div className="text-xs text-slate-400">{formatDate(t.date || t.created_at)}</div>
+                          <div className="text-[11px] text-slate-400">{formatDate(t.date || t.created_at, { day: 'numeric', month: 'short' })}</div>
                         </td>
-                        <td className="py-3.5 px-4">
-                          <div className="font-bold text-slate-800">{t.collector_name || 'Agent Collecteur'}</div>
-                          {t.collector_phone && <div className="text-xs text-slate-400">{t.collector_phone}</div>}
-                          {t.collector_zone && <span className="inline-block text-[10px] font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded mt-0.5">{t.collector_zone}</span>}
+                        <td className="py-2.5 px-2.5">
+                          <div className="font-bold text-slate-800 truncate max-w-[130px]">{t.collector_name || 'Agent'}</div>
+                          {t.collector_zone && <span className="inline-block text-[10px] font-semibold text-slate-500 bg-slate-100 px-1 py-0.2 rounded mt-0.5">{t.collector_zone}</span>}
                         </td>
-                        <td className="py-3.5 px-4">
-                          <div className="font-semibold text-slate-900 truncate max-w-[180px]" title={t.client_name || t.client || 'Locataire'}>{t.client_name || t.client || 'Locataire'}</div>
-                          <div className="text-xs text-slate-500 truncate max-w-[180px]" title={t.property_name || '—'}>{t.property_name || '—'}</div>
+                        <td className="py-2.5 px-2.5">
+                          <div className="font-semibold text-slate-900 truncate max-w-[140px]" title={t.client_name || t.client || 'Locataire'}>{t.client_name || t.client || 'Locataire'}</div>
+                          <div className="text-[11px] text-slate-500 truncate max-w-[140px]" title={t.property_name || '—'}>{t.property_name || '—'}</div>
                         </td>
-                        <td className="py-3.5 px-4 text-xs font-medium text-slate-600 whitespace-nowrap">
+                        <td className="py-2.5 px-2.5 text-xs font-medium text-slate-600 whitespace-nowrap">
                           {formatMethod(t.method)}
                         </td>
-                        <td className="py-3.5 px-4 text-right font-bold text-amber-900 text-sm tabular-nums whitespace-nowrap">
+                        <td className="py-2.5 px-2.5 text-right font-bold text-amber-900 text-xs sm:text-sm tabular-nums whitespace-nowrap">
                           {formatXOF(t.amount, { compact: false })}
                         </td>
-                        <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200/80">
+                        <td className="py-2.5 px-2.5 text-center whitespace-nowrap">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-200/80">
                             <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0"></span>
                             À réceptionner
                           </span>
                         </td>
-                        <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                          <div className="inline-flex items-center justify-end gap-1.5">
+                        <td className="py-2.5 px-2 text-right whitespace-nowrap">
+                          <div className="inline-flex items-center justify-end gap-1">
                             <button
                               type="button"
                               onClick={() => { setSelectedTxForValidation(t); setValidationNotes(''); }}
-                              className="h-8 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold inline-flex items-center gap-1.5 shadow-2xs transition-all whitespace-nowrap cursor-pointer"
-                              title="Valider la réception physique des fonds en caisse"
+                              className="w-8 h-8 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white inline-flex items-center justify-center shadow-2xs transition-all cursor-pointer"
+                              title="Valider la réception physique des fonds"
                             >
-                              <i className="fas fa-check-circle text-xs"></i>
-                              <span>Valider réception</span>
+                              <i className="fas fa-check text-xs"></i>
                             </button>
                             <button
                               type="button"
@@ -875,18 +873,18 @@ export default function AccountingDashboard() {
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-sm">
+            <table className="w-full text-left border-collapse text-xs sm:text-sm">
               <thead>
                 <tr className="bg-slate-50/70 border-b border-slate-200/80 text-slate-500 text-[11px] font-bold uppercase tracking-wider">
-                  <th className="py-3.5 px-4 whitespace-nowrap">Réf.</th>
-                  <th className="py-3.5 px-4 whitespace-nowrap">Propriétaire & Bien(s)</th>
-                  <th className="py-3.5 px-4 whitespace-nowrap">Période / Date</th>
-                  <th className="py-3.5 px-4 whitespace-nowrap">Mode & Moyen</th>
-                  <th className="py-3.5 px-4 text-right whitespace-nowrap">Net Dû</th>
-                  <th className="py-3.5 px-4 text-right whitespace-nowrap">Versé</th>
-                  <th className="py-3.5 px-4 text-right whitespace-nowrap">Reste</th>
-                  <th className="py-3.5 px-4 whitespace-nowrap">Statut</th>
-                  <th className="py-3.5 px-4 text-right whitespace-nowrap min-w-[170px]">Actions</th>
+                  <th className="py-2.5 px-2.5 whitespace-nowrap">Réf.</th>
+                  <th className="py-2.5 px-2.5">Propriétaire &amp; Bien</th>
+                  <th className="py-2.5 px-2.5 whitespace-nowrap">Période</th>
+                  <th className="py-2.5 px-2.5 whitespace-nowrap">Mode / Moyen</th>
+                  <th className="py-2.5 px-2.5 text-right whitespace-nowrap">Net Dû</th>
+                  <th className="py-2.5 px-2.5 text-right whitespace-nowrap">Versé</th>
+                  <th className="py-2.5 px-2.5 text-right whitespace-nowrap">Reste</th>
+                  <th className="py-2.5 px-2.5 text-center whitespace-nowrap">Statut</th>
+                  <th className="py-2.5 px-2 text-right whitespace-nowrap w-[76px]">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -904,57 +902,55 @@ export default function AccountingDashboard() {
                     const statusBadge = SETTLEMENT_STATUS_BADGES[s.status] || SETTLEMENT_STATUS_BADGES.paid;
                     return (
                       <tr key={s.id} className="hover:bg-slate-50/80 transition-colors">
-                        <td className="py-3.5 px-4 font-mono text-xs font-semibold text-slate-700 whitespace-nowrap">
+                        <td className="py-2.5 px-2.5 font-mono text-xs font-semibold text-slate-700 whitespace-nowrap">
                           {s.transaction_reference || `REV-${s.id}`}
                         </td>
-                        <td className="py-3.5 px-4">
-                          <div className="font-semibold text-slate-900 leading-tight">{s.owner_name || `Propriétaire #${s.owner_id}`}</div>
-                          <div className="text-xs text-slate-500 mt-0.5">{s.property_name || 'Tous les biens attribués'}</div>
+                        <td className="py-2.5 px-2.5">
+                          <div className="font-semibold text-slate-900 leading-tight truncate max-w-[130px] lg:max-w-[160px]" title={s.owner_name}>{s.owner_name || `Propriétaire #${s.owner_id}`}</div>
+                          <div className="text-[11px] text-slate-500 mt-0.5 truncate max-w-[130px] lg:max-w-[160px]" title={s.property_name}>{s.property_name || 'Tous les biens'}</div>
                         </td>
-                        <td className="py-3.5 px-4 text-xs text-slate-600 whitespace-nowrap">
-                          <div>Du {formatDate(s.period_start)} au {formatDate(s.period_end)}</div>
-                          {s.scheduled_date && <div className="text-slate-400 mt-0.5">Échéance : {formatDate(s.scheduled_date)}</div>}
+                        <td className="py-2.5 px-2.5 whitespace-nowrap">
+                          <div className="font-medium text-slate-700 text-xs">{formatDate(s.period_start, { day: 'numeric', month: 'short' })} - {formatDate(s.period_end, { day: 'numeric', month: 'short', year: '2-digit' })}</div>
+                          {s.scheduled_date && <div className="text-[10px] text-slate-400 mt-0.5">Éch. {formatDate(s.scheduled_date, { day: 'numeric', month: 'short' })}</div>}
                         </td>
-                        <td className="py-3.5 px-4 whitespace-nowrap">
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold border ${modeBadge.cls}`}>
+                        <td className="py-2.5 px-2.5 whitespace-nowrap">
+                          <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold border ${modeBadge.cls}`}>
                             {s.is_prefinanced ? <i className="fas fa-bolt mr-1 text-amber-600"></i> : null}
                             {modeBadge.label}
                           </span>
-                          <div className="text-xs text-slate-500 mt-1">{formatMethod(s.payment_method || 'bank_transfer')}</div>
+                          <div className="text-[11px] text-slate-500 mt-0.5">{formatMethod(s.payment_method || 'bank_transfer')}</div>
                         </td>
-                        <td className="py-3.5 px-4 font-medium text-slate-800 text-right tabular-nums whitespace-nowrap">{formatXOF(s.net_amount, { compact: false })}</td>
-                        <td className="py-3.5 px-4 font-bold text-emerald-700 text-right tabular-nums whitespace-nowrap">{formatXOF(s.amount_paid || s.net_amount, { compact: false })}</td>
-                        <td className="py-3.5 px-4 font-semibold text-rose-600 text-right tabular-nums whitespace-nowrap">
+                        <td className="py-2.5 px-2.5 font-medium text-slate-800 text-right tabular-nums whitespace-nowrap">{formatXOF(s.net_amount, { compact: false })}</td>
+                        <td className="py-2.5 px-2.5 font-bold text-emerald-700 text-right tabular-nums whitespace-nowrap">{formatXOF(s.amount_paid || s.net_amount, { compact: false })}</td>
+                        <td className="py-2.5 px-2.5 font-semibold text-rose-600 text-right tabular-nums whitespace-nowrap">
                           {s.remaining_to_pay > 0 ? formatXOF(s.remaining_to_pay, { compact: false }) : formatXOF(0, { compact: false })}
                         </td>
-                        <td className="py-3.5 px-4 whitespace-nowrap">
-                          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${statusBadge.cls}`}>
+                        <td className="py-2.5 px-2.5 text-center whitespace-nowrap">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold border ${statusBadge.cls}`}>
                             {statusBadge.label}
                           </span>
                         </td>
-                        <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                          <div className="inline-flex items-center justify-end gap-1.5 whitespace-nowrap">
+                        <td className="py-2.5 px-2 text-right whitespace-nowrap">
+                          <div className="inline-flex items-center justify-end gap-1">
                             <button
                               type="button"
                               onClick={() => setSelectedSettlementForInstallments(s)}
-                              className={`h-8 px-2.5 rounded-lg text-xs font-semibold transition-colors inline-flex items-center gap-1.5 cursor-pointer ${
+                              className={`w-8 h-8 rounded-lg text-xs font-semibold transition-colors inline-flex items-center justify-center cursor-pointer ${
                                 s.remaining_to_pay > 0
                                   ? 'bg-primary hover:bg-primary-dark text-white shadow-2xs'
                                   : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
                               }`}
-                              title="Voir l'historique des tranches ou enregistrer un versement partiel"
+                              title={s.remaining_to_pay > 0 ? 'Enregistrer une tranche de versement' : `Tranches (${s.installments?.length || 1})`}
                             >
-                              <i className={`fas ${s.remaining_to_pay > 0 ? 'fa-plus-circle' : 'fa-layer-group'} text-xs`}></i>
-                              <span>{s.remaining_to_pay > 0 ? '+ Tranche' : `Tranches (${s.installments?.length || 1})`}</span>
+                              <i className={`fas ${s.remaining_to_pay > 0 ? 'fa-plus' : 'fa-layer-group'} text-xs`}></i>
                             </button>
                             <button
                               type="button"
                               onClick={() => printOwnerSettlementReceipt(s)}
-                              className="h-8 px-2.5 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 rounded-lg text-xs font-semibold transition-colors inline-flex items-center gap-1.5 cursor-pointer"
+                              className="w-8 h-8 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 transition-colors inline-flex items-center justify-center cursor-pointer"
                               title="Imprimer le Bordereau / Reçu Officiel PDF"
                             >
                               <i className="fas fa-print text-xs"></i>
-                              <span>Bordereau</span>
                             </button>
                           </div>
                         </td>
@@ -1007,18 +1003,18 @@ export default function AccountingDashboard() {
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-sm">
+            <table className="w-full text-left border-collapse text-xs sm:text-sm">
               <thead>
                 <tr className="bg-slate-50/70 border-b border-slate-200/80 text-slate-500 text-[11px] font-bold uppercase tracking-wider">
-                  <th className="py-3.5 px-4 whitespace-nowrap">Date</th>
-                  <th className="py-3.5 px-4 whitespace-nowrap">Réf.</th>
-                  <th className="py-3.5 px-4 whitespace-nowrap">Catégorie</th>
-                  <th className="py-3.5 px-4 whitespace-nowrap">Tiers</th>
-                  <th className="py-3.5 px-4 whitespace-nowrap">Bien</th>
-                  <th className="py-3.5 px-4 whitespace-nowrap">Libellé</th>
-                  <th className="py-3.5 px-4 text-right whitespace-nowrap">Crédit (+)</th>
-                  <th className="py-3.5 px-4 text-right whitespace-nowrap">Débit (-)</th>
-                  <th className="py-3.5 px-4 text-right whitespace-nowrap">Solde Progressif</th>
+                  <th className="py-2.5 px-2.5 whitespace-nowrap">Date</th>
+                  <th className="py-2.5 px-2.5 whitespace-nowrap">Réf.</th>
+                  <th className="py-2.5 px-2.5 whitespace-nowrap">Catégorie</th>
+                  <th className="py-2.5 px-2.5">Tiers</th>
+                  <th className="py-2.5 px-2.5 whitespace-nowrap">Bien</th>
+                  <th className="py-2.5 px-2.5">Libellé</th>
+                  <th className="py-2.5 px-2.5 text-right whitespace-nowrap">Crédit (+)</th>
+                  <th className="py-2.5 px-2.5 text-right whitespace-nowrap">Débit (-)</th>
+                  <th className="py-2.5 px-2.5 text-right whitespace-nowrap">Solde</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -1029,10 +1025,10 @@ export default function AccountingDashboard() {
                 ) : (
                   ledgerData.entries.map(e => (
                     <tr key={e.id} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="py-3.5 px-4 text-xs text-slate-600 whitespace-nowrap">{formatDate(e.date)}</td>
-                      <td className="py-3.5 px-4 font-mono text-xs font-semibold text-slate-700 whitespace-nowrap">{e.reference}</td>
-                      <td className="py-3.5 px-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold ${
+                      <td className="py-2.5 px-2.5 text-xs text-slate-600 whitespace-nowrap">{formatDate(e.date, { day: 'numeric', month: 'short' })}</td>
+                      <td className="py-2.5 px-2.5 font-mono text-xs font-semibold text-slate-700 whitespace-nowrap">{e.reference}</td>
+                      <td className="py-2.5 px-2.5 whitespace-nowrap">
+                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold ${
                           e.direction === 'CREDIT'
                             ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                             : e.is_prefinanced
@@ -1042,16 +1038,16 @@ export default function AccountingDashboard() {
                           {e.category}
                         </span>
                       </td>
-                      <td className="py-3.5 px-4 font-medium text-slate-900 whitespace-nowrap">{e.third_party}</td>
-                      <td className="py-3.5 px-4 text-xs text-slate-600 whitespace-nowrap">{e.property_name || '—'}</td>
-                      <td className="py-3.5 px-4 text-xs text-slate-600 max-w-[220px] truncate" title={e.description}>{e.description}</td>
-                      <td className="py-3.5 px-4 text-right font-bold text-emerald-600 tabular-nums whitespace-nowrap">
+                      <td className="py-2.5 px-2.5 font-medium text-slate-900 whitespace-nowrap truncate max-w-[120px] lg:max-w-[150px]" title={e.third_party}>{e.third_party}</td>
+                      <td className="py-2.5 px-2.5 text-xs text-slate-600 whitespace-nowrap truncate max-w-[110px]" title={e.property_name}>{e.property_name || '—'}</td>
+                      <td className="py-2.5 px-2.5 text-xs text-slate-600 max-w-[150px] lg:max-w-[200px] truncate" title={e.description}>{e.description}</td>
+                      <td className="py-2.5 px-2.5 text-right font-bold text-emerald-600 tabular-nums whitespace-nowrap">
                         {e.credit > 0 ? `+${formatXOF(e.credit, { compact: false })}` : '-'}
                       </td>
-                      <td className="py-3.5 px-4 text-right font-bold text-rose-600 tabular-nums whitespace-nowrap">
+                      <td className="py-2.5 px-2.5 text-right font-bold text-rose-600 tabular-nums whitespace-nowrap">
                         {e.debit > 0 ? `-${formatXOF(e.debit, { compact: false })}` : '-'}
                       </td>
-                      <td className="py-3.5 px-4 text-right font-extrabold text-slate-900 bg-slate-50/60 tabular-nums whitespace-nowrap">
+                      <td className="py-2.5 px-2.5 text-right font-extrabold text-slate-900 bg-slate-50/60 tabular-nums whitespace-nowrap">
                         {formatXOF(e.running_balance, { compact: false })}
                       </td>
                     </tr>
