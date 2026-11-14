@@ -115,10 +115,104 @@ const tenantStatementValidator = [
   handleValidationErrors
 ];
 
+const recordOwnerPaymentValidator = [
+  body('ownerId')
+    .custom((val, { req }) => {
+      const id = val || req.body.owner_id;
+      if (!id || isNaN(parseInt(id, 10)) || parseInt(id, 10) <= 0) {
+        throw new Error('L\'identifiant du propriétaire (ownerId) est obligatoire et doit être un entier positif');
+      }
+      return true;
+    }),
+
+  body('periodStart')
+    .custom((val, { req }) => {
+      const d = val || req.body.period_start;
+      if (!d || !/^\d{4}-\d{2}-\d{2}$/.test(d) || isNaN(Date.parse(d))) {
+        throw new Error('Format periodStart invalide (YYYY-MM-DD)');
+      }
+      return true;
+    }),
+
+  body('periodEnd')
+    .custom((val, { req }) => {
+      const end = val || req.body.period_end;
+      const start = req.body.periodStart || req.body.period_start;
+      if (!end || !/^\d{4}-\d{2}-\d{2}$/.test(end) || isNaN(Date.parse(end))) {
+        throw new Error('Format periodEnd invalide (YYYY-MM-DD)');
+      }
+      if (start && new Date(end) < new Date(start)) {
+        throw new Error('periodEnd doit être postérieur ou égal à periodStart');
+      }
+      return true;
+    }),
+
+  body('amount')
+    .custom((val, { req }) => {
+      const amt = val ?? req.body.amount_paid ?? req.body.amountPaid;
+      if (amt === undefined || amt === null || isNaN(parseFloat(amt)) || parseFloat(amt) <= 0) {
+        throw new Error('Le montant (amount) est obligatoire et doit être supérieur à 0');
+      }
+      return true;
+    }),
+
+  body('paymentMethod')
+    .custom((val, { req }) => {
+      const method = (val || req.body.payment_method || '').toLowerCase();
+      const validMethods = ['cash', 'check', 'cheque', 'bank_transfer', 'mobile_money'];
+      if (!method || !validMethods.includes(method)) {
+        throw new Error(`paymentMethod obligatoire et doit être l'un de : ${validMethods.join(', ')}`);
+      }
+      return true;
+    }),
+
+  body('reference')
+    .optional({ nullable: true })
+    .isString().trim(),
+
+  body('payout_reference')
+    .optional({ nullable: true })
+    .isString().trim(),
+
+  handleValidationErrors
+];
+
+const paySettlementValidator = [
+  param('id')
+    .notEmpty().withMessage('L\'identifiant du règlement est obligatoire')
+    .isInt({ min: 1 }).withMessage('L\'identifiant du règlement doit être un entier positif'),
+
+  body('paymentMethod')
+    .custom((val, { req }) => {
+      const method = (val || req.body.payment_method || '').toLowerCase();
+      const validMethods = ['cash', 'check', 'cheque', 'bank_transfer', 'mobile_money'];
+      if (!method || !validMethods.includes(method)) {
+        throw new Error(`paymentMethod obligatoire et doit être l'un de : ${validMethods.join(', ')}`);
+      }
+      return true;
+    }),
+
+  body('reference')
+    .optional({ nullable: true })
+    .isString().trim(),
+
+  body('payout_reference')
+    .optional({ nullable: true })
+    .isString().trim(),
+
+  body('paidAt')
+    .optional({ nullable: true })
+    .isISO8601().withMessage('Format paidAt invalide (date ISO)'),
+
+  handleValidationErrors
+];
+
 module.exports = {
   registerPaymentValidator,
   reversePaymentValidator,
   generateMonthlyInvoiceValidator,
   generateSettlementValidator,
-  tenantStatementValidator
+  tenantStatementValidator,
+  recordOwnerPaymentValidator,
+  paySettlementValidator
 };

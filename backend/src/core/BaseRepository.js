@@ -64,19 +64,49 @@ class BaseRepository {
     }
   }
 
+  _sanitizeData(data, isUpdate = false) {
+    const IDENTIFIER_REGEX = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
+    const allowed = Array.isArray(this.allowedColumns || this.fillable)
+      ? (this.allowedColumns || this.fillable)
+      : null;
+
+    const sanitized = {};
+    for (const [key, value] of Object.entries(data)) {
+      if (!IDENTIFIER_REGEX.test(key)) {
+        throw AppError.badRequest(`Identifiant de colonne SQL invalide: ${key}`);
+      }
+      if (isUpdate && (key === 'id' || key === 'created_at')) {
+        continue;
+      }
+      if (allowed && !allowed.includes(key)) {
+        continue;
+      }
+      sanitized[key] = value;
+    }
+
+    if (Object.keys(sanitized).length === 0) {
+      throw AppError.badRequest('Aucune donnée valide à enregistrer');
+    }
+
+    return sanitized;
+  }
+
   async create(data) {
     try {
-      const columns = Object.keys(data).join(',');
-      const placeholders = Object.keys(data).fill('?').join(',');
-      const query = `INSERT INTO ${this.tableName} (${columns}) VALUES (${placeholders})`;
+      const sanitized = this._sanitizeData(data, false);
+      const keys = Object.keys(sanitized);
+      const columns = keys.map(k => `\`${k}\``).join(',');
+      const placeholders = keys.map(() => '?').join(',');
+      const query = `INSERT INTO \`${this.tableName}\` (${columns}) VALUES (${placeholders})`;
 
-      const [result] = await db.query(query, Object.values(data));
+      const [result] = await db.query(query, Object.values(sanitized));
 
       return {
         id: result.insertId,
-        ...data
+        ...sanitized
       };
     } catch (error) {
+      if (error instanceof AppError) throw error;
       Logger.error(`Error in ${this.tableName}.create`, error);
       if (error.code === 'ER_DUP_ENTRY') {
         throw AppError.conflict('Enregistrement dupliqué');
@@ -87,9 +117,11 @@ class BaseRepository {
 
   async update(id, data) {
     try {
-      const updates = Object.keys(data).map(key => `${key} = ?`).join(',');
-      const query = `UPDATE ${this.tableName} SET ${updates} WHERE id = ?`;
-      const params = [...Object.values(data), id];
+      const sanitized = this._sanitizeData(data, true);
+      const keys = Object.keys(sanitized);
+      const updates = keys.map(k => `\`${k}\` = ?`).join(',');
+      const query = `UPDATE \`${this.tableName}\` SET ${updates} WHERE id = ?`;
+      const params = [...Object.values(sanitized), id];
 
       const [result] = await db.query(query, params);
 
@@ -97,7 +129,7 @@ class BaseRepository {
         throw AppError.notFound(this.tableName);
       }
 
-      return { id, ...data };
+      return { id, ...sanitized };
     } catch (error) {
       if (error instanceof AppError) {
         throw error;

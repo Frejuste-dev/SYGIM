@@ -83,6 +83,29 @@ class TransactionService extends BaseService {
     }
   }
 
+  async update(id, data, user) {
+    await this.checkOwnership(id, user);
+
+    const existing = await this.repository.findById(id);
+    if (!existing) {
+      const AppError = require('../../utils/errors/AppError');
+      throw AppError.notFound('Transaction introuvable');
+    }
+
+    if (existing.status === 'processed' || existing.status === 'validated') {
+      const AppError = require('../../utils/errors/AppError');
+      const hasAmountChange = data.amount !== undefined && data.amount !== null && parseFloat(data.amount) !== parseFloat(existing.amount);
+      const targetClientId = data.clientId !== undefined ? data.clientId : data.client_id;
+      const hasClientChange = targetClientId !== undefined && targetClientId !== null && parseInt(targetClientId, 10) !== parseInt(existing.client_id, 10);
+
+      if (hasAmountChange || hasClientChange) {
+        throw AppError.badRequest('Une transaction comptabilisée (statut processed) ne peut pas être modifiée directement sur le montant ou le client. Veuillez effectuer une extourne formelle.');
+      }
+    }
+
+    return await super.update(id, data, user);
+  }
+
   async createTransaction(data, user) {
     // Validation
     if (!data.amount) {

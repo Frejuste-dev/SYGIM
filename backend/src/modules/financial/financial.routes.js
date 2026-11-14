@@ -6,7 +6,9 @@ const {
   reversePaymentValidator,
   generateMonthlyInvoiceValidator,
   generateSettlementValidator,
-  tenantStatementValidator
+  tenantStatementValidator,
+  recordOwnerPaymentValidator,
+  paySettlementValidator
 } = require('./financial.validator');
 const { authenticate, authorize } = require('../../middleware/auth.middleware');
 
@@ -63,6 +65,7 @@ router.get(
 router.post(
   '/settlements',
   authorize('admin', 'director', 'accounting'),
+  recordOwnerPaymentValidator,
   financialController.recordOwnerPayment
 );
 
@@ -73,6 +76,7 @@ router.post(
 router.put(
   '/settlements/:id/pay',
   authorize('admin', 'director', 'accounting'),
+  paySettlementValidator,
   financialController.paySettlement
 );
 

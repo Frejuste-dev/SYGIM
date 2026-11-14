@@ -2,6 +2,7 @@ const paymentService = require('./services/PaymentService');
 const rentBillingService = require('./services/RentBillingService');
 const ownerSettlementService = require('./services/OwnerSettlementService');
 const tenantCreditLedgerRepository = require('./repositories/tenant-credit-ledger.repository');
+const clientService = require('../clients/client.service');
 const { pool } = require('../../config/database');
 const ApiResponse = require('../../utils/responses/ApiResponse');
 const AppError = require('../../utils/errors/AppError');
@@ -235,6 +236,7 @@ class FinancialController {
   async getTenantStatement(req, res, next) {
     try {
       const clientId = parseInt(req.params.id, 10);
+      await clientService.checkOwnership(clientId, req.user);
 
       const [clientRows] = await pool.query('SELECT * FROM clients WHERE id = ?', [clientId]);
       if (clientRows.length === 0) {
