@@ -101,9 +101,9 @@ export default function Properties() {
   });
 
   const stats = [
-    { label: 'Total', value: statsData.total || 0, icon: 'fa-hotel', color: 'var(--primary)' },
-    { label: 'Loués', value: statsData.loue || 0, icon: 'fa-check-circle', color: 'var(--success)' },
-    { label: 'Vacants', value: statsData.vacant || 0, icon: 'fa-exclamation-circle', color: 'var(--danger)' },
+    { label: 'Total biens', value: statsData.total || 0, icon: 'fa-building', color: 'var(--primary)' },
+    { label: 'En location (Loués)', value: statsData.loue || 0, icon: 'fa-key', color: 'var(--success)' },
+    { label: 'Biens vacants', value: statsData.vacant || 0, icon: 'fa-door-open', color: 'var(--danger)' },
     { label: 'En rénovation', value: statsData.en_renovation || 0, icon: 'fa-tools', color: 'var(--warning)' }
   ];
 
@@ -264,197 +264,229 @@ export default function Properties() {
   return (
     <div className="space-y-6 min-w-0 overflow-x-hidden">
       {/* 1. L'EN-TÊTE (Header) */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+      <div className="bg-white border border-slate-200/80 rounded-xl shadow-xs p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">Gestion des Biens</h2>
-          <p className="text-sm text-slate-500">Administrer les biens, leurs propriétaires et leur statut</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-slate-900">Gestion des Biens</h2>
+          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">Administrer le parc immobilier, les propriétaires et l'état d'occupation</p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <button onClick={handleExportPropertiesExcel} className="px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-lg text-sm font-semibold flex items-center gap-1.5 transition-colors">
-            <i className="fas fa-file-excel"></i> Excel
-          </button>
-          <button onClick={handleExportPropertiesPDF} className="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-sm font-semibold flex items-center gap-1.5 transition-colors">
-            <i className="fas fa-file-pdf"></i> PDF
-          </button>
-          <button className="bg-primary text-white rounded-lg px-4 py-2 hover:bg-primary-dark transition-colors font-medium text-sm shadow-sm flex items-center gap-2" onClick={openCreateModal}>
-            <i className="fas fa-plus"></i> Nouveau bien
+        <div className="flex items-center gap-2.5 shrink-0 flex-nowrap">
+          {/* Groupe d'exportation segmenté compact */}
+          <div className="inline-flex items-center rounded-lg border border-slate-200 bg-slate-50/80 p-0.5 shadow-2xs">
+            <button
+              type="button"
+              onClick={handleExportPropertiesExcel}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-semibold text-slate-700 hover:text-emerald-700 hover:bg-white transition-colors cursor-pointer"
+              title="Exporter la liste des biens en Excel"
+            >
+              <i className="fas fa-file-excel text-emerald-600"></i>
+              <span className="hidden sm:inline">Excel</span>
+            </button>
+            <div className="h-4 w-px bg-slate-200"></div>
+            <button
+              type="button"
+              onClick={handleExportPropertiesPDF}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-semibold text-slate-700 hover:text-rose-700 hover:bg-white transition-colors cursor-pointer"
+              title="Exporter la liste des biens en PDF"
+            >
+              <i className="fas fa-file-pdf text-rose-600"></i>
+              <span className="hidden sm:inline">PDF</span>
+            </button>
+          </div>
+
+          <button
+            type="button"
+            onClick={openCreateModal}
+            className="h-9 px-3.5 bg-primary hover:bg-primary-dark text-white rounded-lg text-xs font-bold transition-all shadow-2xs inline-flex items-center gap-1.5 whitespace-nowrap cursor-pointer"
+          >
+            <i className="fas fa-plus text-xs"></i>
+            <span>Nouveau bien</span>
           </button>
         </div>
       </div>
 
-      {/* 3. CARDS DE STATISTIQUES (KPIs) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
-        {stats.map((s, i) => (
-          <div key={i} className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 flex flex-col justify-between hover:shadow-md transition-all">
-             <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">{s.label}</div>
-             <div className="text-2xl lg:text-3xl font-extrabold text-slate-900 tracking-tight">{s.value}</div>
-          </div>
+      {/* 2. CARDS DE STATISTIQUES (KPIs) */}
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        {stats.map((s) => (
+          <StatsCard key={s.label} label={s.label} title={s.label} value={s.value} icon={s.icon} color={s.color} />
         ))}
       </div>
 
-      {/* FILTRES */}
-      <div className="flex flex-col md:flex-row items-center gap-4 mb-6">
-        <div className="relative w-full md:w-80">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <i className="fas fa-search text-slate-400"></i>
-          </div>
+      {/* 3. FILTRES */}
+      <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-2xs flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between mb-6">
+        <div className="relative flex-1">
+          <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
           <input 
             type="text" 
             placeholder="Rechercher par nom, réf, adresse..." 
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 outline-none text-sm transition-all" 
+            className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-slate-700 transition-all" 
           />
         </div>
-        <select 
-          value={typeFilter} 
-          onChange={(e) => handleFilterChange('type', e.target.value)}
-          className="w-full md:w-44 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg outline-none text-sm focus:ring-2 focus:ring-primary/20 transition-all text-slate-700"
-        >
-          <option value="">Tous les types</option>
-          <option value="appartement">Appartement</option>
-          <option value="maison">Maison</option>
-          <option value="terrain">Terrain</option>
-          <option value="commercial">Commercial</option>
-        </select>
-        <select 
-          value={statusFilter} 
-          onChange={(e) => handleFilterChange('status', e.target.value)}
-          className="w-full md:w-44 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg outline-none text-sm focus:ring-2 focus:ring-primary/20 transition-all text-slate-700"
-        >
-          <option value="">Tous les statuts</option>
-          <option value="vacant">Vacant</option>
-          <option value="loue">Loué</option>
-          <option value="en_renovation">En rénovation</option>
-          <option value="vendu">Vendu</option>
-        </select>
-        <select 
-          value={assignmentFilter} 
-          onChange={(e) => handleFilterChange('assignmentStatus', e.target.value)}
-          className="w-full md:w-48 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg outline-none text-sm focus:ring-2 focus:ring-primary/20 transition-all text-slate-700 font-medium"
-        >
-          <option value="">Toutes attributions</option>
-          <option value="assigned">Attribués (avec propriétaire)</option>
-          <option value="unassigned">Non attribués</option>
-        </select>
+        <div className="flex flex-wrap items-center gap-2.5">
+          <select 
+            value={typeFilter} 
+            onChange={(e) => handleFilterChange('type', e.target.value)}
+            className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer shadow-2xs"
+          >
+            <option value="">Tous les types</option>
+            <option value="appartement">Appartement</option>
+            <option value="maison">Maison</option>
+            <option value="terrain">Terrain</option>
+            <option value="commercial">Commercial</option>
+          </select>
+          <select 
+            value={statusFilter} 
+            onChange={(e) => handleFilterChange('status', e.target.value)}
+            className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer shadow-2xs"
+          >
+            <option value="">Tous les statuts</option>
+            <option value="vacant">Vacant</option>
+            <option value="loue">Loué</option>
+            <option value="en_renovation">En rénovation</option>
+            <option value="vendu">Vendu</option>
+          </select>
+          <select 
+            value={assignmentFilter} 
+            onChange={(e) => handleFilterChange('assignmentStatus', e.target.value)}
+            className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer shadow-2xs"
+          >
+            <option value="">Toutes attributions</option>
+            <option value="assigned">Attribués (avec propriétaire)</option>
+            <option value="unassigned">Non attribués</option>
+          </select>
+        </div>
       </div>
 
       {/* 4. TABLEAU DES PROPRIÉTÉS */}
-      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+      <div className="bg-white border border-slate-200/80 rounded-xl shadow-xs overflow-hidden">
         <div className="overflow-x-auto w-full">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50 border-y border-slate-200 text-slate-500 text-xs uppercase tracking-wider">
-                <th className="py-3 px-6 font-semibold">Bien</th>
-                <th className="py-3 px-6 font-semibold">Type</th>
-                <th className="py-3 px-6 font-semibold">Propriétaire</th>
-                <th className="py-3 px-6 font-semibold">Zone & Adresse</th>
-                <th className="py-3 px-6 font-semibold">Attribution Locataire</th>
-                <th className="py-3 px-6 font-semibold text-right">Valeur</th>
-                <th className="py-3 px-6 font-semibold text-right">Loyer</th>
-                <th className="py-3 px-6 font-semibold">Commission</th>
-                <th className="py-3 px-6 font-semibold text-right">Actions</th>
+                <th className="py-3.5 px-4 font-semibold whitespace-nowrap">Bien</th>
+                <th className="py-3.5 px-4 font-semibold whitespace-nowrap">Type</th>
+                <th className="py-3.5 px-4 font-semibold whitespace-nowrap">Propriétaire</th>
+                <th className="py-3.5 px-4 font-semibold whitespace-nowrap">Zone &amp; Adresse</th>
+                <th className="py-3.5 px-4 font-semibold whitespace-nowrap">Attribution Locataire</th>
+                <th className="py-3.5 px-4 font-semibold text-right whitespace-nowrap">Valeur</th>
+                <th className="py-3.5 px-4 font-semibold text-right whitespace-nowrap">Loyer</th>
+                <th className="py-3.5 px-4 font-semibold text-center whitespace-nowrap">Commission</th>
+                <th className="py-3.5 px-4 font-semibold text-right whitespace-nowrap min-w-[120px]">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-100 text-sm">
               {loading ? (
                 <TableSkeleton rows={5} columns={9} />
               ) : filteredProperties.length > 0 ? filteredProperties.map(p => {
-                const pStatus = formatStatus(p.status);
                 const ownerObj = owners.find(o => Number(o.id) === Number(p.owner_id));
                 const ownerName = ownerObj
                   ? (`${ownerObj.first_name || ''} ${ownerObj.last_name || ''}`.trim() || ownerObj.display_name)
                   : (p.owner_name || null);
+                const isVacant = p.status === 'vacant' || (!p.tenant_name && !p.tenant_first_name && p.status !== 'loue');
 
                 return (
-                  <tr key={p.id} className="group hover:bg-slate-50/80 transition-colors">
-                    <td className="py-4 px-6 font-medium text-slate-900">
+                  <tr key={p.id} className="hover:bg-slate-50/70 transition-colors">
+                    <td className="py-3.5 px-4 font-medium text-slate-900">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                          <i className={`fas ${TYPE_ICONS[p.type] || 'fa-building'}`}></i>
+                        <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0 border border-primary/20">
+                          <i className={`fas ${TYPE_ICONS[p.type] || 'fa-building'} text-xs`}></i>
                         </div>
-                        <div>
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="font-semibold text-slate-900">{p.name}</span>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-semibold text-slate-900 truncate max-w-[180px]" title={p.name}>{p.name}</span>
                             {p.reference_code && (
-                              <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200">
+                              <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200 shrink-0">
                                 {p.reference_code}
                               </span>
                             )}
                           </div>
-                          {p.rooms ? <span className="text-xs text-slate-400">{p.rooms} pièces {p.area ? `• ${p.area} m²` : ''}</span> : null}
+                          {p.rooms ? <span className="text-[11px] text-slate-400 block">{p.rooms} pièces {p.area ? `• ${p.area} m²` : ''}</span> : null}
                         </div>
                       </div>
                     </td>
-                    <td className="py-4 px-6 text-sm text-slate-600 capitalize">{p.type}</td>
-                    <td className="py-4 px-6 text-sm">
+                    <td className="py-3.5 px-4 text-xs text-slate-600 capitalize whitespace-nowrap">
+                      {p.type}
+                    </td>
+                    <td className="py-3.5 px-4 whitespace-nowrap">
                       {p.owner_id ? (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 font-medium text-xs border border-emerald-200">
-                          <i className="fas fa-check-circle text-[10px] text-emerald-600"></i>
-                          <span className="max-w-[130px] truncate" title={ownerName}>{ownerName || `Propriétaire #${p.owner_id}`}</span>
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 font-medium text-xs border border-emerald-200/80 max-w-[140px] truncate" title={ownerName}>
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
+                          <span className="truncate">{ownerName || `Propriétaire #${p.owner_id}`}</span>
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 font-medium text-xs border border-amber-200">
-                          <i className="fas fa-exclamation-circle text-[10px] text-amber-600"></i>
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 text-amber-800 font-medium text-xs border border-amber-200/80">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0"></span>
                           Non attribué
                         </span>
                       )}
                     </td>
-                    <td className="py-4 px-6 text-sm text-slate-600 max-w-[200px]">
+                    <td className="py-3.5 px-4 text-xs text-slate-600 max-w-[190px]">
                       {p.zone && (
                         <div className="text-[11px] font-semibold text-primary mb-0.5 flex items-center gap-1">
                           <i className="fas fa-location-dot text-[9px]"></i>
-                          <span>{p.zone}</span>
+                          <span className="truncate">{p.zone}</span>
                         </div>
                       )}
-                      <div className="truncate text-slate-500 text-xs" title={p.address}>{p.address}</div>
+                      <div className="truncate text-slate-500 text-xs" title={p.address}>{p.address || '—'}</div>
                     </td>
-                    <td className="py-4 px-6 text-sm">
-                      {p.status === 'loue' || p.tenant_name || p.tenant_first_name ? (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 font-semibold text-xs border border-emerald-200" title={`Locataire : ${p.tenant_name || `${p.tenant_last_name || ''} ${p.tenant_first_name || ''}`.trim()}`}>
-                          <i className="fas fa-key text-[10px] text-emerald-600"></i>
-                          <span className="max-w-[150px] truncate">
-                            Attribué ({p.tenant_name || `${p.tenant_last_name || ''} ${p.tenant_first_name || ''}`.trim() || 'Loué'})
+                    <td className="py-3.5 px-4 whitespace-nowrap">
+                      {!isVacant ? (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 font-semibold text-xs border border-emerald-200/80 max-w-[160px] truncate" title={`Locataire : ${p.tenant_name || `${p.tenant_last_name || ''} ${p.tenant_first_name || ''}`.trim()}`}>
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
+                          <span className="truncate">
+                            Loué ({p.tenant_name || `${p.tenant_last_name || ''} ${p.tenant_first_name || ''}`.trim() || 'Actif'})
                           </span>
                         </span>
                       ) : (
-                        <div className="inline-flex items-center gap-2">
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 font-medium text-xs border border-amber-200">
-                            <i className="fas fa-door-open text-[10px] text-amber-600"></i>
-                            Non attribué (Vacant)
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => navigate(`/admin/property-assignments?propertyId=${p.id}`)}
-                            className="px-2 py-0.5 text-[11px] font-semibold text-primary bg-primary/10 hover:bg-primary hover:text-white rounded-md transition-colors whitespace-nowrap cursor-pointer"
-                            title="Attribuer à un locataire"
-                          >
-                            Attribuer
-                          </button>
-                        </div>
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 font-semibold text-xs border border-amber-200/80">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0"></span>
+                          Vacant
+                        </span>
                       )}
                     </td>
-                    <td className="py-4 px-6 text-sm font-medium text-slate-900 text-right tabular-nums">
+                    <td className="py-3.5 px-4 text-xs font-semibold text-slate-700 text-right tabular-nums whitespace-nowrap">
                       {formatXOF(p.value, { compact: false })}
                     </td>
-                    <td className="py-4 px-6 text-sm font-medium text-slate-900 text-right tabular-nums">
+                    <td className="py-3.5 px-4 text-xs font-bold text-slate-900 text-right tabular-nums whitespace-nowrap">
                       {formatXOF(p.rent, { compact: false })}
                     </td>
-                    <td className="py-4 px-6 text-sm">
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 font-semibold text-xs border border-emerald-200">
-                        <i className={p.commission_type === 'fixed' ? "fas fa-tag text-[10px]" : "fas fa-percent text-[10px]"}></i>
+                    <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-semibold text-xs border border-slate-200/80">
+                        <i className={p.commission_type === 'fixed' ? "fas fa-tag text-[9px]" : "fas fa-percent text-[9px]"}></i>
                         {p.commission_type === 'fixed'
                           ? `${formatXOF(p.commission_fixed_amount || 0)} fixe`
                           : `${p.commission_rate ?? 10}%`}
                       </span>
                     </td>
-                    <td className="py-4 px-6">
-                      <div className="flex items-center justify-end gap-3 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                        <button className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-500 hover:text-primary hover:border-primary hover:bg-primary/5 border border-transparent hover:border-primary/20 transition-all bg-white" onClick={() => openEditModal(p)} title="Modifier">
-                          <i className="fas fa-pencil-alt text-sm"></i>
+                    <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                      <div className="flex items-center justify-end gap-1.5">
+                        {isVacant && (
+                          <button
+                            type="button"
+                            onClick={() => navigate(`/admin/property-assignments?propertyId=${p.id}`)}
+                            className="h-8 px-2 bg-primary/10 hover:bg-primary hover:text-white text-primary rounded-lg text-xs font-bold transition-all inline-flex items-center gap-1 shadow-2xs cursor-pointer"
+                            title="Attribuer ce bien à un locataire"
+                          >
+                            <i className="fas fa-key text-[10px]"></i>
+                            <span>Attribuer</span>
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          className="w-8 h-8 rounded-lg inline-flex items-center justify-center text-slate-500 hover:text-primary hover:bg-primary/10 border border-slate-200 bg-white transition-colors cursor-pointer"
+                          onClick={() => openEditModal(p)}
+                          title="Modifier ce bien"
+                        >
+                          <i className="fas fa-pencil-alt text-xs"></i>
                         </button>
-                        <button className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-500 hover:text-rose-600 hover:border-rose-200 hover:bg-rose-50 border border-transparent hover:border-rose-200 transition-all bg-white" onClick={() => handleDelete(p)} title="Supprimer">
-                          <i className="fas fa-trash text-sm"></i>
+                        <button
+                          type="button"
+                          className="w-8 h-8 rounded-lg inline-flex items-center justify-center text-slate-500 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 bg-white transition-colors cursor-pointer"
+                          onClick={() => handleDelete(p)}
+                          title="Supprimer ce bien"
+                        >
+                          <i className="fas fa-trash text-xs"></i>
                         </button>
                       </div>
                     </td>
