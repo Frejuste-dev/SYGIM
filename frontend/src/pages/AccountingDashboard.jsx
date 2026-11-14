@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { useDashboardKpis } from '../hooks/queries/useDashboardKpis';
 import { useTransactions, useTransactionStats } from '../hooks/queries/useTransactions';
 import { API } from '../api/services';
@@ -27,6 +28,7 @@ const SETTLEMENT_STATUS_BADGES = {
 
 export default function AccountingDashboard() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { showToast } = useToast();
 
   const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'pending_validation' | 'settlements' | 'ledger'
@@ -103,6 +105,9 @@ export default function AccountingDashboard() {
       });
       setSelectedTxForValidation(null);
       setValidationNotes('');
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['reports'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       loadFinancialData();
     } catch (err) {
       showToast({
@@ -125,6 +130,9 @@ export default function AccountingDashboard() {
       });
       setSelectedTxForRejection(null);
       setRejectionReason('');
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['reports'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       loadFinancialData();
     } catch (err) {
       showToast({

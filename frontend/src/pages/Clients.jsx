@@ -3,10 +3,9 @@ import { useClients, useClientStats, useCreateClient, useUpdateClient, useDelete
 import { useProperties } from '../hooks/queries/useProperties';
 import { useCollectors } from '../hooks/queries/useCollectors';
 import { useSearchParams } from 'react-router-dom';
+import { useDebounce } from '../hooks/useDebounce';
 import { useToast } from '../components/ToastContext';
 import { useConfirm } from '../components/ConfirmContext';
-import AppHeader from '../components/AppHeader';
-import FilterBar from '../components/FilterBar';
 import StatsCard from '../components/StatsCard';
 import Modal from '../components/Modal';
 import TenantStatementModal from '../components/TenantStatementModal';
@@ -36,13 +35,36 @@ const COLUMNS = [
 
 export default function Clients() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const searchTerm = searchParams.get('search') || '';
+  const urlSearch = searchParams.get('search') || '';
+  const [searchTerm, setSearchTerm] = useState(urlSearch);
+  const debouncedSearch = useDebounce(searchTerm, 350);
+
   const statusFilter = searchParams.get('status') || '';
   const page = parseInt(searchParams.get('page') || '1', 10);
   const limit = 25;
 
   const { showToast } = useToast();
   const { confirm } = useConfirm();
+
+  useEffect(() => {
+    const currentParam = searchParams.get('search') || '';
+    if (debouncedSearch !== currentParam) {
+      const newParams = new URLSearchParams(searchParams);
+      if (debouncedSearch) {
+        newParams.set('search', debouncedSearch);
+      } else {
+        newParams.delete('search');
+      }
+      newParams.delete('page');
+      setSearchParams(newParams, { replace: true });
+    }
+  }, [debouncedSearch]);
+
+  useEffect(() => {
+    if (urlSearch !== searchTerm) {
+      setSearchTerm(urlSearch);
+    }
+  }, [urlSearch]);
 
   const handleFilterChange = (key, value) => {
     const newParams = new URLSearchParams(searchParams);
@@ -52,10 +74,10 @@ export default function Clients() {
       newParams.delete(key);
     }
     if (key !== 'page') newParams.delete('page');
-    setSearchParams(newParams);
+    setSearchParams(newParams, { replace: true });
   };
 
-  const { data: queryResult = {}, isLoading: loading, error: listError } = useClients({ page, limit, search: searchTerm, status: statusFilter });
+  const { data: queryResult = {}, isLoading: loading, error: listError } = useClients({ page, limit, search: debouncedSearch, status: statusFilter });
   const clients = Array.isArray(queryResult) ? queryResult : (queryResult?.data || []);
   const pagination = queryResult?.pagination || {};
   const isLastPage = pagination.hasNextPage === false;
@@ -79,7 +101,7 @@ export default function Clients() {
 
   // Data fetched automatically by useClients
 
-  const { data: stats = {} } = useClientStats({ search: searchTerm, status: statusFilter });
+  const { data: stats = {} } = useClientStats({ search: debouncedSearch, status: statusFilter });
   
   const totalOwed = (stats.totalDue || 0) - (stats.totalPaid || 0);
   const paidCount = (stats.totalClients || 0) - (stats.overdueCount || 0);
@@ -250,7 +272,7 @@ export default function Clients() {
         <div className="relative w-full md:w-96">
           <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
           <input type="text" placeholder="Rechercher (nom, téléphone, email)..." value={searchTerm}
-            onChange={(e) => handleFilterChange('search', e.target.value)}
+            onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" />
         </div>
         <div className="w-full sm:w-auto flex items-center gap-2">

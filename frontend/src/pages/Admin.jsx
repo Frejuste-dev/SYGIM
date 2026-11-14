@@ -1,28 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { useClientStats } from '../hooks/queries/useClients';
-import { usePropertyStats } from '../hooks/queries/useProperties';
-import { useTransactionStats } from '../hooks/queries/useTransactions';
-import { useOwnerStats } from '../hooks/queries/useOwners';
 import { API } from '../api/services';
-import StatsCard from '../components/StatsCard';
-import UsersTable from '../components/UsersTable';
-import UserFormModal from '../components/UserFormModal';
-import OverdueAlertPanel from '../components/OverdueAlertPanel';
-import DataIntegrityPanel from '../components/DataIntegrityPanel';
-import ActivityLog from '../components/ActivityLog';
-import SystemSettingsPanel from '../components/SystemSettingsPanel';
-import { useToast } from '../components/ToastContext';
 import { useConfirm } from '../components/ConfirmContext';
 
 export default function Admin() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const { confirm } = useConfirm();
 
   const handleLogout = async () => {
     await logout();
     navigate('/login');
+  };
+
+  const handleMobileLogout = async () => {
+    const isConfirmed = await confirm('Voulez-vous vraiment vous déconnecter de votre tournée en cours ?');
+    if (isConfirmed) {
+      await handleLogout();
+    }
   };
 
   const isAdmin = user?.role === 'admin' || user?.role === 'super_admin' || user?.isSuperAdmin;
@@ -246,7 +242,7 @@ export default function Admin() {
               <span>Profil</span>
             </NavLink>
             <button 
-              onClick={handleLogout} 
+              onClick={handleMobileLogout} 
               className="flex flex-col items-center justify-center flex-1 py-1 text-[11px] font-semibold text-rose-500 hover:text-rose-600 transition-colors"
             >
               <i className="fas fa-sign-out-alt text-lg mb-0.5"></i>

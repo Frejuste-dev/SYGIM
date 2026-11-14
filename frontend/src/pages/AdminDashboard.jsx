@@ -8,6 +8,7 @@ import { useTransactions, useTransactionStats } from '../hooks/queries/useTransa
 import { useOwners, useOwnerStats } from '../hooks/queries/useOwners';
 import { useDashboardKpis } from '../hooks/queries/useDashboardKpis';
 import { useToast } from '../components/ToastContext';
+import { useDebounce } from '../hooks/useDebounce';
 import Modal from '../components/Modal';
 import { formatXOF, formatDate, formatMethod, formatStatus, transactionSearchDate } from '../utils/formatters';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -47,14 +48,15 @@ export default function AdminDashboard() {
   const { showToast } = useToast();
 
   const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearch = useDebounce(searchQuery, 350);
 
-  const { data: clientsData = {}, isLoading: clientsLoading } = useClients({ search: searchQuery, limit: 20 });
+  const { data: clientsData = {}, isLoading: clientsLoading } = useClients({ search: debouncedSearch, limit: 20 });
   const clients = Array.isArray(clientsData) ? clientsData : (clientsData?.data || []);
-  const { data: propertiesData = {}, isLoading: propsLoading } = useProperties({ search: searchQuery, limit: 20 });
+  const { data: propertiesData = {}, isLoading: propsLoading } = useProperties({ search: debouncedSearch, limit: 20 });
   const properties = Array.isArray(propertiesData) ? propertiesData : (propertiesData?.data || []);
-  const { data: transactionsData = {}, isLoading: txLoading } = useTransactions({ search: searchQuery, limit: 20 });
+  const { data: transactionsData = {}, isLoading: txLoading } = useTransactions({ search: debouncedSearch, limit: 20 });
   const transactions = Array.isArray(transactionsData) ? transactionsData : (transactionsData?.data || []);
-  const { data: ownersData = {} } = useOwners({ search: searchQuery, limit: 20 });
+  const { data: ownersData = {} } = useOwners({ search: debouncedSearch, limit: 20 });
   const owners = Array.isArray(ownersData) ? ownersData : (ownersData?.data || []);
 
   const { data: clientStats = {} } = useClientStats();

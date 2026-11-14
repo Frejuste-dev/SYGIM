@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useDebounce } from '../hooks/useDebounce';
 import { useTransactions, useTransactionStats } from '../hooks/queries/useTransactions';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../components/ToastContext';
@@ -72,13 +73,38 @@ export default function Transactions() {
   const [isValidatingTx, setIsValidatingTx] = useState(false);
 
   const [searchParams, setSearchParams] = useSearchParams();
-  const searchTerm = searchParams.get('search') || '';
+  const urlSearch = searchParams.get('search') || '';
+  const [searchTerm, setSearchTerm] = useState(urlSearch);
+  const debouncedSearch = useDebounce(searchTerm, 350);
+
   const statusFilter = searchParams.get('status') || '';
   const methodFilter = searchParams.get('method') || '';
   const dateFrom = searchParams.get('dateFrom') || '';
   const dateTo = searchParams.get('dateTo') || '';
   const page = parseInt(searchParams.get('page') || '1', 10);
   const limit = 25;
+
+  // Synchronisation du paramètre de recherche délayé vers l'URL
+  useEffect(() => {
+    const currentParam = searchParams.get('search') || '';
+    if (debouncedSearch !== currentParam) {
+      const newParams = new URLSearchParams(searchParams);
+      if (debouncedSearch) {
+        newParams.set('search', debouncedSearch);
+      } else {
+        newParams.delete('search');
+      }
+      newParams.delete('page');
+      setSearchParams(newParams, { replace: true });
+    }
+  }, [debouncedSearch]);
+
+  // Synchronisation si l'URL change en externe (précédent/suivant)
+  useEffect(() => {
+    if (urlSearch !== searchTerm) {
+      setSearchTerm(urlSearch);
+    }
+  }, [urlSearch]);
 
   const handleFilterChange = (key, value) => {
     const newParams = new URLSearchParams(searchParams);
@@ -88,12 +114,12 @@ export default function Transactions() {
       newParams.delete(key);
     }
     if (key !== 'page') newParams.delete('page');
-    setSearchParams(newParams);
+    setSearchParams(newParams, { replace: true });
   };
 
   const filters = {
     page, limit,
-    search: searchTerm,
+    search: debouncedSearch,
     status: statusFilter,
     method: methodFilter,
     dateFrom, dateTo
@@ -422,7 +448,7 @@ export default function Transactions() {
                 type="text"
                 placeholder="Rechercher par référence, client..."
                 value={searchTerm}
-                onChange={(e) => handleFilterChange('search', e.target.value)}
+                onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
               />
             </div>
