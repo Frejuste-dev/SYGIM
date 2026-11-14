@@ -20,6 +20,10 @@
   --color-bg: #F8FAFC;
   --animate-fade-in-up: fade-in-up 0.5s ease-out both;
   --animate-shake: shake 0.4s ease-in-out;
+  --animate-float-slow: float-slow 6s ease-in-out infinite;
+  --animate-float-reverse: float-reverse 7s ease-in-out infinite;
+  --animate-blob-1: blob-drift-1 16s ease-in-out infinite;
+  --animate-blob-2: blob-drift-2 20s ease-in-out infinite;
 
   @keyframes fade-in-up {
     0% { opacity: 0; transform: translateY(20px); }
@@ -30,6 +34,28 @@
     0%, 100% { transform: translateX(0); }
     20%, 60% { transform: translateX(-6px); }
     40%, 80% { transform: translateX(6px); }
+  }
+
+  @keyframes float-slow {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-12px); }
+  }
+
+  @keyframes float-reverse {
+    0%, 100% { transform: translateY(0px) rotate(0deg); }
+    50% { transform: translateY(10px) rotate(2deg); }
+  }
+
+  @keyframes blob-drift-1 {
+    0%, 100% { transform: translate(0px, 0px) scale(1); }
+    33% { transform: translate(40px, -45px) scale(1.08); }
+    66% { transform: translate(-35px, 35px) scale(0.95); }
+  }
+
+  @keyframes blob-drift-2 {
+    0%, 100% { transform: translate(0px, 0px) scale(1); }
+    33% { transform: translate(-45px, 40px) scale(1.12); }
+    66% { transform: translate(35px, -30px) scale(0.92); }
   }
 }
 
