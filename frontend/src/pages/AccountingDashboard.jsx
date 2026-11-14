@@ -355,46 +355,52 @@ export default function AccountingDashboard() {
   return (
     <div className="space-y-6 w-full max-w-full overflow-x-hidden box-border">
       {/* EN-TÊTE COMPTABLE + ACTIONS RAPIDES */}
-      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+      <div className="bg-white border border-slate-200/80 rounded-xl shadow-xs p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div className="min-w-0">
           <h1 className="text-xl sm:text-2xl font-bold text-slate-900 flex items-center gap-2.5">
             <span className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
               <i className="fas fa-calculator text-lg"></i>
             </span>
-            <span>Espace Comptabilité & Trésorerie</span>
+            <span>Espace Comptabilité &amp; Trésorerie</span>
           </h1>
-          <p className="text-sm text-slate-500 mt-1.5">
-            Gérez les encaissements locataires, les paiements propriétaires (intégraux, échelonnés, préfinancements) et le Grand Livre.
+          <p className="text-xs sm:text-sm text-slate-500 mt-1">
+            Gérez les encaissements locataires, les reversements propriétaires (intégraux, échelonnés, préfinancements) et le Grand Livre.
           </p>
         </div>
-        <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 shrink-0">
+        <div className="flex items-center gap-2.5 shrink-0 flex-nowrap">
           <button
+            type="button"
             onClick={() => navigate('/admin/owners')}
-            className="px-4 py-2.5 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-xl text-sm font-semibold transition-colors flex items-center gap-2 whitespace-nowrap shadow-xs"
+            className="h-9 px-3.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-lg shadow-2xs inline-flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-colors"
           >
-            <i className="fas fa-user-tie text-primary"></i> Gérer Propriétaires & Biens
+            <i className="fas fa-user-tie text-primary"></i>
+            <span>Propriétaires &amp; Biens</span>
           </button>
           <button
+            type="button"
             onClick={() => { setSelectedOwnerForPayout(null); setShowPayoutModal(true); }}
-            className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold shadow-sm transition-colors flex items-center gap-2 whitespace-nowrap"
+            className="h-9 px-3.5 bg-primary hover:bg-primary-dark text-white text-xs font-bold rounded-lg shadow-2xs inline-flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-colors"
           >
-            <i className="fas fa-hand-holding-usd"></i> + Payer / Préfinancer un Propriétaire
+            <i className="fas fa-hand-holding-dollar"></i>
+            <span>+ Payer / Préfinancer</span>
           </button>
         </div>
       </div>
 
       {/* BARRE D'ONGLETS COMPTABLES */}
-      <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 pb-2">
+      <div className="flex items-center gap-2 border-b border-slate-200 pb-2 overflow-x-auto flex-nowrap sm:flex-wrap mb-6">
         <button
+          type="button"
           onClick={() => setActiveTab('performance')}
-          className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 ${
+          className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all inline-flex items-center gap-2 whitespace-nowrap cursor-pointer ${
             activeTab === 'performance'
-              ? 'bg-primary text-white shadow-sm'
+              ? 'bg-primary text-white shadow-xs'
               : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
           }`}
         >
-          <i className="fas fa-chart-line"></i> Performance & Analytique
-          <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold ${
+          <i className="fas fa-chart-line text-xs"></i>
+          <span>Performance</span>
+          <span className={`px-1.5 py-0.2 rounded text-[10px] font-bold ${
             activeTab === 'performance'
               ? 'bg-white/20 text-white'
               : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
@@ -403,55 +409,63 @@ export default function AccountingDashboard() {
           </span>
         </button>
         <button
+          type="button"
           onClick={() => setActiveTab('overview')}
-          className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 ${
+          className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all inline-flex items-center gap-2 whitespace-nowrap cursor-pointer ${
             activeTab === 'overview'
-              ? 'bg-primary text-white shadow-sm'
+              ? 'bg-primary text-white shadow-xs'
               : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
           }`}
         >
-          <i className="fas fa-chart-pie"></i> Vue d'ensemble & Encaissements
+          <i className="fas fa-chart-pie text-xs"></i>
+          <span>Vue d'ensemble</span>
         </button>
         <button
+          type="button"
           onClick={() => setActiveTab('pending_validation')}
-          className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 ${
+          className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all inline-flex items-center gap-2 whitespace-nowrap cursor-pointer ${
             activeTab === 'pending_validation'
-              ? 'bg-amber-600 text-white shadow-sm'
+              ? 'bg-amber-500 text-white shadow-xs'
               : 'bg-white text-slate-700 hover:bg-amber-50 hover:text-amber-800 border border-amber-200'
           }`}
         >
-          <i className="fas fa-hand-holding-usd text-amber-500"></i> Encaissements Terrain à Valider
+          <i className={`fas fa-clock text-xs ${activeTab === 'pending_validation' ? 'text-white' : 'text-amber-500'}`}></i>
+          <span>À valider</span>
           {pendingTransactions.length > 0 && (
-            <span className={`px-2 py-0.5 rounded-full text-xs font-black ${
-              activeTab === 'pending_validation' ? 'bg-white text-amber-800' : 'bg-amber-500 text-white animate-pulse'
+            <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
+              activeTab === 'pending_validation' ? 'bg-white text-amber-800' : 'bg-amber-500 text-white'
             }`}>
               {pendingTransactions.length}
             </span>
           )}
         </button>
         <button
+          type="button"
           onClick={() => setActiveTab('settlements')}
-          className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 ${
+          className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all inline-flex items-center gap-2 whitespace-nowrap cursor-pointer ${
             activeTab === 'settlements'
-              ? 'bg-primary text-white shadow-sm'
+              ? 'bg-primary text-white shadow-xs'
               : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
           }`}
         >
-          <i className="fas fa-hand-holding-usd"></i> Paiements & Préfinancements Propriétaires
-          <span className={`px-2 py-0.5 rounded-full text-xs ${activeTab === 'settlements' ? 'bg-white/20 text-white' : 'bg-emerald-100 text-emerald-800'}`}>
+          <i className="fas fa-hand-holding-dollar text-xs"></i>
+          <span>Reversements</span>
+          <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${activeTab === 'settlements' ? 'bg-white/20 text-white' : 'bg-emerald-100 text-emerald-800'}`}>
             {settlements.length}
           </span>
         </button>
         <button
+          type="button"
           onClick={() => setActiveTab('ledger')}
-          className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 ${
+          className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all inline-flex items-center gap-2 whitespace-nowrap cursor-pointer ${
             activeTab === 'ledger'
-              ? 'bg-primary text-white shadow-sm'
+              ? 'bg-primary text-white shadow-xs'
               : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
           }`}
         >
-          <i className="fas fa-book"></i> Grand Livre Comptable
-          <span className={`px-2 py-0.5 rounded-full text-xs ${activeTab === 'ledger' ? 'bg-white/20 text-white' : 'bg-primary/10 text-primary'}`}>
+          <i className="fas fa-book text-xs"></i>
+          <span>Grand Livre</span>
+          <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${activeTab === 'ledger' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-700'}`}>
             {ledgerData.entries?.length || 0}
           </span>
         </button>
@@ -605,21 +619,44 @@ export default function AccountingDashboard() {
           </div>
 
           {/* Dernières Transactions Locataires */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <div className="bg-white rounded-xl border border-slate-200/80 shadow-xs overflow-hidden">
+            <div className="p-5 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
-                <h3 className="text-lg font-bold text-slate-900">Dernières Transactions (Encaissements Locataires)</h3>
-                <p className="text-xs text-slate-500">Exportez la liste des transactions en Excel ou PDF.</p>
+                <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                  <i className="fas fa-list text-primary"></i>
+                  Dernières Transactions (Encaissements Locataires)
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">Flux récents d'encaissements validés et intégrés en caisse.</p>
               </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <button onClick={handleExportTransactionsExcel} className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg hover:bg-emerald-100 transition-colors">
-                  <i className="fas fa-file-excel"></i> Exporter Excel
-                </button>
-                <button onClick={handleExportTransactionsPDF} className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-rose-700 bg-rose-50 border border-rose-200 rounded-lg hover:bg-rose-100 transition-colors">
-                  <i className="fas fa-file-pdf"></i> Exporter PDF
-                </button>
-                <button onClick={() => navigate('/admin/transactions')} className="px-3 py-2 text-xs font-semibold text-primary bg-primary/5 rounded-lg hover:bg-primary/10 transition-colors">
-                  Toutes les transactions <i className="fas fa-arrow-right ml-1"></i>
+              <div className="flex items-center gap-2.5 shrink-0 flex-nowrap">
+                <div className="inline-flex items-center rounded-lg border border-slate-200 bg-slate-50/80 p-0.5 shadow-2xs">
+                  <button
+                    type="button"
+                    onClick={handleExportTransactionsExcel}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-semibold text-slate-700 hover:text-emerald-700 hover:bg-white transition-colors cursor-pointer"
+                    title="Exporter en Excel"
+                  >
+                    <i className="fas fa-file-excel text-emerald-600"></i>
+                    <span>Excel</span>
+                  </button>
+                  <div className="h-4 w-px bg-slate-200"></div>
+                  <button
+                    type="button"
+                    onClick={handleExportTransactionsPDF}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-semibold text-slate-700 hover:text-rose-700 hover:bg-white transition-colors cursor-pointer"
+                    title="Exporter en PDF"
+                  >
+                    <i className="fas fa-file-pdf text-rose-600"></i>
+                    <span>PDF</span>
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => navigate('/admin/transactions')}
+                  className="h-8 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
+                >
+                  <span>Toutes les transactions</span>
+                  <i className="fas fa-arrow-right text-[10px]"></i>
                 </button>
               </div>
             </div>
@@ -630,22 +667,22 @@ export default function AccountingDashboard() {
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse text-sm">
                   <thead>
-                    <tr className="bg-slate-50 border-y border-slate-200 text-slate-500 text-xs uppercase">
-                      <th className="py-2.5 px-4">Réf.</th>
-                      <th className="py-2.5 px-4">Date</th>
-                      <th className="py-2.5 px-4">Locataire</th>
-                      <th className="py-2.5 px-4">Moyen</th>
-                      <th className="py-2.5 px-4 text-right">Montant</th>
+                    <tr className="bg-slate-50/70 border-b border-slate-200/80 text-slate-500 text-[11px] font-bold uppercase tracking-wider">
+                      <th className="py-3.5 px-4 whitespace-nowrap">Réf.</th>
+                      <th className="py-3.5 px-4 whitespace-nowrap">Date</th>
+                      <th className="py-3.5 px-4 whitespace-nowrap">Locataire</th>
+                      <th className="py-3.5 px-4 whitespace-nowrap">Moyen</th>
+                      <th className="py-3.5 px-4 text-right whitespace-nowrap">Montant</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {transactions.slice(0, 10).map(tx => (
-                      <tr key={tx.id || tx.reference} className="hover:bg-slate-50">
-                        <td className="py-3 px-4 font-mono text-xs text-slate-600">{tx.reference || tx.id}</td>
-                        <td className="py-3 px-4 text-slate-600">{formatDate(tx.date || tx.createdAt)}</td>
-                        <td className="py-3 px-4 font-medium text-slate-900">{tx.client_name || tx.client || '-'}</td>
-                        <td className="py-3 px-4 text-slate-600">{formatMethod(tx.method)}</td>
-                        <td className="py-3 px-4 text-right font-bold text-emerald-600 tabular-nums">+{formatXOF(tx.amount, { compact: false })}</td>
+                      <tr key={tx.id || tx.reference} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="py-3.5 px-4 font-mono text-xs font-semibold text-slate-600 whitespace-nowrap">{tx.reference || tx.id}</td>
+                        <td className="py-3.5 px-4 text-xs text-slate-600 whitespace-nowrap">{formatDate(tx.date || tx.createdAt)}</td>
+                        <td className="py-3.5 px-4 font-medium text-slate-900 whitespace-nowrap">{tx.client_name || tx.client || '-'}</td>
+                        <td className="py-3.5 px-4 text-xs text-slate-600 whitespace-nowrap">{formatMethod(tx.method)}</td>
+                        <td className="py-3.5 px-4 text-right font-bold text-emerald-600 tabular-nums whitespace-nowrap">+{formatXOF(tx.amount, { compact: false })}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -685,23 +722,25 @@ export default function AccountingDashboard() {
           </div>
 
           {/* Tableau de validation des encaissements */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-            <div className="p-6 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="bg-white rounded-xl border border-slate-200/80 shadow-xs overflow-hidden">
+            <div className="p-5 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
-                <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
                   <i className="fas fa-hand-holding-usd text-amber-600"></i>
                   File d'Attente de Validation des Encaissements Terrain
                 </h3>
-                <p className="text-xs text-slate-500 mt-1">
-                  Vérifiez le montant physique remis par le collecteur et cliquez sur « Valider la réception » pour créditer le locataire et intégrer les fonds dans la comptabilité.
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Vérifiez le montant physique remis par le collecteur et cliquez sur « Valider la réception » pour créditer le locataire et intégrer les fonds.
                 </p>
               </div>
               <button
+                type="button"
                 onClick={loadFinancialData}
                 disabled={loadingFinancial}
-                className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold flex items-center gap-1.5 transition"
+                className="h-8 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
               >
-                <i className={`fas fa-sync text-xs ${loadingFinancial ? 'fa-spin' : ''}`}></i> Actualiser
+                <i className={`fas fa-sync text-xs ${loadingFinancial ? 'fa-spin' : ''}`}></i>
+                <span>Actualiser</span>
               </button>
             </div>
 
@@ -719,20 +758,20 @@ export default function AccountingDashboard() {
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse text-sm">
                   <thead>
-                    <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 text-xs uppercase">
-                      <th className="py-3.5 px-4 font-semibold">Réf. & Date</th>
-                      <th className="py-3.5 px-4 font-semibold">Collecteur (Porteur)</th>
-                      <th className="py-3.5 px-4 font-semibold">Locataire & Bien</th>
-                      <th className="py-3.5 px-4 font-semibold">Moyen</th>
-                      <th className="py-3.5 px-4 text-right font-semibold">Montant Reçu</th>
-                      <th className="py-3.5 px-4 text-center font-semibold">Statut</th>
-                      <th className="py-3.5 px-4 text-right font-semibold">Action Comptable</th>
+                    <tr className="bg-slate-50/70 border-b border-slate-200/80 text-slate-500 text-[11px] font-bold uppercase tracking-wider">
+                      <th className="py-3.5 px-4 font-semibold whitespace-nowrap">Réf. &amp; Date</th>
+                      <th className="py-3.5 px-4 font-semibold whitespace-nowrap">Collecteur (Porteur)</th>
+                      <th className="py-3.5 px-4 font-semibold whitespace-nowrap">Locataire &amp; Bien</th>
+                      <th className="py-3.5 px-4 font-semibold whitespace-nowrap">Moyen</th>
+                      <th className="py-3.5 px-4 text-right font-semibold whitespace-nowrap">Montant Reçu</th>
+                      <th className="py-3.5 px-4 text-center font-semibold whitespace-nowrap">Statut</th>
+                      <th className="py-3.5 px-4 text-right font-semibold whitespace-nowrap min-w-[150px]">Action Comptable</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {pendingTransactions.map(t => (
                       <tr key={t.id} className="hover:bg-amber-50/30 transition-colors">
-                        <td className="py-3.5 px-4">
+                        <td className="py-3.5 px-4 whitespace-nowrap">
                           <div className="font-mono text-xs font-bold text-slate-900">{t.reference || `TX-${t.id}`}</div>
                           <div className="text-xs text-slate-400">{formatDate(t.date || t.created_at)}</div>
                         </td>
@@ -742,37 +781,39 @@ export default function AccountingDashboard() {
                           {t.collector_zone && <span className="inline-block text-[10px] font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded mt-0.5">{t.collector_zone}</span>}
                         </td>
                         <td className="py-3.5 px-4">
-                          <div className="font-semibold text-slate-900">{t.client_name || t.client || 'Locataire'}</div>
-                          <div className="text-xs text-slate-500 truncate max-w-[200px]">{t.property_name || '—'}</div>
+                          <div className="font-semibold text-slate-900 truncate max-w-[180px]" title={t.client_name || t.client || 'Locataire'}>{t.client_name || t.client || 'Locataire'}</div>
+                          <div className="text-xs text-slate-500 truncate max-w-[180px]" title={t.property_name || '—'}>{t.property_name || '—'}</div>
                         </td>
-                        <td className="py-3.5 px-4 text-xs font-medium text-slate-600">
+                        <td className="py-3.5 px-4 text-xs font-medium text-slate-600 whitespace-nowrap">
                           {formatMethod(t.method)}
                         </td>
-                        <td className="py-3.5 px-4 text-right font-black text-amber-800 text-base tabular-nums">
+                        <td className="py-3.5 px-4 text-right font-bold text-amber-900 text-sm tabular-nums whitespace-nowrap">
                           {formatXOF(t.amount, { compact: false })}
                         </td>
-                        <td className="py-3.5 px-4 text-center">
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300">
-                            <i className="fas fa-clock text-[10px] text-amber-700"></i> À réceptionner
+                        <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200/80">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0"></span>
+                            À réceptionner
                           </span>
                         </td>
-                        <td className="py-3.5 px-4 text-right">
-                          <div className="flex items-center justify-end gap-2">
+                        <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                          <div className="inline-flex items-center justify-end gap-1.5">
                             <button
                               type="button"
                               onClick={() => { setSelectedTxForValidation(t); setValidationNotes(''); }}
-                              className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-2xs transition-all active:scale-95"
+                              className="h-8 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold inline-flex items-center gap-1.5 shadow-2xs transition-all whitespace-nowrap cursor-pointer"
                               title="Valider la réception physique des fonds en caisse"
                             >
-                              <i className="fas fa-check-circle"></i> Valider la réception
+                              <i className="fas fa-check-circle text-xs"></i>
+                              <span>Valider réception</span>
                             </button>
                             <button
                               type="button"
                               onClick={() => { setSelectedTxForRejection(t); setRejectionReason(''); }}
-                              className="px-2.5 py-1.5 bg-slate-100 hover:bg-rose-50 text-slate-500 hover:text-rose-700 border border-slate-200 rounded-xl text-xs font-semibold transition"
+                              className="w-8 h-8 rounded-lg inline-flex items-center justify-center bg-slate-100 hover:bg-rose-50 text-slate-500 hover:text-rose-700 border border-slate-200 transition-colors cursor-pointer"
                               title="Rejeter cet encaissement"
                             >
-                              <i className="fas fa-times"></i>
+                              <i className="fas fa-times text-xs"></i>
                             </button>
                           </div>
                         </td>
@@ -788,29 +829,47 @@ export default function AccountingDashboard() {
 
       {/* ONGLET 3 : PAIEMENTS & PRÉFINANCEMENTS PROPRIÉTAIRES */}
       {activeTab === 'settlements' && (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="p-6 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="bg-white rounded-xl border border-slate-200/80 shadow-xs overflow-hidden">
+          <div className="p-5 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+              <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
                 <i className="fas fa-hand-holding-usd text-emerald-600"></i>
                 Historique des Paiements & Préfinancements Propriétaires
               </h3>
-              <p className="text-xs text-slate-500 mt-1">
+              <p className="text-xs text-slate-500 mt-0.5">
                 Suivi des reversements propriétaires (paiement intégral, paiement échelonné, ou préfinancement sur loyer impayé).
               </p>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <button onClick={handleExportSettlementsExcel} className="px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors">
-                <i className="fas fa-file-excel"></i> Excel
-              </button>
-              <button onClick={handleExportSettlementsPDF} className="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors">
-                <i className="fas fa-file-pdf"></i> PDF
-              </button>
+            <div className="flex items-center gap-2.5 shrink-0 flex-nowrap">
+              <div className="inline-flex items-center rounded-lg border border-slate-200 bg-slate-50/80 p-0.5 shadow-2xs">
+                <button
+                  type="button"
+                  onClick={handleExportSettlementsExcel}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-semibold text-slate-700 hover:text-emerald-700 hover:bg-white transition-colors cursor-pointer"
+                  title="Exporter les règlements en Excel"
+                >
+                  <i className="fas fa-file-excel text-emerald-600"></i>
+                  <span>Excel</span>
+                </button>
+                <div className="h-4 w-px bg-slate-200"></div>
+                <button
+                  type="button"
+                  onClick={handleExportSettlementsPDF}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-semibold text-slate-700 hover:text-rose-700 hover:bg-white transition-colors cursor-pointer"
+                  title="Exporter les règlements en PDF"
+                >
+                  <i className="fas fa-file-pdf text-rose-600"></i>
+                  <span>PDF</span>
+                </button>
+              </div>
+
               <button
+                type="button"
                 onClick={() => { setSelectedOwnerForPayout(null); setShowPayoutModal(true); }}
-                className="px-4 py-2 bg-primary hover:bg-primary-dark text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-colors"
+                className="h-9 px-3.5 bg-primary hover:bg-primary-dark text-white rounded-lg text-xs font-bold transition-all shadow-2xs inline-flex items-center gap-1.5 whitespace-nowrap cursor-pointer"
               >
-                <i className="fas fa-plus"></i> Nouveau Paiement / Préfinancement
+                <i className="fas fa-plus text-xs"></i>
+                <span>Nouveau Versement</span>
               </button>
             </div>
           </div>
@@ -818,16 +877,16 @@ export default function AccountingDashboard() {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-sm">
               <thead>
-                <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 text-xs uppercase">
-                  <th className="py-3 px-4">Réf.</th>
-                  <th className="py-3 px-4">Propriétaire & Bien(s)</th>
-                  <th className="py-3 px-4">Période / Date</th>
-                  <th className="py-3 px-4">Mode & Moyen</th>
-                  <th className="py-3 px-4 text-right">Net Dû</th>
-                  <th className="py-3 px-4 text-right">Versé</th>
-                  <th className="py-3 px-4 text-right">Reste</th>
-                  <th className="py-3 px-4">Statut</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
+                <tr className="bg-slate-50/70 border-b border-slate-200/80 text-slate-500 text-[11px] font-bold uppercase tracking-wider">
+                  <th className="py-3.5 px-4 whitespace-nowrap">Réf.</th>
+                  <th className="py-3.5 px-4 whitespace-nowrap">Propriétaire & Bien(s)</th>
+                  <th className="py-3.5 px-4 whitespace-nowrap">Période / Date</th>
+                  <th className="py-3.5 px-4 whitespace-nowrap">Mode & Moyen</th>
+                  <th className="py-3.5 px-4 text-right whitespace-nowrap">Net Dû</th>
+                  <th className="py-3.5 px-4 text-right whitespace-nowrap">Versé</th>
+                  <th className="py-3.5 px-4 text-right whitespace-nowrap">Reste</th>
+                  <th className="py-3.5 px-4 whitespace-nowrap">Statut</th>
+                  <th className="py-3.5 px-4 text-right whitespace-nowrap min-w-[170px]">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -836,7 +895,7 @@ export default function AccountingDashboard() {
                 ) : settlements.length === 0 ? (
                   <tr>
                     <td colSpan="9" className="py-12 text-center text-slate-500">
-                      Aucun règlement propriétaire enregistré. Cliquez sur « Nouveau Paiement / Préfinancement ».
+                      Aucun règlement propriétaire enregistré. Cliquez sur « Nouveau Versement ».
                     </td>
                   </tr>
                 ) : (
@@ -844,55 +903,58 @@ export default function AccountingDashboard() {
                     const modeBadge = PAYOUT_MODE_BADGES[s.payout_mode] || PAYOUT_MODE_BADGES.full;
                     const statusBadge = SETTLEMENT_STATUS_BADGES[s.status] || SETTLEMENT_STATUS_BADGES.paid;
                     return (
-                      <tr key={s.id} className="hover:bg-slate-50/80">
-                        <td className="py-3.5 px-4 font-mono text-xs font-semibold text-slate-700">
+                      <tr key={s.id} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="py-3.5 px-4 font-mono text-xs font-semibold text-slate-700 whitespace-nowrap">
                           {s.transaction_reference || `REV-${s.id}`}
                         </td>
                         <td className="py-3.5 px-4">
-                          <div className="font-semibold text-slate-900">{s.owner_name || `Propriétaire #${s.owner_id}`}</div>
-                          <div className="text-xs text-slate-500">{s.property_name || 'Tous les biens attribués'}</div>
+                          <div className="font-semibold text-slate-900 leading-tight">{s.owner_name || `Propriétaire #${s.owner_id}`}</div>
+                          <div className="text-xs text-slate-500 mt-0.5">{s.property_name || 'Tous les biens attribués'}</div>
                         </td>
-                        <td className="py-3.5 px-4 text-xs text-slate-600">
+                        <td className="py-3.5 px-4 text-xs text-slate-600 whitespace-nowrap">
                           <div>Du {formatDate(s.period_start)} au {formatDate(s.period_end)}</div>
-                          {s.scheduled_date && <div className="text-slate-400">Échéance : {formatDate(s.scheduled_date)}</div>}
+                          {s.scheduled_date && <div className="text-slate-400 mt-0.5">Échéance : {formatDate(s.scheduled_date)}</div>}
                         </td>
-                        <td className="py-3.5 px-4">
+                        <td className="py-3.5 px-4 whitespace-nowrap">
                           <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold border ${modeBadge.cls}`}>
                             {s.is_prefinanced ? <i className="fas fa-bolt mr-1 text-amber-600"></i> : null}
                             {modeBadge.label}
                           </span>
                           <div className="text-xs text-slate-500 mt-1">{formatMethod(s.payment_method || 'bank_transfer')}</div>
                         </td>
-                        <td className="py-3.5 px-4 font-medium text-slate-800 text-right tabular-nums">{formatXOF(s.net_amount, { compact: false })}</td>
-                        <td className="py-3.5 px-4 font-bold text-emerald-700 text-right tabular-nums">{formatXOF(s.amount_paid || s.net_amount, { compact: false })}</td>
-                        <td className="py-3.5 px-4 font-semibold text-rose-600 text-right tabular-nums">
-                          {s.remaining_to_pay > 0 ? formatXOF(s.remaining_to_pay, { compact: false }) : '0 FCFA'}
+                        <td className="py-3.5 px-4 font-medium text-slate-800 text-right tabular-nums whitespace-nowrap">{formatXOF(s.net_amount, { compact: false })}</td>
+                        <td className="py-3.5 px-4 font-bold text-emerald-700 text-right tabular-nums whitespace-nowrap">{formatXOF(s.amount_paid || s.net_amount, { compact: false })}</td>
+                        <td className="py-3.5 px-4 font-semibold text-rose-600 text-right tabular-nums whitespace-nowrap">
+                          {s.remaining_to_pay > 0 ? formatXOF(s.remaining_to_pay, { compact: false }) : formatXOF(0, { compact: false })}
                         </td>
-                        <td className="py-3.5 px-4">
+                        <td className="py-3.5 px-4 whitespace-nowrap">
                           <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${statusBadge.cls}`}>
                             {statusBadge.label}
                           </span>
                         </td>
-                        <td className="py-3.5 px-4 text-right">
-                          <div className="flex items-center justify-end gap-1.5">
+                        <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                          <div className="inline-flex items-center justify-end gap-1.5 whitespace-nowrap">
                             <button
+                              type="button"
                               onClick={() => setSelectedSettlementForInstallments(s)}
-                              className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1 ${
+                              className={`h-8 px-2.5 rounded-lg text-xs font-semibold transition-colors inline-flex items-center gap-1.5 cursor-pointer ${
                                 s.remaining_to_pay > 0
-                                  ? 'bg-primary hover:bg-primary-dark text-white shadow-sm'
+                                  ? 'bg-primary hover:bg-primary-dark text-white shadow-2xs'
                                   : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
                               }`}
                               title="Voir l'historique des tranches ou enregistrer un versement partiel"
                             >
-                              <i className={`fas ${s.remaining_to_pay > 0 ? 'fa-plus-circle' : 'fa-layer-group'}`}></i>
-                              {s.remaining_to_pay > 0 ? '+ Tranche' : `Tranches (${s.installments?.length || 1})`}
+                              <i className={`fas ${s.remaining_to_pay > 0 ? 'fa-plus-circle' : 'fa-layer-group'} text-xs`}></i>
+                              <span>{s.remaining_to_pay > 0 ? '+ Tranche' : `Tranches (${s.installments?.length || 1})`}</span>
                             </button>
                             <button
+                              type="button"
                               onClick={() => printOwnerSettlementReceipt(s)}
-                              className="px-2.5 py-1 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1 cursor-pointer"
+                              className="h-8 px-2.5 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 rounded-lg text-xs font-semibold transition-colors inline-flex items-center gap-1.5 cursor-pointer"
                               title="Imprimer le Bordereau / Reçu Officiel PDF"
                             >
-                              <i className="fas fa-print"></i> Bordereau
+                              <i className="fas fa-print text-xs"></i>
+                              <span>Bordereau</span>
                             </button>
                           </div>
                         </td>
@@ -908,40 +970,55 @@ export default function AccountingDashboard() {
 
       {/* ONGLET 3 : GRAND LIVRE COMPTABLE */}
       {activeTab === 'ledger' && (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="p-6 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="bg-white rounded-xl border border-slate-200/80 shadow-xs overflow-hidden">
+          <div className="p-5 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+              <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
                 <i className="fas fa-book text-indigo-600"></i>
                 Grand Livre Comptable Général (Journal Centralisé)
               </h3>
-              <p className="text-xs text-slate-500 mt-1">
-                Toutes les écritures de Crédit (encaissements locataires) et de Débit (paiements et préfinancements propriétaires) avec solde progressif.
+              <p className="text-xs text-slate-500 mt-0.5">
+                Toutes les écritures de Crédit (encaissements) et Débit (règlements propriétaires) avec solde progressif.
               </p>
             </div>
-            <div className="flex items-center gap-2">
-              <button onClick={handleExportLedgerExcel} className="px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors">
-                <i className="fas fa-file-excel"></i> Exporter Grand Livre (Excel)
-              </button>
-              <button onClick={handleExportLedgerPDF} className="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors">
-                <i className="fas fa-file-pdf"></i> Exporter Grand Livre (PDF)
-              </button>
+            <div className="flex items-center gap-2.5 shrink-0 flex-nowrap">
+              <div className="inline-flex items-center rounded-lg border border-slate-200 bg-slate-50/80 p-0.5 shadow-2xs">
+                <button
+                  type="button"
+                  onClick={handleExportLedgerExcel}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-semibold text-slate-700 hover:text-emerald-700 hover:bg-white transition-colors cursor-pointer"
+                  title="Exporter le Grand Livre en Excel"
+                >
+                  <i className="fas fa-file-excel text-emerald-600"></i>
+                  <span>Excel</span>
+                </button>
+                <div className="h-4 w-px bg-slate-200"></div>
+                <button
+                  type="button"
+                  onClick={handleExportLedgerPDF}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-semibold text-slate-700 hover:text-rose-700 hover:bg-white transition-colors cursor-pointer"
+                  title="Exporter le Grand Livre en PDF"
+                >
+                  <i className="fas fa-file-pdf text-rose-600"></i>
+                  <span>PDF</span>
+                </button>
+              </div>
             </div>
           </div>
 
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-sm">
               <thead>
-                <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 text-xs uppercase">
-                  <th className="py-3 px-4">Date</th>
-                  <th className="py-3 px-4">Réf.</th>
-                  <th className="py-3 px-4">Catégorie</th>
-                  <th className="py-3 px-4">Tiers</th>
-                  <th className="py-3 px-4">Bien</th>
-                  <th className="py-3 px-4">Libellé</th>
-                  <th className="py-3 px-4 text-right">Crédit (+)</th>
-                  <th className="py-3 px-4 text-right">Débit (-)</th>
-                  <th className="py-3 px-4 text-right">Solde Progressif</th>
+                <tr className="bg-slate-50/70 border-b border-slate-200/80 text-slate-500 text-[11px] font-bold uppercase tracking-wider">
+                  <th className="py-3.5 px-4 whitespace-nowrap">Date</th>
+                  <th className="py-3.5 px-4 whitespace-nowrap">Réf.</th>
+                  <th className="py-3.5 px-4 whitespace-nowrap">Catégorie</th>
+                  <th className="py-3.5 px-4 whitespace-nowrap">Tiers</th>
+                  <th className="py-3.5 px-4 whitespace-nowrap">Bien</th>
+                  <th className="py-3.5 px-4 whitespace-nowrap">Libellé</th>
+                  <th className="py-3.5 px-4 text-right whitespace-nowrap">Crédit (+)</th>
+                  <th className="py-3.5 px-4 text-right whitespace-nowrap">Débit (-)</th>
+                  <th className="py-3.5 px-4 text-right whitespace-nowrap">Solde Progressif</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -951,10 +1028,10 @@ export default function AccountingDashboard() {
                   </tr>
                 ) : (
                   ledgerData.entries.map(e => (
-                    <tr key={e.id} className="hover:bg-slate-50/80">
-                      <td className="py-3 px-4 text-xs text-slate-600 whitespace-nowrap">{formatDate(e.date)}</td>
-                      <td className="py-3 px-4 font-mono text-xs text-slate-700">{e.reference}</td>
-                      <td className="py-3 px-4">
+                    <tr key={e.id} className="hover:bg-slate-50/80 transition-colors">
+                      <td className="py-3.5 px-4 text-xs text-slate-600 whitespace-nowrap">{formatDate(e.date)}</td>
+                      <td className="py-3.5 px-4 font-mono text-xs font-semibold text-slate-700 whitespace-nowrap">{e.reference}</td>
+                      <td className="py-3.5 px-4 whitespace-nowrap">
                         <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold ${
                           e.direction === 'CREDIT'
                             ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
@@ -965,16 +1042,16 @@ export default function AccountingDashboard() {
                           {e.category}
                         </span>
                       </td>
-                      <td className="py-3 px-4 font-medium text-slate-900">{e.third_party}</td>
-                      <td className="py-3 px-4 text-xs text-slate-600">{e.property_name}</td>
-                      <td className="py-3 px-4 text-xs text-slate-600 max-w-xs truncate" title={e.description}>{e.description}</td>
-                      <td className="py-3 px-4 text-right font-bold text-emerald-600 tabular-nums">
+                      <td className="py-3.5 px-4 font-medium text-slate-900 whitespace-nowrap">{e.third_party}</td>
+                      <td className="py-3.5 px-4 text-xs text-slate-600 whitespace-nowrap">{e.property_name || '—'}</td>
+                      <td className="py-3.5 px-4 text-xs text-slate-600 max-w-[220px] truncate" title={e.description}>{e.description}</td>
+                      <td className="py-3.5 px-4 text-right font-bold text-emerald-600 tabular-nums whitespace-nowrap">
                         {e.credit > 0 ? `+${formatXOF(e.credit, { compact: false })}` : '-'}
                       </td>
-                      <td className="py-3 px-4 text-right font-bold text-rose-600 tabular-nums">
+                      <td className="py-3.5 px-4 text-right font-bold text-rose-600 tabular-nums whitespace-nowrap">
                         {e.debit > 0 ? `-${formatXOF(e.debit, { compact: false })}` : '-'}
                       </td>
-                      <td className="py-3 px-4 text-right font-extrabold text-slate-900 bg-slate-50/60 tabular-nums">
+                      <td className="py-3.5 px-4 text-right font-extrabold text-slate-900 bg-slate-50/60 tabular-nums whitespace-nowrap">
                         {formatXOF(e.running_balance, { compact: false })}
                       </td>
                     </tr>

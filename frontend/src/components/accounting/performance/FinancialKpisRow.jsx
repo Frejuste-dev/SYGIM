@@ -88,7 +88,7 @@ export default function FinancialKpisRow({ financialKpis = {} }) {
             </div>
 
             <div className="mt-3 flex items-baseline justify-between gap-2">
-              <div className="text-2xl font-bold text-slate-900 tabular-nums tracking-tight">
+              <div className="text-2xl font-bold text-slate-900 tabular-nums tracking-tight whitespace-nowrap">
                 {formatAmount(revenue.current || 0)}{' '}
                 <span className="text-xs font-semibold text-slate-500">FCFA</span>
               </div>
@@ -98,7 +98,7 @@ export default function FinancialKpisRow({ financialKpis = {} }) {
 
           <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
             <span>Période N-1</span>
-            <span className="font-medium text-slate-700 tabular-nums">
+            <span className="font-medium text-slate-700 tabular-nums whitespace-nowrap">
               {formatAmount(revenue.previous || 0)} FCFA
             </span>
           </div>
@@ -115,7 +115,7 @@ export default function FinancialKpisRow({ financialKpis = {} }) {
             </div>
 
             <div className="mt-3 flex items-baseline justify-between gap-2">
-              <div className="text-2xl font-bold text-slate-900 tabular-nums tracking-tight">
+              <div className="text-2xl font-bold text-slate-900 tabular-nums tracking-tight whitespace-nowrap">
                 {formatAmount(collections.current || 0)}{' '}
                 <span className="text-xs font-semibold text-slate-500">FCFA</span>
               </div>
@@ -125,7 +125,7 @@ export default function FinancialKpisRow({ financialKpis = {} }) {
 
           <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
             <span>Période N-1</span>
-            <span className="font-medium text-slate-700 tabular-nums">
+            <span className="font-medium text-slate-700 tabular-nums whitespace-nowrap">
               {formatAmount(collections.previous || 0)} FCFA
             </span>
           </div>
@@ -142,7 +142,7 @@ export default function FinancialKpisRow({ financialKpis = {} }) {
             </div>
 
             <div className="mt-3 flex items-baseline justify-between gap-2">
-              <div className="text-2xl font-bold text-slate-900 tabular-nums tracking-tight">
+              <div className="text-2xl font-bold text-slate-900 tabular-nums tracking-tight whitespace-nowrap">
                 {formatAmount(prefinancing.current || 0)}{' '}
                 <span className="text-xs font-semibold text-slate-500">FCFA</span>
               </div>
@@ -154,7 +154,7 @@ export default function FinancialKpisRow({ financialKpis = {} }) {
             <span>
               {prefinancing.count || 0} dossier{(prefinancing.count || 0) > 1 ? 's' : ''} • N-1
             </span>
-            <span className="font-medium text-slate-700 tabular-nums">
+            <span className="font-medium text-slate-700 tabular-nums whitespace-nowrap">
               {formatAmount(prefinancing.previous || 0)} FCFA
             </span>
           </div>
@@ -180,10 +180,10 @@ export default function FinancialKpisRow({ financialKpis = {} }) {
 
             <div className="mt-3">
               <div className="flex items-baseline gap-2">
-                <span className="text-2xl font-bold text-slate-900 tabular-nums">
+                <span className="text-2xl font-bold text-slate-900 tabular-nums whitespace-nowrap">
                   {targetAchieved.toFixed(1)}%
                 </span>
-                <span className="text-xs text-slate-500 font-medium">
+                <span className="text-xs text-slate-500 font-medium whitespace-nowrap">
                   {isTargetOver
                     ? `+${formatAmount(Math.abs(target.diffAmount || 0))} FCFA`
                     : `Reste ${formatAmount(Math.abs(target.diffAmount || 0))} FCFA`}
@@ -204,7 +204,7 @@ export default function FinancialKpisRow({ financialKpis = {} }) {
 
           <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
             <span>Cible période</span>
-            <span className="font-medium text-slate-700 tabular-nums">
+            <span className="font-medium text-slate-700 tabular-nums whitespace-nowrap">
               {formatAmount(target.targetAmount || 0)} FCFA
             </span>
           </div>
