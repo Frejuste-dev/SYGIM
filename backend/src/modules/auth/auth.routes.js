@@ -24,7 +24,7 @@ router.post('/login', authLimiter, loginValidator, authController.login);
  * @desc    Rafraîchissement de l'accessToken
  * @access  Public (nécessite refreshToken)
  */
-router.post('/refresh', authController.refresh);
+router.post('/refresh', authLimiter, authController.refresh);
 
 /**
  * @route   POST /api/auth/logout

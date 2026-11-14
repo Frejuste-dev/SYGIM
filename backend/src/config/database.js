@@ -200,8 +200,10 @@ async function ensureSchemaUpgrades() {
     }
 }
 
-// Exécuter la mise à niveau du schéma au chargement
-ensureSchemaUpgrades();
+// Exécuter la mise à niveau du schéma au chargement uniquement si expressément activé via variable d'environnement (SEC-12)
+if (process.env.RUN_AUTO_DDL === 'true') {
+    ensureSchemaUpgrades();
+}
 
 // Test de connexion au démarrage
 async function testConnection() {
