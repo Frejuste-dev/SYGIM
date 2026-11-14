@@ -2,7 +2,7 @@ const paymentService = require('./services/PaymentService');
 const rentBillingService = require('./services/RentBillingService');
 const ownerSettlementService = require('./services/OwnerSettlementService');
 const tenantCreditLedgerRepository = require('./repositories/tenant-credit-ledger.repository');
-const { pool } = require('../../../config/db');
+const { pool } = require('../../config/database');
 const ApiResponse = require('../../utils/responses/ApiResponse');
 const AppError = require('../../utils/errors/AppError');
 

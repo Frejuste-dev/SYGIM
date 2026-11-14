@@ -6,7 +6,6 @@ import { usePropertyStats } from '../hooks/queries/useProperties';
 import { useTransactionStats } from '../hooks/queries/useTransactions';
 import { useOwnerStats } from '../hooks/queries/useOwners';
 import { API } from '../api/services';
-import AdminNav from '../components/AdminNav';
 import StatsCard from '../components/StatsCard';
 import UsersTable from '../components/UsersTable';
 import UserFormModal from '../components/UserFormModal';

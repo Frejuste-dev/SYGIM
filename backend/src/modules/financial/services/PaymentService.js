@@ -1,4 +1,4 @@
-const { pool } = require('../../../../config/db');
+const { pool } = require('../../../config/database');
 const invoiceRepository = require('../repositories/invoice.repository');
 const paymentRepository = require('../repositories/payment.repository');
 const paymentAllocationRepository = require('../repositories/payment-allocation.repository');

@@ -1,6 +1,6 @@
 const request = require('supertest');
 const app = require('../../../src/app');
-const { pool } = require('../../../config/db');
+const { pool } = require('../../../src/config/database');
 const authRepository = require('../../../src/modules/auth/auth.repository');
 
 const extractCookie = (res, cookieName) => {

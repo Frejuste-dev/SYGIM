@@ -9,7 +9,7 @@
  */
 
 require('dotenv').config({ path: require('path').join(__dirname, '..', '.env.dev') });
-const { pool } = require('../config/db');
+const { pool } = require('../src/config/database');
 
 async function auditFinancialMigrationDryRun() {
   console.log('\n===============================================================');

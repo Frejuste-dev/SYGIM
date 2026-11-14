@@ -4,7 +4,7 @@
  */
 
 require('dotenv').config();
-const { pool } = require('./config/db');
+const { pool } = require('../../src/config/database');
 
 async function cleanupOrphans() {
   console.log('\n🧹 NETTOYAGE DES DONNÉES ORPHELINES\n');

@@ -5,7 +5,7 @@
  * Rôle     : Persistence pour les récolteurs/agents
  */
 
-const { pool: db } = require('../../../config/db');
+const { pool: db } = require('../../config/database');
 
 class CollectorRepository {
   /**

@@ -5,7 +5,7 @@
 
 const request = require('supertest');
 const app = require('../../../src/app');
-const { pool } = require('../../../config/db');
+const { pool } = require('../../../src/config/database');
 
 describe('Property Integration Tests (PROP)', () => {
   let authToken;

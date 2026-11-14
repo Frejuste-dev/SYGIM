@@ -1,8 +1,8 @@
 const TransactionRepository = require('../../../src/modules/transactions/transaction.repository');
-const { pool } = require('../../../config/db');
+const { pool } = require('../../../src/config/database');
 const { randomUUID } = require('crypto');
 
-jest.mock('../../../config/db', () => ({
+jest.mock('../../../src/config/database', () => ({
   pool: {
     getConnection: jest.fn()
   }

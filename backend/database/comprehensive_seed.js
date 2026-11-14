@@ -8,7 +8,7 @@
 require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 const bcrypt = require('bcryptjs');
 const { randomUUID } = require('crypto');
-const { pool } = require('../config/db');
+const { pool } = require('../src/config/database');
 
 async function seedComprehensive() {
   console.log('🚀 Démarrage du peuplement exhaustif de la base SYGIM...');

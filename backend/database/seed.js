@@ -11,7 +11,7 @@
 
 require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 const bcrypt = require('bcryptjs');
-const { pool } = require('../config/db');
+const { pool } = require('../src/config/database');
 
 const DEFAULT_USERS = [
     {

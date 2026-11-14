@@ -1,10 +1,10 @@
-jest.mock('../../../config/db', () => ({
+jest.mock('../../../src/config/database', () => ({
   pool: {
     query: jest.fn()
   }
 }));
 
-const { pool } = require('../../../config/db');
+const { pool } = require('../../../src/config/database');
 const authRepository = require('../../../src/modules/auth/auth.repository');
 
 describe('AuthRepository Unit Tests', () => {

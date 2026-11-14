@@ -3,7 +3,7 @@ process.env.DB_NAME = 'sygim_characterization';
 
 const request = require('supertest');
 const app = require('../../src/app');
-const db = require('../../config/db');
+const db = require('../../src/config/database');
 
 describe('Characterization Tests - Phase 2.0 (RBAC)', () => {
   let collectorAgent;

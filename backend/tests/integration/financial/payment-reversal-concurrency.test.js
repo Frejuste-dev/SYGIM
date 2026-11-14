@@ -7,7 +7,7 @@
 // Mock de l'import défaillant historique de invoice.repository pour isoler les tests
 jest.mock('../../../src/modules/financial/repositories/invoice.repository', () => ({}));
 
-const { pool } = require('../../../config/db');
+const { pool } = require('../../../src/config/database');
 const { randomUUID } = require('crypto');
 const paymentService = require('../../../src/modules/financial/services/PaymentService');
 const paymentRepository = require('../../../src/modules/financial/repositories/payment.repository');

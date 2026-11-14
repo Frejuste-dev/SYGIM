@@ -5,7 +5,7 @@
  */
 
 const BaseRepository = require('../../core/BaseRepository');
-const { pool: db } = require('../../../config/db');
+const { pool: db } = require('../../config/database');
 
 class UserRepository extends BaseRepository {
   constructor() {

@@ -10,7 +10,7 @@ jest.mock('../../../src/modules/clients/client.service', () => ({
   getById: jest.fn()
 }));
 
-jest.mock('../../../config/db', () => ({
+jest.mock('../../../src/config/database', () => ({
   pool: {
     query: jest.fn().mockResolvedValue([[]]),
     getConnection: jest.fn()

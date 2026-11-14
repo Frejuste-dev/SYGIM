@@ -1,6 +1,6 @@
 const request = require('supertest');
 const app = require('../../../src/app');
-const { pool } = require('../../../config/db');
+const { pool } = require('../../../src/config/database');
 const { generateToken } = require('../../../src/middleware/auth.middleware');
 
 describe('Security: User & Profile Tests (DEBT-S04)', () => {
