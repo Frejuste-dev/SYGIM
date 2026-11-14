@@ -72,35 +72,40 @@ export default function ReportOverviewTab({ dashboard, prefSummary = {}, loading
           </h3>
           <p className="text-xs text-slate-500 mb-5">Ventilation des loyers encaissés par canal de règlement</p>
 
-          {(dashboard?.byMethod || []).length > 0 ? (
-            <div className="space-y-4">
-              {dashboard.byMethod.map((m, idx) => {
-                const maxTotal = Math.max(1, dashboard.totalRevenue || 1);
-                const pct = Math.min(100, Math.round((m.totalAmount / maxTotal) * 100));
-                return (
-                  <div key={idx} className="space-y-1.5">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="font-semibold text-slate-800">{formatMethod(m.method)}</span>
-                      <span className="font-bold text-slate-900 tabular-nums">
-                        {formatXOF(m.totalAmount, { compact: false })}{' '}
-                        <span className="text-xs font-normal text-slate-500">({m.count} op. — {pct}%)</span>
-                      </span>
+          {(() => {
+            const validMethods = (dashboard?.byMethod || []).filter(
+              m => Number(m.totalAmount) > 0 && !['assignment', 'departure'].includes(String(m.method).toLowerCase())
+            );
+            return validMethods.length > 0 ? (
+              <div className="space-y-4">
+                {validMethods.map((m, idx) => {
+                  const maxTotal = Math.max(1, dashboard.totalRevenue || 1);
+                  const pct = Math.min(100, Math.round((m.totalAmount / maxTotal) * 100));
+                  return (
+                    <div key={idx} className="space-y-1.5">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="font-semibold text-slate-800">{formatMethod(m.method)}</span>
+                        <span className="font-bold text-slate-900 tabular-nums">
+                          {formatXOF(m.totalAmount, { compact: false })}{' '}
+                          <span className="text-xs font-normal text-slate-500">({m.count} op. — {pct}%)</span>
+                        </span>
+                      </div>
+                      <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-primary rounded-full transition-all"
+                          style={{ width: `${Math.max(4, pct)}%` }}
+                        ></div>
+                      </div>
                     </div>
-                    <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-primary rounded-full transition-all"
-                        style={{ width: `${Math.max(4, pct)}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="py-8 text-center text-slate-400 text-sm">
-              Aucune transaction ventilée sur cette période.
-            </div>
-          )}
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="py-8 text-center text-slate-400 text-sm">
+                Aucune transaction ventilée sur cette période.
+              </div>
+            );
+          })()}
         </div>
 
         {/* Encart de synthèse du Préfinancement Propriétaire */}

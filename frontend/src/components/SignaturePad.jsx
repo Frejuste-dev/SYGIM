@@ -2,10 +2,11 @@ import React, { useRef, useState, useEffect } from 'react';
 import { formatXOF } from '../utils/formatters';
 
 const METHOD_LABELS = {
-  mobile_money: 'Mobile Money',
   cash: 'Espèces',
+  mobile_money: 'Mobile Money',
   check: 'Chèque',
-  bank_transfer: 'Virement'
+  cheque: 'Chèque',
+  bank_transfer: 'Virement bancaire'
 };
 
 export default function SignaturePad({ isOpen, onClose, onConfirm, client, payment }) {

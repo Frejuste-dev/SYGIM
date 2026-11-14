@@ -129,17 +129,34 @@ class ReportRepository {
       // Table owner_settlements optionnelle si non initialisée
     }
 
-    // 5. Répartition par mode de paiement
+    // 5. Répartition par mode de paiement (Strictement 4 modes officiels, exclusion baux/0 XOF)
     const [byMethodRows] = await db.query(
       `SELECT
-         COALESCE(t.method, 'cash') AS method,
+         CASE
+           WHEN LOWER(TRIM(t.method)) IN ('cash', 'especes', 'espece', 'espèce', 'espèces') THEN 'Espèces'
+           WHEN LOWER(TRIM(t.method)) IN ('mobile_money', 'mobile money', 'wave', 'orange_money', 'orange money', 'mtn', 'moov') THEN 'Mobile Money'
+           WHEN LOWER(TRIM(t.method)) IN ('cheque', 'check', 'chèque') THEN 'Chèque'
+           WHEN LOWER(TRIM(t.method)) IN ('transfer', 'bank_transfer', 'virement', 'virement bancaire', 'virement_bancaire') THEN 'Virement bancaire'
+           ELSE 'Espèces'
+         END AS method,
          COUNT(*) AS count,
          COALESCE(SUM(t.amount), 0) AS totalAmount
        FROM transactions t
        LEFT JOIN clients c ON c.id = t.client_id
        LEFT JOIN properties p ON p.id = c.property_id
-       WHERE t.status IN ('processed', 'paid', 'completed', 'partial', 'partiel') ${whereTx}
-       GROUP BY COALESCE(t.method, 'cash')
+       WHERE t.status IN ('processed', 'paid', 'completed', 'partial', 'partiel')
+         AND t.amount > 0
+         AND COALESCE(t.payment_type, 'payment') NOT IN ('assignment', 'departure')
+         AND COALESCE(t.method, '') NOT IN ('assignment', 'departure', '')
+         ${whereTx}
+       GROUP BY 
+         CASE
+           WHEN LOWER(TRIM(t.method)) IN ('cash', 'especes', 'espece', 'espèce', 'espèces') THEN 'Espèces'
+           WHEN LOWER(TRIM(t.method)) IN ('mobile_money', 'mobile money', 'wave', 'orange_money', 'orange money', 'mtn', 'moov') THEN 'Mobile Money'
+           WHEN LOWER(TRIM(t.method)) IN ('cheque', 'check', 'chèque') THEN 'Chèque'
+           WHEN LOWER(TRIM(t.method)) IN ('transfer', 'bank_transfer', 'virement', 'virement bancaire', 'virement_bancaire') THEN 'Virement bancaire'
+           ELSE 'Espèces'
+         END
        ORDER BY totalAmount DESC`,
       txParams
     );
@@ -1160,7 +1177,7 @@ class ReportRepository {
       };
     };
 
-    // 2. Requête Recouvrements Globaux N & N-1
+    // 2. Requête Recouvrements Globaux N & N-1 (exclusion des événements de bail et montants <= 0)
     const [[txSummaryRow]] = await db.query(
       `SELECT
          COALESCE(SUM(CASE WHEN t.date BETWEEN ? AND ? THEN t.amount ELSE 0 END), 0) AS currentCollections,
@@ -1169,25 +1186,45 @@ class ReportRepository {
          COUNT(CASE WHEN t.date BETWEEN ? AND ? THEN 1 END) AS prevOperationsCount,
          COUNT(DISTINCT CASE WHEN t.date BETWEEN ? AND ? THEN t.client_id END) AS currentUniqueClients
        FROM transactions t
-       WHERE t.status IN ('processed', 'paid', 'completed', 'partial', 'partiel')`,
+       WHERE t.status IN ('processed', 'paid', 'completed', 'partial', 'partiel')
+         AND t.amount > 0
+         AND COALESCE(t.payment_type, 'payment') NOT IN ('assignment', 'departure')
+         AND COALESCE(t.method, '') NOT IN ('assignment', 'departure', '')`,
       [startStr, endStr, prevStartStr, prevEndStr, startStr, endStr, prevStartStr, prevEndStr, startStr, endStr]
     );
 
     const currentCollections = Number(txSummaryRow?.currentCollections || 0);
     const prevCollections = Number(txSummaryRow?.prevCollections || 0);
     const currentOperationsCount = Number(txSummaryRow?.currentOperationsCount || 0);
+    const prevOperationsCount = Number(txSummaryRow?.prevOperationsCount || 0);
     const currentUniqueClients = Number(txSummaryRow?.currentUniqueClients || 0);
 
-    // 3. Ventilation par canal de paiement sur la période N
+    // 3. Ventilation par canal de paiement sur la période N (Strictement 4 canaux officiels)
     const [methodRows] = await db.query(
       `SELECT
-         method,
+         CASE
+           WHEN LOWER(TRIM(method)) IN ('cash', 'especes', 'espece', 'espèce', 'espèces') THEN 'Espèces'
+           WHEN LOWER(TRIM(method)) IN ('mobile_money', 'mobile money', 'wave', 'orange_money', 'orange money', 'mtn', 'moov') THEN 'Mobile Money'
+           WHEN LOWER(TRIM(method)) IN ('cheque', 'check', 'chèque') THEN 'Chèque'
+           WHEN LOWER(TRIM(method)) IN ('transfer', 'bank_transfer', 'virement', 'virement bancaire', 'virement_bancaire') THEN 'Virement bancaire'
+           ELSE 'Espèces'
+         END AS method,
          COUNT(*) AS count,
          COALESCE(SUM(amount), 0) AS totalAmount
        FROM transactions
        WHERE status IN ('processed', 'paid', 'completed', 'partial', 'partiel')
+         AND amount > 0
+         AND COALESCE(payment_type, 'payment') NOT IN ('assignment', 'departure')
+         AND COALESCE(method, '') NOT IN ('assignment', 'departure', '')
          AND date BETWEEN ? AND ?
-       GROUP BY method`,
+       GROUP BY 
+         CASE
+           WHEN LOWER(TRIM(method)) IN ('cash', 'especes', 'espece', 'espèce', 'espèces') THEN 'Espèces'
+           WHEN LOWER(TRIM(method)) IN ('mobile_money', 'mobile money', 'wave', 'orange_money', 'orange money', 'mtn', 'moov') THEN 'Mobile Money'
+           WHEN LOWER(TRIM(method)) IN ('cheque', 'check', 'chèque') THEN 'Chèque'
+           WHEN LOWER(TRIM(method)) IN ('transfer', 'bank_transfer', 'virement', 'virement bancaire', 'virement_bancaire') THEN 'Virement bancaire'
+           ELSE 'Espèces'
+         END`,
       [startStr, endStr]
     );
 
@@ -1199,15 +1236,46 @@ class ReportRepository {
     };
 
     methodRows.forEach(m => {
-      const key = m.method === 'check' ? 'cheque' : m.method;
-      if (operationsByMethod[key]) {
-        operationsByMethod[key].count += Number(m.count || 0);
-        operationsByMethod[key].amount += Number(m.totalAmount || 0);
-      } else {
-        operationsByMethod.cash.count += Number(m.count || 0);
-        operationsByMethod.cash.amount += Number(m.totalAmount || 0);
-      }
+      let key = 'cash';
+      if (m.method === 'Mobile Money' || m.method === 'mobile_money') key = 'mobile_money';
+      else if (m.method === 'Virement bancaire' || m.method === 'bank_transfer' || m.method === 'transfer') key = 'bank_transfer';
+      else if (m.method === 'Chèque' || m.method === 'cheque' || m.method === 'check') key = 'cheque';
+
+      operationsByMethod[key].count += Number(m.count || 0);
+      operationsByMethod[key].amount += Number(m.totalAmount || 0);
     });
+
+    const totalCollectedVolume = operationsByMethod.cash.amount +
+      operationsByMethod.mobile_money.amount +
+      operationsByMethod.bank_transfer.amount +
+      operationsByMethod.cheque.amount;
+
+    const channels = [
+      {
+        channel: 'Espèces',
+        count: operationsByMethod.cash.count,
+        amount: operationsByMethod.cash.amount,
+        share: totalCollectedVolume > 0 ? Math.round((operationsByMethod.cash.amount / totalCollectedVolume) * 100) : 0
+      },
+      {
+        channel: 'Mobile Money',
+        count: operationsByMethod.mobile_money.count,
+        amount: operationsByMethod.mobile_money.amount,
+        share: totalCollectedVolume > 0 ? Math.round((operationsByMethod.mobile_money.amount / totalCollectedVolume) * 100) : 0
+      },
+      {
+        channel: 'Virement bancaire',
+        count: operationsByMethod.bank_transfer.count,
+        amount: operationsByMethod.bank_transfer.amount,
+        share: totalCollectedVolume > 0 ? Math.round((operationsByMethod.bank_transfer.amount / totalCollectedVolume) * 100) : 0
+      },
+      {
+        channel: 'Chèque',
+        count: operationsByMethod.cheque.count,
+        amount: operationsByMethod.cheque.amount,
+        share: totalCollectedVolume > 0 ? Math.round((operationsByMethod.cheque.amount / totalCollectedVolume) * 100) : 0
+      }
+    ].filter(c => c.amount > 0 || c.count > 0);
 
     // 4. Chiffre d'Affaires & Préfinancements (owner_settlements) N & N-1
     let currentCommission = 0;
@@ -1595,13 +1663,20 @@ class ReportRepository {
       timeSeries,
       topCollectors,
       complementaryDetails: {
+        totalOperations: {
+          current: currentOperationsCount,
+          previous: prevOperationsCount
+        },
         operationsCount: {
           total: currentOperationsCount,
           ...operationsByMethod
         },
+        channels,
         avgPerOperation,
         avgPerCollector,
         uniqueClientsCount: currentUniqueClients,
+        unpaidAmount: remainingToCollect,
+        recoveryRate: achievementRate,
         prefinancingCount: currentPrefinancingCount,
         remainingToCollect,
         collectionRate: achievementRate,

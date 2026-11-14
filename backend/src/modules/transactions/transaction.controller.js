@@ -70,7 +70,7 @@ class TransactionController extends BaseController {
       const headers = ['Référence', 'Date', 'Client', 'Description', 'Montant (XOF)', 'Moyen', 'Statut'];
       const csvRows = [headers.join(';')];
 
-      const methodLabels = { cash: 'Espèces', mobile_money: 'Mobile Money', bank_transfer: 'Virement', check: 'Chèque', card: 'Carte' };
+      const methodLabels = { cash: 'Espèces', mobile_money: 'Mobile Money', bank_transfer: 'Virement bancaire', transfer: 'Virement bancaire', check: 'Chèque', cheque: 'Chèque' };
       const statusLabels = { processed: 'Traité', pending: 'En attente', cancelled: 'Annulé', refunded: 'Remboursé' };
 
       for (const tx of rows) {

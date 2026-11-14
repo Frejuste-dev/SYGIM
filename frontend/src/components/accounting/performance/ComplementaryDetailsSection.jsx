@@ -29,6 +29,10 @@ export default function ComplementaryDetailsSection({
   const [collectorSearch, setCollectorSearch] = useState('');
   const [showChannelModal, setShowChannelModal] = useState(false);
 
+  const validChannels = (channels || []).filter(
+    (c) => Number(c.amount) > 0 && !['assignment', 'departure'].includes(String(c.channel).toLowerCase())
+  );
+
   const filteredCollectors = allCollectorsTable.filter((c) =>
     (c.name || '').toLowerCase().includes(collectorSearch.toLowerCase()) ||
     (c.zone || '').toLowerCase().includes(collectorSearch.toLowerCase())
@@ -132,7 +136,7 @@ export default function ComplementaryDetailsSection({
       </div>
 
       {/* Carte Répartition par Canal de Paiement */}
-      {channels.length > 0 && (
+      {validChannels.length > 0 && (
         <div className="bg-white border border-slate-200/80 rounded-xl shadow-xs p-4 sm:p-5">
           <div className="flex items-center justify-between pb-3 border-b border-slate-100">
             <div>
@@ -154,7 +158,7 @@ export default function ComplementaryDetailsSection({
 
           {/* Barre segmentée horizontale */}
           <div className="w-full bg-slate-100 rounded-full h-3 mt-4 flex overflow-hidden">
-            {channels.map((chan, idx) => {
+            {validChannels.map((chan, idx) => {
               const color = CHANNEL_COLORS[chan.channel]?.bg || 'bg-slate-400';
               const share = Number(chan.share || 0);
               if (share <= 0) return null;
@@ -171,7 +175,7 @@ export default function ComplementaryDetailsSection({
 
           {/* Légende détaillée */}
           <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-            {channels.map((chan, idx) => {
+            {validChannels.map((chan, idx) => {
               const colorInfo = CHANNEL_COLORS[chan.channel] || CHANNEL_COLORS['Autre'];
               return (
                 <div key={idx} className="flex items-center justify-between p-2.5 rounded-lg bg-slate-50/70 border border-slate-200/60">
@@ -207,7 +211,7 @@ export default function ComplementaryDetailsSection({
             </p>
 
             <div className="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden">
-              {channels.map((chan, idx) => (
+              {validChannels.map((chan, idx) => (
                 <div key={idx} className="p-3.5 flex items-center justify-between hover:bg-slate-50">
                   <div className="flex items-center gap-3">
                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold ${CHANNEL_COLORS[chan.channel]?.light || 'bg-slate-100 text-slate-700'}`}>

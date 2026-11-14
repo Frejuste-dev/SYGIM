@@ -26,9 +26,8 @@ const METHOD_OPTIONS = [
   { value: '', label: 'Tous les moyens' },
   { value: 'cash', label: 'Espèces' },
   { value: 'mobile_money', label: 'Mobile Money' },
-  { value: 'bank_transfer', label: 'Virement' },
   { value: 'check', label: 'Chèque' },
-  { value: 'card', label: 'Carte' },
+  { value: 'bank_transfer', label: 'Virement bancaire' },
 ];
 
 const PAYOUT_MODE_BADGES = {

@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { formatXOF } from '../utils/formatters';
 
 const PAYMENT_METHODS = [
-  { id: 'mobile_money', name: 'Mobile Money', sub: 'Wave / OM / Moov', icon: 'fa-mobile-screen-button', color: 'text-sky-600 bg-sky-50' },
-  { id: 'cash',         name: 'Espèces',      sub: 'Main à main',      icon: 'fa-money-bill-wave',     color: 'text-emerald-600 bg-emerald-50' },
-  { id: 'check',        name: 'Chèque',       sub: 'Bancaire / Certifié', icon: 'fa-money-check',      color: 'text-purple-600 bg-purple-50' },
-  { id: 'bank_transfer',name: 'Virement',     sub: 'Direct compte',    icon: 'fa-university',          color: 'text-indigo-600 bg-indigo-50' },
+  { id: 'cash',         name: 'Espèces',           sub: 'Main à main',          icon: 'fa-money-bill-wave',       color: 'text-emerald-600 bg-emerald-50' },
+  { id: 'mobile_money', name: 'Mobile Money',      sub: 'Wave / OM / Moov',     icon: 'fa-mobile-screen-button', color: 'text-amber-600 bg-amber-50' },
+  { id: 'check',        name: 'Chèque',            sub: 'Bancaire / Certifié',  icon: 'fa-money-check',          color: 'text-purple-600 bg-purple-50' },
+  { id: 'bank_transfer',name: 'Virement bancaire', sub: 'Direct compte',       icon: 'fa-university',           color: 'text-sky-600 bg-sky-50' },
 ];
 
 const INPUT_CLS = 'w-full px-4 py-3 bg-white border border-slate-300 rounded-xl text-base text-slate-900 shadow-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all';

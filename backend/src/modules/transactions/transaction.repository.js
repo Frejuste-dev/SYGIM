@@ -130,9 +130,30 @@ class TransactionRepository extends BaseRepository {
       `SELECT COALESCE(SUM(amount), 0) as total FROM transactions WHERE status = 'pending' ${dateFilter}`
     );
     const [countByMethod] = await pool.query(
-      `SELECT method, COUNT(*) as count, COALESCE(SUM(amount), 0) as total 
-       FROM transactions WHERE status = 'processed' ${dateFilter}
-       GROUP BY method`
+      `SELECT
+         CASE
+           WHEN LOWER(TRIM(method)) IN ('cash', 'especes', 'espece', 'espèce', 'espèces') THEN 'Espèces'
+           WHEN LOWER(TRIM(method)) IN ('mobile_money', 'mobile money', 'wave', 'orange_money', 'orange money', 'mtn', 'moov') THEN 'Mobile Money'
+           WHEN LOWER(TRIM(method)) IN ('cheque', 'check', 'chèque') THEN 'Chèque'
+           WHEN LOWER(TRIM(method)) IN ('transfer', 'bank_transfer', 'virement', 'virement bancaire', 'virement_bancaire') THEN 'Virement bancaire'
+           ELSE 'Espèces'
+         END AS method,
+         COUNT(*) as count,
+         COALESCE(SUM(amount), 0) as total 
+       FROM transactions
+       WHERE status = 'processed'
+         AND amount > 0
+         AND COALESCE(payment_type, 'payment') NOT IN ('assignment', 'departure')
+         AND COALESCE(method, '') NOT IN ('assignment', 'departure', '')
+         ${dateFilter}
+       GROUP BY 
+         CASE
+           WHEN LOWER(TRIM(method)) IN ('cash', 'especes', 'espece', 'espèce', 'espèces') THEN 'Espèces'
+           WHEN LOWER(TRIM(method)) IN ('mobile_money', 'mobile money', 'wave', 'orange_money', 'orange money', 'mtn', 'moov') THEN 'Mobile Money'
+           WHEN LOWER(TRIM(method)) IN ('cheque', 'check', 'chèque') THEN 'Chèque'
+           WHEN LOWER(TRIM(method)) IN ('transfer', 'bank_transfer', 'virement', 'virement bancaire', 'virement_bancaire') THEN 'Virement bancaire'
+           ELSE 'Espèces'
+         END`
     );
     const [recentTransactions] = await pool.query(
       'SELECT * FROM transactions ORDER BY created_at DESC LIMIT 10'
@@ -158,10 +179,20 @@ class TransactionRepository extends BaseRepository {
                FROM transactions WHERE 1=1${where}`;
 
     let methodSql = `SELECT 
-                       method as name, 
-                       SUM(amount) as value 
+                       CASE
+                         WHEN LOWER(TRIM(method)) IN ('cash', 'especes', 'espece', 'espèce', 'espèces') THEN 'Espèces'
+                         WHEN LOWER(TRIM(method)) IN ('mobile_money', 'mobile money', 'wave', 'orange_money', 'orange money', 'mtn', 'moov') THEN 'Mobile Money'
+                         WHEN LOWER(TRIM(method)) IN ('cheque', 'check', 'chèque') THEN 'Chèque'
+                         WHEN LOWER(TRIM(method)) IN ('transfer', 'bank_transfer', 'virement', 'virement bancaire', 'virement_bancaire') THEN 'Virement bancaire'
+                         ELSE 'Espèces'
+                       END as name, 
+                       COALESCE(SUM(amount), 0) as value 
                      FROM transactions 
-                     WHERE status = 'processed' ${where}`;
+                     WHERE status = 'processed'
+                       AND amount > 0
+                       AND COALESCE(payment_type, 'payment') NOT IN ('assignment', 'departure')
+                       AND COALESCE(method, '') NOT IN ('assignment', 'departure', '')
+                       ${where}`;
 
     if (user && user.role === 'collector') {
       const [userRow] = await pool.query('SELECT id FROM collectors WHERE user_id = ?', [user.id]);
@@ -172,7 +203,14 @@ class TransactionRepository extends BaseRepository {
       }
     }
 
-    methodSql += ' GROUP BY method';
+    methodSql += ` GROUP BY 
+                    CASE
+                      WHEN LOWER(TRIM(method)) IN ('cash', 'especes', 'espece', 'espèce', 'espèces') THEN 'Espèces'
+                      WHEN LOWER(TRIM(method)) IN ('mobile_money', 'mobile money', 'wave', 'orange_money', 'orange money', 'mtn', 'moov') THEN 'Mobile Money'
+                      WHEN LOWER(TRIM(method)) IN ('cheque', 'check', 'chèque') THEN 'Chèque'
+                      WHEN LOWER(TRIM(method)) IN ('transfer', 'bank_transfer', 'virement', 'virement bancaire', 'virement_bancaire') THEN 'Virement bancaire'
+                      ELSE 'Espèces'
+                    END`;
 
     const [rows] = await pool.query(sql, params);
     const [methodRows] = await pool.query(methodSql, params);

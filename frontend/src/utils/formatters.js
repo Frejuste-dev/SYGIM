@@ -30,17 +30,32 @@ export function transactionSearchDate(transaction) {
 
 const METHOD_MAP = {
   cash: "Espèces",
+  especes: "Espèces",
+  espece: "Espèces",
+  espèce: "Espèces",
+  espèces: "Espèces",
   mobile_money: "Mobile Money",
+  "mobile money": "Mobile Money",
+  wave: "Mobile Money",
+  orange_money: "Mobile Money",
+  mtn: "Mobile Money",
+  moov: "Mobile Money",
+  transfer: "Virement bancaire",
   bank_transfer: "Virement bancaire",
+  virement: "Virement bancaire",
+  "virement bancaire": "Virement bancaire",
   cheque: "Chèque",
   check: "Chèque",
-  card: "Carte bancaire",
+  chèque: "Chèque",
 };
 
 export function formatMethod(methodKey) {
   if (!methodKey) return "Espèces";
-  return METHOD_MAP[methodKey] || methodKey;
+  const normalized = String(methodKey).trim().toLowerCase();
+  return METHOD_MAP[normalized] || methodKey;
 }
+
+export const formatPaymentMethod = formatMethod;
 
 const STATUS_MAP = {
   paid:         { label: "Payé",          badgeClass: "paid",    twClass: "bg-emerald-50 text-emerald-700 border-emerald-200" },
