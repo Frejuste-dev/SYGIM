@@ -101,6 +101,18 @@ class ReportService {
     return data;
   }
 
+  async getManagerDashboard(filters = {}) {
+    const cacheKey = this._getCacheKey('manager_dashboard', filters);
+    const cached = await cacheService.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    const data = await reportRepository.getManagerDashboard(filters);
+    await cacheService.set(cacheKey, data, 15);
+    return data;
+  }
+
   async _getExportRows(reportType, filters = {}) {
     if (reportType === 'collectors') {
       return await reportRepository.getCollectorPerformance(filters);

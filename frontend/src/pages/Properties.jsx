@@ -14,7 +14,7 @@ import { exportToExcel, exportToPDF } from '../utils/exportUtils';
 const TYPE_ICONS = { appartement: 'fa-building', maison: 'fa-home', terrain: 'fa-map', commercial: 'fa-store' };
 
 const EMPTY_FORM = () => ({
-  name: '', address: '', type: 'appartement', status: 'vacant',
+  name: '', reference_code: '', zone: '', address: '', type: 'appartement', status: 'vacant',
   value: '', rent: '', area: '', rooms: '', description: '', owner_id: '',
   commission_type: 'percentage', commission_rate: 10, commission_fixed_amount: ''
 });
@@ -27,6 +27,7 @@ export default function Properties() {
 
   const typeFilter = searchParams.get('type') || '';
   const statusFilter = searchParams.get('status') || '';
+  const assignmentFilter = searchParams.get('assignmentStatus') || '';
   const page = parseInt(searchParams.get('page') || '1', 10);
   const limit = 25;
 
@@ -64,7 +65,14 @@ export default function Properties() {
     setSearchParams(newParams, { replace: true });
   };
 
-  const { data: queryResult = {}, isLoading: loading } = useProperties({ page, limit, search: debouncedSearch, type: typeFilter, status: statusFilter });
+  const { data: queryResult = {}, isLoading: loading } = useProperties({
+    page,
+    limit,
+    search: debouncedSearch,
+    type: typeFilter,
+    status: statusFilter,
+    assignmentStatus: assignmentFilter
+  });
   const properties = Array.isArray(queryResult) ? queryResult : (queryResult?.data || []);
   const pagination = queryResult?.pagination || {};
   const isLastPage = pagination.hasNextPage === false;
@@ -84,8 +92,12 @@ export default function Properties() {
 
   const filteredProperties = properties; // Backend is filtering
 
-
-  const { data: statsData = {} } = usePropertyStats({ search: debouncedSearch, type: typeFilter, status: statusFilter });
+  const { data: statsData = {} } = usePropertyStats({
+    search: debouncedSearch,
+    type: typeFilter,
+    status: statusFilter,
+    assignmentStatus: assignmentFilter
+  });
 
   const stats = [
     { label: 'Total', value: statsData.total || 0, icon: 'fa-hotel', color: 'var(--primary)' },
@@ -94,7 +106,7 @@ export default function Properties() {
     { label: 'En rénovation', value: statsData.en_renovation || 0, icon: 'fa-tools', color: 'var(--warning)' }
   ];
 
-  const hasActiveFilters = Boolean(searchTerm || typeFilter || statusFilter);
+  const hasActiveFilters = Boolean(searchTerm || typeFilter || statusFilter || assignmentFilter);
   const propertyEmptyMessage = hasActiveFilters
     ? 'Aucun bien ne correspond aux filtres.'
     : 'Aucun bien enregistré. Ajoutez le premier bien du portefeuille.';
@@ -110,6 +122,8 @@ export default function Properties() {
     setEditingProperty(property);
     setForm({
       name: property.name || '',
+      reference_code: property.reference_code || '',
+      zone: property.zone || '',
       address: property.address || '',
       type: property.type || 'appartement',
       status: property.status || 'vacant',
@@ -138,6 +152,8 @@ export default function Properties() {
     try {
       const payload = {
         ...form,
+        reference_code: form.reference_code?.trim() || undefined,
+        zone: form.zone?.trim() || null,
         value: form.value ? parseFloat(form.value) : 0,
         rent: form.rent ? parseFloat(form.rent) : 0,
         area: form.area ? parseFloat(form.area) : null,
@@ -273,13 +289,13 @@ export default function Properties() {
 
       {/* FILTRES */}
       <div className="flex flex-col md:flex-row items-center gap-4 mb-6">
-        <div className="relative w-full md:w-96">
+        <div className="relative w-full md:w-80">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
             <i className="fas fa-search text-slate-400"></i>
           </div>
           <input 
             type="text" 
-            placeholder="Rechercher par nom, adresse..." 
+            placeholder="Rechercher par nom, réf, adresse..." 
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 outline-none text-sm transition-all" 
@@ -288,7 +304,7 @@ export default function Properties() {
         <select 
           value={typeFilter} 
           onChange={(e) => handleFilterChange('type', e.target.value)}
-          className="w-full md:w-48 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg outline-none text-sm focus:ring-2 focus:ring-primary/20 transition-all text-slate-700"
+          className="w-full md:w-44 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg outline-none text-sm focus:ring-2 focus:ring-primary/20 transition-all text-slate-700"
         >
           <option value="">Tous les types</option>
           <option value="appartement">Appartement</option>
@@ -299,13 +315,22 @@ export default function Properties() {
         <select 
           value={statusFilter} 
           onChange={(e) => handleFilterChange('status', e.target.value)}
-          className="w-full md:w-48 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg outline-none text-sm focus:ring-2 focus:ring-primary/20 transition-all text-slate-700"
+          className="w-full md:w-44 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg outline-none text-sm focus:ring-2 focus:ring-primary/20 transition-all text-slate-700"
         >
           <option value="">Tous les statuts</option>
           <option value="vacant">Vacant</option>
           <option value="loue">Loué</option>
           <option value="en_renovation">En rénovation</option>
           <option value="vendu">Vendu</option>
+        </select>
+        <select 
+          value={assignmentFilter} 
+          onChange={(e) => handleFilterChange('assignmentStatus', e.target.value)}
+          className="w-full md:w-48 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg outline-none text-sm focus:ring-2 focus:ring-primary/20 transition-all text-slate-700 font-medium"
+        >
+          <option value="">Toutes attributions</option>
+          <option value="assigned">Attribués (avec propriétaire)</option>
+          <option value="unassigned">Non attribués</option>
         </select>
       </div>
 
@@ -318,7 +343,7 @@ export default function Properties() {
                 <th className="py-3 px-6 font-semibold">Bien</th>
                 <th className="py-3 px-6 font-semibold">Type</th>
                 <th className="py-3 px-6 font-semibold">Propriétaire</th>
-                <th className="py-3 px-6 font-semibold">Adresse</th>
+                <th className="py-3 px-6 font-semibold">Zone & Adresse</th>
                 <th className="py-3 px-6 font-semibold">Statut</th>
                 <th className="py-3 px-6 font-semibold text-right">Valeur</th>
                 <th className="py-3 px-6 font-semibold text-right">Loyer</th>
@@ -340,24 +365,45 @@ export default function Properties() {
                   <tr key={p.id} className="group hover:bg-slate-50/80 transition-colors">
                     <td className="py-4 px-6 font-medium text-slate-900">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                        <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
                           <i className={`fas ${TYPE_ICONS[p.type] || 'fa-building'}`}></i>
                         </div>
-                        {p.name}
+                        <div>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-semibold text-slate-900">{p.name}</span>
+                            {p.reference_code && (
+                              <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200">
+                                {p.reference_code}
+                              </span>
+                            )}
+                          </div>
+                          {p.rooms ? <span className="text-xs text-slate-400">{p.rooms} pièces {p.area ? `• ${p.area} m²` : ''}</span> : null}
+                        </div>
                       </div>
                     </td>
                     <td className="py-4 px-6 text-sm text-slate-600 capitalize">{p.type}</td>
                     <td className="py-4 px-6 text-sm">
-                      {ownerName ? (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-primary/10 text-primary font-medium text-xs border border-primary/20">
-                          <i className="fas fa-user-tie text-[10px]"></i>
-                          {ownerName}
+                      {p.owner_id ? (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 font-medium text-xs border border-emerald-200">
+                          <i className="fas fa-check-circle text-[10px] text-emerald-600"></i>
+                          <span className="max-w-[130px] truncate" title={ownerName}>{ownerName || `Propriétaire #${p.owner_id}`}</span>
                         </span>
                       ) : (
-                        <span className="text-xs text-slate-400 italic">Non attribué</span>
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 font-medium text-xs border border-amber-200">
+                          <i className="fas fa-exclamation-circle text-[10px] text-amber-600"></i>
+                          Non attribué
+                        </span>
                       )}
                     </td>
-                    <td className="py-4 px-6 text-sm text-slate-600 max-w-[200px] truncate" title={p.address}>{p.address}</td>
+                    <td className="py-4 px-6 text-sm text-slate-600 max-w-[200px]">
+                      {p.zone && (
+                        <div className="text-[11px] font-semibold text-primary mb-0.5 flex items-center gap-1">
+                          <i className="fas fa-location-dot text-[9px]"></i>
+                          <span>{p.zone}</span>
+                        </div>
+                      )}
+                      <div className="truncate text-slate-500 text-xs" title={p.address}>{p.address}</div>
+                    </td>
                     <td className="py-4 px-6">
                       <span className={`px-2.5 py-1 rounded-full text-xs font-medium border ${pStatus.twClass}`}>
                         {pStatus.label}
@@ -471,6 +517,35 @@ export default function Properties() {
                   <option value="terrain">Terrain</option>
                   <option value="commercial">Local Commercial / Bureau</option>
                 </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="reference_code" className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+                  Code Référence (Unique)
+                </label>
+                <input
+                  id="reference_code"
+                  type="text"
+                  placeholder="Auto-généré si vide (ex: BIEN-001)"
+                  value={form.reference_code}
+                  onChange={(e) => setForm({ ...form, reference_code: e.target.value })}
+                  className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-mono text-slate-900 placeholder-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+                />
+              </div>
+              <div>
+                <label htmlFor="zone" className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+                  Zone géographique
+                </label>
+                <input
+                  id="zone"
+                  type="text"
+                  placeholder="Ex : Cocody Riviera, Marcory Zone 4"
+                  value={form.zone}
+                  onChange={(e) => setForm({ ...form, zone: e.target.value })}
+                  className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+                />
               </div>
             </div>
 
@@ -692,7 +767,7 @@ export default function Properties() {
                   onChange={(e) => setForm({ ...form, owner_id: e.target.value })}
                   className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-medium text-slate-900 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer"
                 >
-                  <option value="">-- Aucun propriétaire --</option>
+                  <option value="">-- Aucun propriétaire (Non attribué) --</option>
                   {owners.map(o => (
                     <option key={o.id} value={o.id}>
                       {o.display_name || `${o.first_name || ''} ${o.last_name || ''}`.trim() || `Propriétaire #${o.id}`} {o.phone ? `(${o.phone})` : ''}

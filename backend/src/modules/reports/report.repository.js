@@ -5,7 +5,7 @@
  * Rôle     : Persistence et agrégations SQL pour les rapports & analytics
  */
 
-const { pool: db } = require('../../config/database');
+const { pool, pool: db } = require('../../config/database');
 
 class ReportRepository {
   /**
@@ -1607,6 +1607,263 @@ class ReportRepository {
         collectionRate: achievementRate,
         allCollectorsTable
       }
+    };
+  }
+
+  /**
+   * Tableau de bord minimaliste du Manager (Section 6 & Maquette 1)
+   */
+  async getManagerDashboard({ granularity = 'month', startDate, endDate } = {}) {
+    // 1. Résolution des plages de dates N et N-1
+    let start, end;
+    if (startDate && endDate) {
+      start = new Date(`${startDate}T00:00:00Z`);
+      end = new Date(`${endDate}T23:59:59Z`);
+    } else if (granularity === 'quarter') {
+      start = new Date('2026-10-01T00:00:00Z');
+      end = new Date('2026-12-31T23:59:59Z');
+    } else if (granularity === 'year') {
+      start = new Date('2026-01-01T00:00:00Z');
+      end = new Date('2026-12-31T23:59:59Z');
+    } else if (granularity === 'day') {
+      const d = startDate || new Date().toISOString().slice(0, 10);
+      start = new Date(`${d}T00:00:00Z`);
+      end = new Date(`${d}T23:59:59Z`);
+    } else {
+      const now = new Date();
+      const y = now.getUTCFullYear();
+      const m = now.getUTCMonth();
+      start = new Date(Date.UTC(y, m, 1, 0, 0, 0));
+      const lastDay = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+      end = new Date(Date.UTC(y, m, lastDay, 23, 59, 59));
+    }
+
+    const startStr = start.toISOString().slice(0, 10);
+    const endStr = end.toISOString().slice(0, 10);
+    const daysCount = Math.max(1, Math.round((end - start) / (24 * 3600 * 1000)));
+
+    let prevStart, prevEnd;
+    if (granularity === 'year' || daysCount >= 360) {
+      prevStart = new Date(Date.UTC(start.getUTCFullYear() - 1, start.getUTCMonth(), start.getUTCDate()));
+      prevEnd = new Date(Date.UTC(end.getUTCFullYear() - 1, end.getUTCMonth(), end.getUTCDate()));
+    } else if (granularity === 'quarter' || (daysCount >= 85 && daysCount <= 95)) {
+      prevStart = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() - 3, start.getUTCDate()));
+      prevEnd = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth() - 3, end.getUTCDate()));
+    } else if (granularity === 'month' || (daysCount >= 28 && daysCount <= 31 && start.getUTCDate() === 1)) {
+      const lastDayPrevMonth = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), 0)).getUTCDate();
+      prevStart = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() - 1, 1));
+      prevEnd = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() - 1, lastDayPrevMonth));
+    } else {
+      prevEnd = new Date(start.getTime() - 24 * 3600 * 1000);
+      prevStart = new Date(prevEnd.getTime() - (daysCount - 1) * 24 * 3600 * 1000);
+    }
+
+    const prevStartStr = prevStart.toISOString().slice(0, 10);
+    const prevEndStr = prevEnd.toISOString().slice(0, 10);
+
+    const calcEvolution = (curr, prev) => {
+      const current = Number(curr) || 0;
+      const previous = Number(prev) || 0;
+      if (previous === 0) {
+        return {
+          percent: current > 0 ? 100 : 0,
+          trend: current > 0 ? 'up' : 'stable'
+        };
+      }
+      const pct = Math.round(((current - previous) / previous) * 1000) / 10;
+      return {
+        percent: pct,
+        trend: pct > 0 ? 'up' : pct < 0 ? 'down' : 'stable'
+      };
+    };
+
+    // 2. Requêtes KPIs en parallèle
+    const [
+      [totalPropsRow],
+      [newPropsRow],
+      [prevNewPropsRow],
+      [totalAssignedRow],
+      [newAssignedRow],
+      [prevNewAssignedRow],
+      [totalOwnersRow],
+      [newOwnersRow],
+      [prevNewOwnersRow],
+      [collectionsRow],
+      [prevCollectionsRow],
+      [expectedRentRow],
+    ] = await Promise.all([
+      pool.query('SELECT COUNT(*) as total FROM properties'),
+      pool.query('SELECT COUNT(*) as count FROM properties WHERE created_at BETWEEN ? AND ?', [`${startStr} 00:00:00`, `${endStr} 23:59:59`]),
+      pool.query('SELECT COUNT(*) as count FROM properties WHERE created_at BETWEEN ? AND ?', [`${prevStartStr} 00:00:00`, `${prevEndStr} 23:59:59`]),
+      pool.query('SELECT COUNT(*) as total FROM properties WHERE owner_id IS NOT NULL'),
+      pool.query(
+        `SELECT COUNT(*) as count FROM properties 
+         WHERE owner_id IS NOT NULL AND (assigned_at BETWEEN ? AND ? OR (assigned_at IS NULL AND created_at BETWEEN ? AND ?))`,
+        [`${startStr} 00:00:00`, `${endStr} 23:59:59`, `${startStr} 00:00:00`, `${endStr} 23:59:59`]
+      ),
+      pool.query(
+        `SELECT COUNT(*) as count FROM properties 
+         WHERE owner_id IS NOT NULL AND (assigned_at BETWEEN ? AND ? OR (assigned_at IS NULL AND created_at BETWEEN ? AND ?))`,
+        [`${prevStartStr} 00:00:00`, `${prevEndStr} 23:59:59`, `${prevStartStr} 00:00:00`, `${prevEndStr} 23:59:59`]
+      ),
+      pool.query('SELECT COUNT(*) as total FROM owners'),
+      pool.query('SELECT COUNT(*) as count FROM owners WHERE created_at BETWEEN ? AND ?', [`${startStr} 00:00:00`, `${endStr} 23:59:59`]),
+      pool.query('SELECT COUNT(*) as count FROM owners WHERE created_at BETWEEN ? AND ?', [`${prevStartStr} 00:00:00`, `${prevEndStr} 23:59:59`]),
+      pool.query(
+        `SELECT COALESCE(SUM(amount), 0) as total FROM transactions 
+         WHERE status IN ('processed', 'paid', 'completed', 'partial', 'partiel') AND date BETWEEN ? AND ?`,
+        [startStr, endStr]
+      ),
+      pool.query(
+        `SELECT COALESCE(SUM(amount), 0) as total FROM transactions 
+         WHERE status IN ('processed', 'paid', 'completed', 'partial', 'partiel') AND date BETWEEN ? AND ?`,
+        [prevStartStr, prevEndStr]
+      ),
+      pool.query("SELECT COALESCE(SUM(rent), 0) as total FROM properties WHERE status = 'loue'")
+    ]);
+
+    const totalProperties = Number(totalPropsRow[0]?.total || 0);
+    const newProperties = Number(newPropsRow[0]?.count || 0);
+    const prevNewProperties = Number(prevNewPropsRow[0]?.count || 0);
+    const propertiesEvo = calcEvolution(newProperties, prevNewProperties);
+
+    const totalAssigned = Number(totalAssignedRow[0]?.total || 0);
+    const newAssigned = Number(newAssignedRow[0]?.count || 0);
+    const prevNewAssigned = Number(prevNewAssignedRow[0]?.count || 0);
+    const assignedEvo = calcEvolution(newAssigned, prevNewAssigned);
+    const occupancyRate = totalProperties > 0 ? Math.round((totalAssigned / totalProperties) * 1000) / 10 : 0;
+
+    const totalOwners = Number(totalOwnersRow[0]?.total || 0);
+    const newOwners = Number(newOwnersRow[0]?.count || 0);
+    const prevNewOwners = Number(prevNewOwnersRow[0]?.count || 0);
+    const ownersEvo = calcEvolution(newOwners, prevNewOwners);
+
+    const currentCollected = Number(collectionsRow[0]?.total || 0);
+    const prevCollected = Number(prevCollectionsRow[0]?.total || 0);
+    const expectedRent = Number(expectedRentRow[0]?.total || 0);
+
+    const collectionTarget = expectedRent > 0 ? expectedRent : (currentCollected > 0 ? currentCollected * 1.1 : 20000000);
+    const currentRecoveryRate = collectionTarget > 0 ? Math.min(100, Math.round((currentCollected / collectionTarget) * 1000) / 10) : 0;
+    const prevRecoveryRate = collectionTarget > 0 ? Math.min(100, Math.round((prevCollected / collectionTarget) * 1000) / 10) : 0;
+    const recoveryDiff = Math.round((currentRecoveryRate - prevRecoveryRate) * 10) / 10;
+
+    // 3. Série temporelle unique : Évolution des enregistrements de biens
+    let timeSeriesIntervals = [];
+    if (granularity === 'day' || daysCount <= 3) {
+      // Points par tranche horaire ou jour
+      timeSeriesIntervals.push({
+        label: startStr,
+        fullLabel: startStr,
+        subStart: `${startStr} 00:00:00`,
+        subEnd: `${endStr} 23:59:59`,
+        prevSubStart: `${prevStartStr} 00:00:00`,
+        prevSubEnd: `${prevEndStr} 23:59:59`,
+      });
+    } else if (granularity === 'year' || daysCount > 120) {
+      // 12 mois
+      for (let m = 0; m < 12; m++) {
+        const mStart = new Date(Date.UTC(start.getUTCFullYear(), m, 1));
+        const lastDay = new Date(Date.UTC(start.getUTCFullYear(), m + 1, 0)).getUTCDate();
+        const mEnd = new Date(Date.UTC(start.getUTCFullYear(), m, lastDay, 23, 59, 59));
+
+        const pmStart = new Date(Date.UTC(prevStart.getUTCFullYear(), m, 1));
+        const plastDay = new Date(Date.UTC(prevStart.getUTCFullYear(), m + 1, 0)).getUTCDate();
+        const pmEnd = new Date(Date.UTC(prevStart.getUTCFullYear(), m, plastDay, 23, 59, 59));
+
+        const monthName = mStart.toLocaleDateString('fr-FR', { month: 'short' });
+        timeSeriesIntervals.push({
+          label: monthName.charAt(0).toUpperCase() + monthName.slice(1),
+          fullLabel: mStart.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }),
+          subStart: mStart.toISOString().slice(0, 10) + ' 00:00:00',
+          subEnd: mEnd.toISOString().slice(0, 10) + ' 23:59:59',
+          prevSubStart: pmStart.toISOString().slice(0, 10) + ' 00:00:00',
+          prevSubEnd: pmEnd.toISOString().slice(0, 10) + ' 23:59:59',
+        });
+      }
+    } else {
+      // Semaines S1..S5
+      const totalDays = daysCount;
+      const step = Math.max(1, Math.ceil(totalDays / 4));
+      for (let i = 0; i < 4; i++) {
+        const sOffset = i * step;
+        const eOffset = Math.min(totalDays - 1, (i + 1) * step - 1);
+        if (sOffset > totalDays - 1) break;
+
+        const subS = new Date(start.getTime() + sOffset * 24 * 3600 * 1000);
+        const subE = new Date(start.getTime() + eOffset * 24 * 3600 * 1000);
+
+        const psubS = new Date(prevStart.getTime() + sOffset * 24 * 3600 * 1000);
+        const psubE = new Date(prevStart.getTime() + eOffset * 24 * 3600 * 1000);
+
+        timeSeriesIntervals.push({
+          label: `S${i + 1}`,
+          fullLabel: `Semaine ${i + 1} (${subS.toISOString().slice(8, 10)} - ${subE.toISOString().slice(8, 10)})`,
+          subStart: subS.toISOString().slice(0, 10) + ' 00:00:00',
+          subEnd: subE.toISOString().slice(0, 10) + ' 23:59:59',
+          prevSubStart: psubS.toISOString().slice(0, 10) + ' 00:00:00',
+          prevSubEnd: psubE.toISOString().slice(0, 10) + ' 23:59:59',
+        });
+      }
+    }
+
+    const registrationsTimeSeries = await Promise.all(
+      timeSeriesIntervals.map(async (interval) => {
+        const [cRow] = await pool.query(
+          'SELECT COUNT(*) as count FROM properties WHERE created_at BETWEEN ? AND ?',
+          [interval.subStart, interval.subEnd]
+        );
+        const [pRow] = await pool.query(
+          'SELECT COUNT(*) as count FROM properties WHERE created_at BETWEEN ? AND ?',
+          [interval.prevSubStart, interval.prevSubEnd]
+        );
+        return {
+          label: interval.label,
+          fullLabel: interval.fullLabel,
+          count: Number(cRow[0]?.count || 0),
+          prevCount: Number(pRow[0]?.count || 0),
+        };
+      })
+    );
+
+    return {
+      period: {
+        granularity,
+        startDate: startStr,
+        endDate: endStr,
+        prevStartDate: prevStartStr,
+        prevEndDate: prevEndStr,
+        durationDays: daysCount,
+      },
+      registeredProperties: {
+        newInPeriod: newProperties,
+        previous: prevNewProperties,
+        evolution: propertiesEvo.percent,
+        trend: propertiesEvo.trend,
+        total: totalProperties,
+      },
+      assignedProperties: {
+        assignedInPeriod: newAssigned,
+        previous: prevNewAssigned,
+        evolution: assignedEvo.percent,
+        trend: assignedEvo.trend,
+        total: totalAssigned,
+        occupancyRate,
+      },
+      collectionRate: {
+        rate: currentRecoveryRate,
+        previous: prevRecoveryRate,
+        evolution: recoveryDiff,
+        trend: recoveryDiff > 0 ? 'up' : recoveryDiff < 0 ? 'down' : 'stable',
+        target: 95,
+      },
+      registeredOwners: {
+        newInPeriod: newOwners,
+        previous: prevNewOwners,
+        evolution: ownersEvo.percent,
+        trend: ownersEvo.trend,
+        total: totalOwners,
+      },
+      registrationsTimeSeries,
     };
   }
 }

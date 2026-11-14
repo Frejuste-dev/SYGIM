@@ -40,6 +40,10 @@ export const useCreateProperty = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['properties'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['manager-dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['property-assignments'] });
+      queryClient.invalidateQueries({ queryKey: ['manager-activity'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
     }
   });
 };
@@ -51,6 +55,10 @@ export const useUpdateProperty = () => {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['properties'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['manager-dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['property-assignments'] });
+      queryClient.invalidateQueries({ queryKey: ['manager-activity'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
     }
   });
 };
@@ -62,6 +70,10 @@ export const useDeleteProperty = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['properties'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['manager-dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['property-assignments'] });
+      queryClient.invalidateQueries({ queryKey: ['manager-activity'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
     }
   });
 };

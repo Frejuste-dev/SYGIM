@@ -27,6 +27,8 @@ import Reports from './pages/Reports';
 import Settings from './pages/Settings';
 import Profile from './pages/Profile';
 import Activity from './pages/Activity';
+import PropertyAssignments from './pages/PropertyAssignments';
+import Notifications from './pages/Notifications';
 
 export default function App() {
     return (
@@ -74,8 +76,18 @@ export default function App() {
                             <Route 
                                 path="properties" 
                                 element={
-                                    <ProtectedRoute allowedRoles={['admin', 'super_admin', 'director', 'accounting', 'collector_manager', 'gestionnaire']}>
+                                    <ProtectedRoute allowedRoles={['admin', 'super_admin', 'director', 'accounting', 'collector_manager', 'manager', 'gestionnaire']}>
                                         <Properties />
+                                    </ProtectedRoute>
+                                } 
+                            />
+
+                            {/* Property Assignments Route */}
+                            <Route 
+                                path="property-assignments" 
+                                element={
+                                    <ProtectedRoute allowedRoles={['admin', 'super_admin', 'director', 'collector_manager', 'manager']}>
+                                        <PropertyAssignments />
                                     </ProtectedRoute>
                                 } 
                             />
@@ -84,7 +96,7 @@ export default function App() {
                             <Route 
                                 path="owners" 
                                 element={
-                                    <ProtectedRoute allowedRoles={['admin', 'super_admin', 'director', 'accounting', 'collector_manager', 'gestionnaire']}>
+                                    <ProtectedRoute allowedRoles={['admin', 'super_admin', 'director', 'accounting', 'collector_manager', 'manager', 'gestionnaire']}>
                                         <Owners />
                                     </ProtectedRoute>
                                 } 
@@ -134,8 +146,18 @@ export default function App() {
                             <Route 
                                 path="activity" 
                                 element={
-                                    <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
+                                    <ProtectedRoute allowedRoles={['admin', 'super_admin', 'director', 'accounting', 'collector_manager', 'manager']}>
                                         <Activity />
+                                    </ProtectedRoute>
+                                } 
+                            />
+
+                            {/* Notifications Route */}
+                            <Route 
+                                path="notifications" 
+                                element={
+                                    <ProtectedRoute allowedRoles={['admin', 'super_admin', 'director', 'accounting', 'collector_manager', 'manager', 'collector']}>
+                                        <Notifications />
                                     </ProtectedRoute>
                                 } 
                             />
@@ -144,7 +166,7 @@ export default function App() {
                             <Route 
                                 path="profile" 
                                 element={
-                                    <ProtectedRoute allowedRoles={['admin', 'super_admin', 'director', 'accounting', 'collector_manager', 'collector', 'gestionnaire']}>
+                                    <ProtectedRoute allowedRoles={['admin', 'super_admin', 'director', 'accounting', 'collector_manager', 'manager', 'collector', 'gestionnaire']}>
                                         <Profile />
                                     </ProtectedRoute>
                                 } 
@@ -154,17 +176,17 @@ export default function App() {
                             <Route 
                                 path="collector" 
                                 element={
-                                    <ProtectedRoute allowedRoles={['collector', 'collector_manager', 'admin', 'super_admin']}>
+                                    <ProtectedRoute allowedRoles={['collector', 'collector_manager', 'manager', 'admin', 'super_admin']}>
                                         <Collector />
                                     </ProtectedRoute>
                                 } 
                             />
 
-                            {/* Collector Manager Route (Legacy / Dedicated layout if any) */}
+                            {/* Manager Route */}
                             <Route 
                                 path="manager" 
                                 element={
-                                    <ProtectedRoute allowedRoles={['collector_manager', 'admin', 'super_admin']}>
+                                    <ProtectedRoute allowedRoles={['collector_manager', 'manager', 'admin', 'super_admin']}>
                                         <Manager />
                                     </ProtectedRoute>
                                 } 
