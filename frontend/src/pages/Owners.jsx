@@ -363,44 +363,54 @@ export default function Owners() {
   return (
     <div className="space-y-6">
       {/* 1. EN-TÊTE */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 gap-4">
+      <div className="bg-white border border-slate-200/80 rounded-xl shadow-xs p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">Propriétaires &amp; État du Parc</h2>
-          <p className="text-sm text-slate-500">
-            Suivi du patrimoine par propriétaire, état d'occupation des biens (en location, vacants, en réparation) et reversements
+          <h2 className="text-xl sm:text-2xl font-bold text-slate-900">Propriétaires &amp; État du Parc</h2>
+          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+            Suivi du patrimoine par propriétaire, état d'occupation des biens et reversements
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5">
-          <button
-            type="button"
-            onClick={handleExportExcel}
-            className="inline-flex items-center gap-2 px-3.5 py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg text-sm font-semibold hover:bg-emerald-100 transition-colors shadow-2xs"
-            title="Exporter la liste avec le détail du statut de chaque bien"
-          >
-            <i className="fas fa-file-excel"></i> Excel
-          </button>
-          <button
-            type="button"
-            onClick={handleExportPDF}
-            className="inline-flex items-center gap-2 px-3.5 py-2 bg-rose-50 text-rose-700 border border-rose-200 rounded-lg text-sm font-semibold hover:bg-rose-100 transition-colors shadow-2xs"
-            title="Exporter l'inventaire officiel du parc propriétaire en PDF"
-          >
-            <i className="fas fa-file-pdf"></i> PDF
-          </button>
+        <div className="flex items-center gap-2.5 shrink-0 flex-nowrap overflow-x-auto pb-1 sm:pb-0">
+          {/* Groupe d'exportation segmenté compact */}
+          <div className="inline-flex items-center rounded-lg border border-slate-200 bg-slate-50/80 p-0.5 shadow-2xs">
+            <button
+              type="button"
+              onClick={handleExportExcel}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-semibold text-slate-700 hover:text-emerald-700 hover:bg-white transition-colors"
+              title="Exporter la liste avec le détail du statut de chaque bien en Excel"
+            >
+              <i className="fas fa-file-excel text-emerald-600"></i>
+              <span className="hidden sm:inline">Excel</span>
+            </button>
+            <div className="h-4 w-px bg-slate-200"></div>
+            <button
+              type="button"
+              onClick={handleExportPDF}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-semibold text-slate-700 hover:text-rose-700 hover:bg-white transition-colors"
+              title="Exporter l'inventaire officiel du parc propriétaire en PDF"
+            >
+              <i className="fas fa-file-pdf text-rose-600"></i>
+              <span className="hidden sm:inline">PDF</span>
+            </button>
+          </div>
+
           <button
             type="button"
             onClick={() => handleOpenPayout(null)}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg text-sm font-semibold hover:bg-amber-700 transition-colors shadow-sm"
+            className="inline-flex items-center gap-1.5 px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-bold transition-all shadow-2xs whitespace-nowrap"
+            title="Effectuer un reversement ou un préfinancement"
           >
-            <i className="fas fa-hand-holding-dollar"></i> Payer / Préfinancer
+            <i className="fas fa-hand-holding-dollar"></i>
+            <span>Reversements</span>
           </button>
           <button
             type="button"
             onClick={openCreateModal}
-            className="bg-primary text-white rounded-lg px-4 py-2 hover:bg-primary-dark transition-all flex items-center gap-2 text-sm font-medium shadow-sm"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-primary hover:bg-primary-dark text-white rounded-lg text-xs font-bold transition-all shadow-2xs whitespace-nowrap"
           >
-            <i className="fas fa-plus"></i> Nouveau propriétaire
+            <i className="fas fa-plus"></i>
+            <span>Nouveau propriétaire</span>
           </button>
         </div>
       </div>
@@ -454,8 +464,8 @@ export default function Owners() {
                 <tr>
                   <th className="bg-slate-50 border-y border-slate-200 text-slate-500 text-xs uppercase tracking-wider py-3.5 px-4 font-semibold">Propriétaire</th>
                   <th className="bg-slate-50 border-y border-slate-200 text-slate-500 text-xs uppercase tracking-wider py-3.5 px-4 font-semibold">Contact</th>
-                  <th className="bg-slate-50 border-y border-slate-200 text-slate-500 text-xs uppercase tracking-wider py-3.5 px-4 font-semibold min-w-[320px]">
-                    Biens &amp; État du Parc (Loué / Vacant / Réparation)
+                  <th className="bg-slate-50 border-y border-slate-200 text-slate-500 text-xs uppercase tracking-wider py-3.5 px-4 font-semibold min-w-[280px]">
+                    Biens &amp; État du Parc
                   </th>
                   <th className="bg-slate-50 border-y border-slate-200 text-slate-500 text-xs uppercase tracking-wider py-3.5 px-4 font-semibold">Modalités de reversement</th>
                   <th className="bg-slate-50 border-y border-slate-200 text-slate-500 text-xs uppercase tracking-wider py-3.5 px-4 font-semibold text-right">Actions</th>
@@ -494,8 +504,8 @@ export default function Owners() {
                 <tr>
                   <th className="bg-slate-50 border-y border-slate-200 text-slate-500 text-xs uppercase tracking-wider py-3.5 px-4 font-semibold">Propriétaire</th>
                   <th className="bg-slate-50 border-y border-slate-200 text-slate-500 text-xs uppercase tracking-wider py-3.5 px-4 font-semibold">Contact</th>
-                  <th className="bg-slate-50 border-y border-slate-200 text-slate-500 text-xs uppercase tracking-wider py-3.5 px-4 font-semibold min-w-[320px]">
-                    Biens &amp; État du Parc (Loué / Vacant / Réparation)
+                  <th className="bg-slate-50 border-y border-slate-200 text-slate-500 text-xs uppercase tracking-wider py-3.5 px-4 font-semibold min-w-[280px]">
+                    Biens &amp; État du Parc
                   </th>
                   <th className="bg-slate-50 border-y border-slate-200 text-slate-500 text-xs uppercase tracking-wider py-3.5 px-4 font-semibold">Modalités de reversement</th>
                   <th className="bg-slate-50 border-y border-slate-200 text-slate-500 text-xs uppercase tracking-wider py-3.5 px-4 font-semibold text-right">Actions</th>
@@ -542,71 +552,90 @@ export default function Owners() {
                       </td>
 
                       <td className="py-4 px-4 text-sm">
-                        {/* Résumé global du patrimoine */}
-                        <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
-                          <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-primary/10 text-primary border border-primary/20">
-                            {ownerProps.length} bien{ownerProps.length > 1 ? 's' : ''} au total
-                          </span>
-                          {totalPortfolioRent > 0 && (
-                            <span className="text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200 tabular-nums">
-                              {formatXOF(totalPortfolioRent)}/mois
+                        {ownerProps.length === 0 ? (
+                          <div className="flex items-center gap-2">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-500 border border-slate-200">
+                              0 bien
                             </span>
-                          )}
-                        </div>
-
-                        {/* Badges de décomposition d'état du parc (Loué / Vacant / En réparation) */}
-                        <div className="flex flex-wrap items-center gap-1.5 mb-2">
-                          <span 
-                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200"
-                            title="Nombre de biens actuellement loués et occupés"
-                          >
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                            {rentedCount} en location
-                          </span>
-                          <span 
-                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200"
-                            title="Nombre de biens vacants disponibles à la location"
-                          >
-                            <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-                            {vacantCount} vacant{vacantCount > 1 ? 's' : ''}
-                          </span>
-                          <span 
-                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200"
-                            title="Nombre de biens actuellement en travaux ou en réparation"
-                          >
-                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-                            {repairCount} en réparation
-                          </span>
-                        </div>
-
-                        {/* Liste des biens individuels avec badge de statut */}
-                        {ownerProps.length > 0 ? (
-                          <div className="flex flex-wrap gap-1.5 max-w-md">
-                            {ownerProps.map(p => {
-                              const cfg = PROPERTY_STATUS_CONFIG[p.status] || {
-                                label: p.status || 'Inconnu',
-                                badgeClass: 'bg-slate-100 text-slate-700 border-slate-200',
-                                dotClass: 'bg-slate-400',
-                                iconClass: 'fa-home text-slate-400'
-                              };
-                              return (
-                                <span 
-                                  key={p.id} 
-                                  className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-medium border ${cfg.badgeClass}`}
-                                  title={`${p.name} - Statut : ${cfg.label}`}
-                                >
-                                  <i className={`fas ${cfg.iconClass} text-[9px]`}></i>
-                                  <span className="font-semibold">{p.name}</span>
-                                  <span className="inline-flex items-center gap-1 text-[10px] opacity-90 font-normal">
-                                    <span className={`w-1 h-1 rounded-full ${cfg.dotClass}`}></span>
-                                    ({cfg.label})
-                                  </span>
-                                </span>
-                              );
-                            })}
+                            <span className="text-xs text-slate-400 italic">Aucun bien rattaché</span>
                           </div>
                         ) : (
-                          <span className="text-xs text-slate-400 italic">Aucun bien rattaché</span>
+                          <div className="space-y-1.5">
+                            {/* Résumé global du patrimoine */}
+                            <div className="flex items-center gap-2">
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-primary/10 text-primary border border-primary/20">
+                                {ownerProps.length} bien{ownerProps.length > 1 ? 's' : ''} au total
+                              </span>
+                              {totalPortfolioRent > 0 && (
+                                <span className="text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200 tabular-nums">
+                                  {formatXOF(totalPortfolioRent)}/mois
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Badges de décomposition d'état du parc (uniquement pour les statuts > 0) */}
+                            {(rentedCount > 0 || vacantCount > 0 || repairCount > 0) && (
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                {rentedCount > 0 && (
+                                  <span 
+                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/80"
+                                    title={`${rentedCount} bien(s) actuellement loué(s)`}
+                                  >
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                    {rentedCount} loué{rentedCount > 1 ? 's' : ''}
+                                  </span>
+                                )}
+                                {vacantCount > 0 && (
+                                  <span 
+                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200/80"
+                                    title={`${vacantCount} bien(s) vacant(s)`}
+                                  >
+                                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                                    {vacantCount} vacant{vacantCount > 1 ? 's' : ''}
+                                  </span>
+                                )}
+                                {repairCount > 0 && (
+                                  <span 
+                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/80"
+                                    title={`${repairCount} bien(s) en réparation`}
+                                  >
+                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                                    {repairCount} en réparation
+                                  </span>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Liste compacte des biens (max 2 puces + "+X autres") */}
+                            <div className="flex flex-wrap items-center gap-1.5 max-w-sm pt-0.5">
+                              {ownerProps.slice(0, 2).map(p => {
+                                const cfg = PROPERTY_STATUS_CONFIG[p.status] || {
+                                  label: p.status || 'Inconnu',
+                                  badgeClass: 'bg-slate-50 text-slate-700 border-slate-200',
+                                  dotClass: 'bg-slate-400',
+                                  iconClass: 'fa-home text-slate-400'
+                                };
+                                return (
+                                  <span 
+                                    key={p.id} 
+                                    className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium border ${cfg.badgeClass} max-w-[130px] truncate`}
+                                    title={`${p.name} (${cfg.label})`}
+                                  >
+                                    <span className={`w-1 h-1 rounded-full ${cfg.dotClass} shrink-0`}></span>
+                                    <span className="truncate">{p.name}</span>
+                                  </span>
+                                );
+                              })}
+                              {ownerProps.length > 2 && (
+                                <span 
+                                  className="text-[10px] font-medium text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200"
+                                  title={ownerProps.slice(2).map(p => p.name).join(', ')}
+                                >
+                                  +{ownerProps.length - 2} autre{ownerProps.length - 2 > 1 ? 's' : ''}
+                                </span>
+                              )}
+                            </div>
+                          </div>
                         )}
                       </td>
 
@@ -625,26 +654,27 @@ export default function Owners() {
                           <button
                             type="button"
                             onClick={() => handleOpenPayout(o)}
-                            className="px-2.5 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 rounded-lg text-xs font-bold transition-colors flex items-center gap-1 shadow-2xs"
+                            className="h-8 px-2.5 bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 rounded-lg text-xs font-bold transition-colors inline-flex items-center gap-1.5 shadow-2xs"
                             title="Enregistrer un versement ou préfinancement pour ce propriétaire"
                           >
-                            <i className="fas fa-hand-holding-dollar"></i> Payer
+                            <i className="fas fa-hand-holding-dollar"></i>
+                            <span>Payer</span>
                           </button>
                           <button
                             type="button"
-                            className="p-1.5 text-slate-400 hover:text-primary transition-colors rounded-lg hover:bg-slate-100"
+                            className="w-8 h-8 rounded-lg inline-flex items-center justify-center text-slate-500 hover:text-primary hover:bg-primary/10 border border-slate-200 bg-white transition-colors"
                             onClick={() => openEditModal(o)}
                             title="Modifier les coordonnées & attribuer des biens"
                           >
-                            <i className="fas fa-edit"></i>
+                            <i className="fas fa-edit text-xs"></i>
                           </button>
                           <button
                             type="button"
-                            className="p-1.5 text-slate-400 hover:text-rose-600 transition-colors rounded-lg hover:bg-rose-50"
+                            className="w-8 h-8 rounded-lg inline-flex items-center justify-center text-slate-500 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 bg-white transition-colors"
                             onClick={() => handleDelete(o)}
                             title="Supprimer ce propriétaire"
                           >
-                            <i className="fas fa-trash"></i>
+                            <i className="fas fa-trash text-xs"></i>
                           </button>
                         </div>
                       </td>

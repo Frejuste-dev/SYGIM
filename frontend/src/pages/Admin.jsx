@@ -37,11 +37,11 @@ export default function Admin() {
   // Navigation exclusive à 7 menus pour le rôle MANAGER
   const managerMenuItems = [
     { name: 'Tableau de bord', path: '/admin/manager', icon: 'fas fa-chart-pie' },
-    { name: 'Gestion des biens', path: '/admin/properties', icon: 'fas fa-building' },
-    { name: 'Gestion des propriétaires', path: '/admin/owners', icon: 'fas fa-user-tie' },
-    { name: 'Gestion des locataires', path: '/admin/clients', icon: 'fas fa-users' },
-    { name: 'Attribution des biens', path: '/admin/property-assignments', icon: 'fas fa-handshake' },
-    { name: 'Historique des activités', path: '/admin/activity', icon: 'fas fa-history' },
+    { name: 'Biens immobiliers', path: '/admin/properties', icon: 'fas fa-building' },
+    { name: 'Propriétaires', path: '/admin/owners', icon: 'fas fa-user-tie' },
+    { name: 'Locataires', path: '/admin/clients', icon: 'fas fa-users' },
+    { name: 'Attributions', path: '/admin/property-assignments', icon: 'fas fa-handshake' },
+    { name: 'Journal d\'activité', path: '/admin/activity', icon: 'fas fa-history' },
     { name: 'Notifications', path: '/admin/notifications', icon: 'fas fa-bell', badge: unreadCount },
   ];
 
@@ -57,7 +57,7 @@ export default function Admin() {
       items: [
         { name: 'Utilisateurs', path: '/admin/users', icon: 'fas fa-users', roles: ['admin', 'super_admin'] },
         { name: 'Propriétés', path: '/admin/properties', icon: 'fas fa-building', roles: ['admin', 'super_admin', 'gestionnaire', 'director', 'accounting'] },
-        { name: 'Attribution des biens', path: '/admin/property-assignments', icon: 'fas fa-handshake', roles: ['admin', 'super_admin', 'director'] },
+        { name: 'Attributions', path: '/admin/property-assignments', icon: 'fas fa-handshake', roles: ['admin', 'super_admin', 'director'] },
         { name: 'Locataires', path: '/admin/clients', icon: 'fas fa-user-friends', roles: ['admin', 'super_admin', 'gestionnaire', 'director', 'accounting'] },
         { name: 'Propriétaires', path: '/admin/owners', icon: 'fas fa-user-tie', roles: ['admin', 'super_admin', 'gestionnaire', 'director', 'accounting'] },
         { name: 'Transactions', path: '/admin/transactions', icon: 'fas fa-exchange-alt', roles: ['admin', 'super_admin', 'gestionnaire', 'director', 'accounting'] },
@@ -81,8 +81,8 @@ export default function Admin() {
 
   const navLinkStyle = ({ isActive }) => 
     isActive
-      ? "w-full text-left px-6 py-2.5 border-none cursor-pointer flex items-center gap-3 bg-primary/10 text-primary rounded-r-full mr-4 font-medium transition-colors"
-      : "w-full text-left px-6 py-2.5 bg-transparent border-none text-slate-700 cursor-pointer flex items-center gap-3 hover:bg-slate-50 hover:text-slate-900 rounded-r-full mr-4 transition-colors";
+      ? "w-[calc(100%-1rem)] mx-2 text-left px-3.5 py-2.5 border-none cursor-pointer flex items-center gap-3 bg-primary/10 text-primary rounded-xl font-semibold transition-colors"
+      : "w-[calc(100%-1rem)] mx-2 text-left px-3.5 py-2.5 bg-transparent border-none text-slate-700 cursor-pointer flex items-center gap-3 hover:bg-slate-100/70 hover:text-slate-900 rounded-xl font-medium transition-colors";
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
@@ -109,7 +109,7 @@ export default function Admin() {
           onClick={() => setIsSidebarOpen(false)}
         ></div>
       )}
-      <aside className={`w-64 bg-white border-r border-slate-200 flex-col z-50 fixed inset-y-0 left-0 transform transition-transform duration-300 md:z-20 md:relative md:translate-x-0 md:flex ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <aside className={`w-64 lg:w-[268px] bg-white border-r border-slate-200 flex-col z-50 fixed inset-y-0 left-0 transform transition-transform duration-300 md:z-20 md:relative md:translate-x-0 md:flex ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         {/* EN-TÊTE SIDEBAR */}
         <div className="h-16 flex items-center gap-3 border-b border-slate-200 px-6 shrink-0">
           <i className="fas fa-building text-primary text-2xl"></i>
@@ -119,15 +119,15 @@ export default function Admin() {
         <nav className="flex-1 py-4 overflow-y-auto">
           {isManager ? (
             <div>
-              <div className="px-6 mb-2 text-[11px] font-bold text-slate-500 uppercase tracking-wider mt-2">
+              <div className="px-6 mb-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider mt-2">
                 ESPACE MANAGER
               </div>
               {managerMenuItems.map((item) => (
                 <NavLink key={item.path} to={item.path} className={navLinkStyle}>
-                  <i className={`${item.icon} w-4 text-slate-400`}></i>
-                  <span className="flex-1">{item.name}</span>
+                  <i className={`${item.icon} w-4 text-center text-slate-400 shrink-0`}></i>
+                  <span className="flex-1 truncate whitespace-nowrap text-sm">{item.name}</span>
                   {Boolean(item.badge) && item.badge > 0 && (
-                    <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-500 text-white shadow-2xs">
+                    <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-500 text-white shadow-2xs shrink-0">
                       {item.badge}
                     </span>
                   )}
@@ -140,15 +140,15 @@ export default function Admin() {
               if (visibleItems.length === 0) return null;
               return (
                 <React.Fragment key={section.title}>
-                  <div className={`px-6 mb-2 text-[11px] font-bold text-slate-500 uppercase tracking-wider ${sIdx > 0 ? 'mt-6' : 'mt-2'}`}>
+                  <div className={`px-6 mb-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider ${sIdx > 0 ? 'mt-6' : 'mt-2'}`}>
                     {section.title}
                   </div>
                   {visibleItems.map(item => (
                     <NavLink key={item.path} to={item.path} className={navLinkStyle}>
-                      <i className={`${item.icon} w-4 text-slate-400`}></i>
-                      <span className="flex-1">{item.name}</span>
+                      <i className={`${item.icon} w-4 text-center text-slate-400 shrink-0`}></i>
+                      <span className="flex-1 truncate whitespace-nowrap text-sm">{item.name}</span>
                       {Boolean(item.badge) && item.badge > 0 && (
-                        <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-500 text-white shadow-2xs">
+                        <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-500 text-white shadow-2xs shrink-0">
                           {item.badge}
                         </span>
                       )}
