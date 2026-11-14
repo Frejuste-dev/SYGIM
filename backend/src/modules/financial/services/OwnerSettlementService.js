@@ -501,7 +501,7 @@ class OwnerSettlementService {
     await connection.beginTransaction();
 
     try {
-      const settlement = await ownerSettlementRepository.findById(settlementId);
+      const settlement = await ownerSettlementRepository.findByIdForUpdate(settlementId, connection);
       if (!settlement) {
         throw AppError.notFound('Décompte propriétaire introuvable.');
       }

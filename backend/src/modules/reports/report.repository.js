@@ -16,11 +16,11 @@ class ReportRepository {
     const txParams = [];
 
     if (startDate) {
-      dateFilterTx.push('DATE(COALESCE(t.date, t.created_at)) >= ?');
+      dateFilterTx.push('t.date >= ?');
       txParams.push(startDate);
     }
     if (endDate) {
-      dateFilterTx.push('DATE(COALESCE(t.date, t.created_at)) <= ?');
+      dateFilterTx.push('t.date <= ?');
       txParams.push(endDate);
     }
     if (ownerId) {
@@ -162,7 +162,7 @@ class ReportRepository {
        LEFT JOIN collectors col ON col.id = t.collector_id
        LEFT JOIN users cu ON cu.id = col.user_id
        WHERE t.status != 'cancelled' ${whereTx}
-       ORDER BY COALESCE(t.date, t.created_at) DESC, t.id DESC
+       ORDER BY t.date DESC, t.id DESC
        LIMIT 25`,
       txParams
     );
@@ -219,11 +219,11 @@ class ReportRepository {
     const params = [];
 
     if (startDate) {
-      txDateClause += ' AND DATE(COALESCE(t.date, t.created_at)) >= ?';
+      txDateClause += ' AND t.date >= ?';
       params.push(startDate);
     }
     if (endDate) {
-      txDateClause += ' AND DATE(COALESCE(t.date, t.created_at)) <= ?';
+      txDateClause += ' AND t.date <= ?';
       params.push(endDate);
     }
 
@@ -605,11 +605,11 @@ class ReportRepository {
     const params = [];
 
     if (startDate) {
-      query += ' AND DATE(COALESCE(t.date, t.created_at)) >= ?';
+      query += ' AND t.date >= ?';
       params.push(startDate);
     }
     if (endDate) {
-      query += ' AND DATE(COALESCE(t.date, t.created_at)) <= ?';
+      query += ' AND t.date <= ?';
       params.push(endDate);
     }
     if (ownerId) {
@@ -665,11 +665,11 @@ class ReportRepository {
     const params = [];
 
     if (startDate) {
-      query += ' AND DATE(COALESCE(t.date, t.created_at)) >= ?';
+      query += ' AND t.date >= ?';
       params.push(startDate);
     }
     if (endDate) {
-      query += ' AND DATE(COALESCE(t.date, t.created_at)) <= ?';
+      query += ' AND t.date <= ?';
       params.push(endDate);
     }
     if (ownerId) {
@@ -685,7 +685,7 @@ class ReportRepository {
       params.push(propertyId);
     }
 
-    query += ' ORDER BY COALESCE(t.date, t.created_at) DESC';
+    query += ' ORDER BY t.date DESC';
 
     const [rows] = await db.query(query, params);
     return rows;
@@ -833,8 +833,8 @@ class ReportRepository {
       FROM transactions t
       JOIN clients c ON c.id = t.client_id
       WHERE t.status IN ('processed', 'paid', 'completed')
-        AND DATE(COALESCE(t.date, t.created_at)) >= ?
-        AND DATE(COALESCE(t.date, t.created_at)) <= ?
+        AND t.date >= ?
+        AND t.date <= ?
       GROUP BY t.client_id, property_id
     `, [startDate, endDate]);
 

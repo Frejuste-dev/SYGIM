@@ -37,6 +37,21 @@ class PaymentService {
     await connection.beginTransaction();
 
     try {
+      // 0. Contrôle d'idempotence anti-double-clic (60 secondes) si aucun numéro de reçu explicite
+      if (!receiptNumber) {
+        const [recentDuplicates] = await connection.query(`
+          SELECT id, created_at FROM payments 
+          WHERE client_id = ? 
+            AND amount_received = ? 
+            AND created_at >= (NOW() - INTERVAL 60 SECOND)
+            AND status != 'REVERSED'
+          LIMIT 1 FOR UPDATE
+        `, [clientId, amountReceived]);
+
+        if (recentDuplicates.length > 0) {
+          throw AppError.conflict('Un paiement identique pour ce locataire a déjà été enregistré il y a moins de 60 secondes.');
+        }
+      }
       // 1. Création de l'enregistrement de paiement initial
       const payment = await paymentRepository.createPayment({
         client_id: clientId,

@@ -254,6 +254,8 @@ class ClientService extends BaseService {
   }
 
   async departTenant(id, data, user) {
+    await this.checkOwnership(id, user);
+
     const existing = await this.repository.findById(id);
     if (!existing) {
       throw AppError.notFound('Locataire non trouvé');

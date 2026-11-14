@@ -100,6 +100,8 @@ class PropertyService extends BaseService {
   }
 
   async assignTenant(propertyId, data, user) {
+    await this.checkOwnership(propertyId, user);
+
     const { pool } = require('../../config/database');
     const AppError = require('../../utils/errors/AppError');
 

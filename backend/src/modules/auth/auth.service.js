@@ -30,14 +30,7 @@ class AuthService {
       throw new AppError('Compte supprimé. Contactez l\'administrateur.', 403);
     }
 
-    let isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid && process.env.NODE_ENV !== 'production') {
-      const p = (password || '').toLowerCase().trim();
-      const u = (user.username || '').toLowerCase().trim();
-      if (p && (p === u || p === `${u}2026` || p === `${u}2026!` || p === 'password' || p === '123456' || p === 'admin')) {
-        isPasswordValid = true;
-      }
-    }
+    const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       throw new AppError('Identifiants invalides.', 401);
     }

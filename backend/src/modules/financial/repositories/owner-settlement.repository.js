@@ -204,11 +204,29 @@ class OwnerSettlementRepository extends BaseRepository {
   }
 
   /**
+   * Récupère un décompte avec verrouillage exclusif (FOR UPDATE) dans une transaction
+   */
+  async findByIdForUpdate(id, connection) {
+    const db = connection || pool;
+    const [rows] = await db.query(
+      'SELECT * FROM owner_settlements WHERE id = ? FOR UPDATE',
+      [id]
+    );
+    return rows[0] || null;
+  }
+
+  /**
    * Ajoute une tranche / un versement complémentaire ou solde le paiement échelonné
    */
   async markAsPaid(settlementId, payoutReference, additionalAmount = null, connection = null, extra = {}) {
     const db = connection || pool;
-    const existing = await this.findById(settlementId);
+    const existing = connection
+      ? await this.findByIdForUpdate(settlementId, connection)
+      : await this.findById(settlementId);
+
+    if (!existing) {
+      throw new Error(`Règlement propriétaire #${settlementId} introuvable.`);
+    }
     const currentPaid = parseFloat(existing.amount_paid || 0);
     const netDue = parseFloat(existing.net_owner_payout || 0);
     const remaining = Math.max(0, netDue - currentPaid);
