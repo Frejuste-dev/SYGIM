@@ -90,3 +90,63 @@ export const useOwnerSituation = (ownerId, params = {}, options = {}) => {
     enabled: Boolean(ownerId) && (options.enabled !== undefined ? options.enabled : true),
   });
 };
+
+export const useAgedReceivables = (params = {}, options = {}) => {
+  return useQuery({
+    queryKey: ['reports', 'aged-receivables', params],
+    queryFn: () => API.Reports.getAgedReceivables(params).then(unwrapData),
+    staleTime: 30_000,
+    placeholderData: (prev) => prev,
+    enabled: options.enabled !== undefined ? options.enabled : true,
+  });
+};
+
+export const useDepositsReport = (params = {}, options = {}) => {
+  return useQuery({
+    queryKey: ['reports', 'deposits', params],
+    queryFn: () => API.Reports.getDepositsReport(params).then(unwrapData),
+    staleTime: 30_000,
+    placeholderData: (prev) => prev,
+    enabled: options.enabled !== undefined ? options.enabled : true,
+  });
+};
+
+export const useOwnerLedger = (ownerId, params = {}, options = {}) => {
+  return useQuery({
+    queryKey: ['reports', 'owner-ledger', ownerId, params],
+    queryFn: () => API.Reports.getOwnerLedger(ownerId, params).then(unwrapData),
+    staleTime: 30_000,
+    placeholderData: (prev) => prev,
+    enabled: Boolean(ownerId) && (options.enabled !== undefined ? options.enabled : true),
+  });
+};
+
+export const useTaxDeclaration = (ownerId, params = {}, options = {}) => {
+  return useQuery({
+    queryKey: ['reports', 'tax-declaration', ownerId, params],
+    queryFn: () => API.Reports.getTaxDeclaration(ownerId, params).then(unwrapData),
+    staleTime: 60_000,
+    placeholderData: (prev) => prev,
+    enabled: Boolean(ownerId) && (options.enabled !== undefined ? options.enabled : true),
+  });
+};
+
+export const useMandateBfr = (options = {}) => {
+  return useQuery({
+    queryKey: ['reports', 'mandate-bfr'],
+    queryFn: () => API.Reports.getMandateBfr().then(unwrapData),
+    staleTime: 30_000,
+    placeholderData: (prev) => prev,
+    enabled: options.enabled !== undefined ? options.enabled : true,
+  });
+};
+
+export const useVacancyLoss = (params = {}, options = {}) => {
+  return useQuery({
+    queryKey: ['reports', 'vacancy-loss', params],
+    queryFn: () => API.Reports.getVacancyLoss(params).then(unwrapData),
+    staleTime: 30_000,
+    placeholderData: (prev) => prev,
+    enabled: options.enabled !== undefined ? options.enabled : true,
+  });
+};

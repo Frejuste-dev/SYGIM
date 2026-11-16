@@ -26,22 +26,69 @@ import ReportPropertiesTab from '../components/reports/ReportPropertiesTab';
 import ReportOverdueTab from '../components/reports/ReportOverdueTab';
 import OwnerSituationReport from './OwnerSituationReport';
 
-const REPORT_TABS = [
-  { key: 'overview', label: "Vue d'ensemble", icon: 'fa-chart-pie' },
-  { key: 'owner_situation', label: 'Situation Propriétaire', icon: 'fa-file-contract', badgeColor: 'bg-sky-100 text-sky-800 border border-sky-200' },
-  { key: 'owner_statements', label: 'Décompte Bailleurs & Locataires', icon: 'fa-file-invoice-dollar', badgeColor: 'bg-primary/10 text-primary border border-primary/20' },
-  { key: 'prefinancing', label: 'Rapport de Préfinancement', icon: 'fa-bolt', badgeColor: 'bg-amber-100 text-amber-800' },
-  { key: 'collectors', label: 'Performance Récolteurs', icon: 'fa-users' },
-  { key: 'properties', label: 'Biens & Occupation', icon: 'fa-building' },
-  { key: 'overdue', label: 'Impayés & Créances', icon: 'fa-exclamation-triangle', badgeColor: 'bg-rose-100 text-rose-800' },
-];
+// 6 Nouveaux rapports d'audit spécialisés
+import ReportAgedReceivablesTab from '../components/reports/ReportAgedReceivablesTab';
+import ReportDepositsTab from '../components/reports/ReportDepositsTab';
+import ReportOwnerLedgerTab from '../components/reports/ReportOwnerLedgerTab';
+import ReportTaxDeclarationTab from '../components/reports/ReportTaxDeclarationTab';
+import ReportMandateBfrTab from '../components/reports/ReportMandateBfrTab';
+import ReportVacancyTab from '../components/reports/ReportVacancyTab';
 
-const MANAGER_REPORT_TABS = [
-  { key: 'owner_situation', label: 'Situation Propriétaire', icon: 'fa-file-contract', badgeColor: 'bg-sky-100 text-sky-800 border border-sky-200' },
-  { key: 'owner_statements', label: 'Décompte Bailleurs & Locataires', icon: 'fa-file-invoice-dollar', badgeColor: 'bg-primary/10 text-primary border border-primary/20' },
-  { key: 'collectors', label: 'Tournées & Collecteurs', icon: 'fa-users' },
-  { key: 'overdue', label: 'Impayés & Plan de Relance', icon: 'fa-exclamation-triangle', badgeColor: 'bg-rose-100 text-rose-800' },
-  { key: 'properties', label: 'Biens, Vacance & Travaux', icon: 'fa-building' },
+// 5 Domaines Métiers d'une Agence de Gestion Locative
+const REPORT_DOMAINS = [
+  {
+    id: 'owners',
+    label: 'Propriétaires (Bailleurs)',
+    icon: 'fa-user-tie',
+    description: 'Situations, décomptes, relevés chronologiques et déclarations fiscales',
+    tabs: [
+      { key: 'owner_situation', label: 'Situation Propriétaire', icon: 'fa-file-contract', badgeColor: 'bg-sky-100 text-sky-800 border border-sky-200' },
+      { key: 'owner_statements', label: 'Décompte Bailleurs & Locataires', icon: 'fa-file-invoice-dollar', badgeColor: 'bg-primary/10 text-primary border border-primary/20' },
+      { key: 'owner_ledger', label: '1.3. Relevé Compte Propriétaire', icon: 'fa-book-open', badgeColor: 'bg-indigo-100 text-indigo-800' },
+      { key: 'tax_declaration', label: '1.2. Aide Déclaration Fiscale 2026', icon: 'fa-calculator', badgeColor: 'bg-emerald-100 text-emerald-800' },
+    ]
+  },
+  {
+    id: 'tenants',
+    label: 'Suivi Locataires',
+    icon: 'fa-users',
+    description: 'Impayés, balance âgée des créances et inventaire des cautions',
+    tabs: [
+      { key: 'overdue', label: 'Impayés & Plan de Relance', icon: 'fa-exclamation-triangle', badgeColor: 'bg-rose-100 text-rose-800' },
+      { key: 'aged_receivables', label: '2.1. Balance Âgée Locataires', icon: 'fa-history', badgeColor: 'bg-amber-100 text-amber-800' },
+      { key: 'deposits', label: '2.3. Dépôts de Garantie (Cautions)', icon: 'fa-shield-halved', badgeColor: 'bg-teal-100 text-teal-800' },
+    ]
+  },
+  {
+    id: 'mandate',
+    label: 'Mandat & Trésorerie',
+    icon: 'fa-vault',
+    description: 'Avances de trésorerie sur loyers et solvabilité du compte mandat',
+    tabs: [
+      { key: 'prefinancing', label: 'Rapport de Préfinancement', icon: 'fa-bolt', badgeColor: 'bg-amber-100 text-amber-800' },
+      { key: 'mandate_bfr', label: '3.3. Analyse BFR Compte Mandat', icon: 'fa-scale-balanced', badgeColor: 'bg-violet-100 text-violet-800' },
+    ]
+  },
+  {
+    id: 'properties',
+    label: 'Parc Immobilier',
+    icon: 'fa-building',
+    description: 'Occupation du parc, vacance locative et manque à gagner financier',
+    tabs: [
+      { key: 'properties', label: 'Biens & Occupation', icon: 'fa-building' },
+      { key: 'vacancy_loss', label: '4.1. Vacance & Manque à Gagner', icon: 'fa-door-open', badgeColor: 'bg-orange-100 text-orange-800' },
+    ]
+  },
+  {
+    id: 'agency',
+    label: 'Pilotage Agence',
+    icon: 'fa-chart-pie',
+    description: 'Synthèse générale des performances et tournées des récolteurs',
+    tabs: [
+      { key: 'overview', label: "Vue d'ensemble", icon: 'fa-chart-pie' },
+      { key: 'collectors', label: 'Performance Récolteurs', icon: 'fa-person-walking-arrow-right' },
+    ]
+  }
 ];
 
 export default function Reports() {
@@ -68,6 +115,31 @@ export default function Reports() {
     nextParams.set('tab', key);
     setSearchParams(nextParams, { replace: true });
   };
+
+  // Domaine actif déterminé automatiquement selon l'onglet actif
+  const currentDomain = useMemo(() => {
+    return REPORT_DOMAINS.find(d => d.tabs.some(t => t.key === activeTab)) || REPORT_DOMAINS[0];
+  }, [activeTab]);
+
+  const [activeDomainId, setActiveDomainId] = useState(currentDomain.id);
+
+  useEffect(() => {
+    if (currentDomain && currentDomain.id !== activeDomainId) {
+      setActiveDomainId(currentDomain.id);
+    }
+  }, [currentDomain, activeDomainId]);
+
+  const handleDomainChange = (domainId) => {
+    setActiveDomainId(domainId);
+    const domain = REPORT_DOMAINS.find(d => d.id === domainId);
+    if (domain && domain.tabs.length > 0) {
+      if (!domain.tabs.some(t => t.key === activeTab)) {
+        handleTabChange(domain.tabs[0].key);
+      }
+    }
+  };
+
+  const isGenericPeriodTab = ['overview', 'owner_statements', 'prefinancing', 'collectors', 'properties', 'overdue'].includes(activeTab);
 
   // Filtres de période synchronisés
   const [selectedMonth, setSelectedMonth] = useState('2026-11');
@@ -656,7 +728,7 @@ export default function Reports() {
           </p>
         </div>
 
-        {activeTab !== 'owner_situation' && (
+        {isGenericPeriodTab && (
           <div className="flex flex-wrap items-center gap-2.5">
             <button
               type="button"
@@ -677,7 +749,7 @@ export default function Reports() {
       </div>
 
       {/* 2. BARRE DE FILTRES DE PÉRIODE */}
-      {activeTab !== 'owner_situation' && (
+      {isGenericPeriodTab && (
         <div className="bg-white px-5 py-3.5 rounded-2xl border border-slate-200 shadow-2xs flex flex-wrap items-center justify-between gap-4">
           <div className="flex flex-wrap items-center gap-3">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
@@ -759,63 +831,105 @@ export default function Reports() {
         </div>
       )}
 
-      {/* 3. NAVIGATION PAR ONGLETS */}
-      <div className="flex flex-wrap gap-2 bg-slate-100/80 p-1.5 rounded-2xl border border-slate-200/80">
-        {(isManager ? MANAGER_REPORT_TABS : REPORT_TABS).map(tab => {
-          const isActive = activeTab === tab.key;
-          const badgeCount =
-            tab.key === 'owner_statements'
-              ? ownerStatementsData?.statements?.length || null
-              : tab.key === 'prefinancing'
-                ? prefinancingsList.length || eligiblePrefList.length
-                : tab.key === 'overdue'
-                  ? overdue.length
-                  : null;
+      {/* 3. NAVIGATION PAR DOMAINES MÉTIERS & RAPPORTS */}
+      <div className="space-y-3">
+        {/* Niveau 1 : Les 5 Domaines Métiers */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 p-1.5 bg-slate-100 rounded-2xl border border-slate-200">
+          {REPORT_DOMAINS.map((domain, index) => {
+            const isDomainActive = domain.id === activeDomainId;
+            return (
+              <button
+                key={domain.id}
+                type="button"
+                onClick={() => handleDomainChange(domain.id)}
+                className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all text-left cursor-pointer ${
+                  isDomainActive
+                    ? 'bg-white text-primary shadow-xs border border-primary/20 ring-2 ring-primary/10'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                }`}
+              >
+                <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 text-xs ${
+                  isDomainActive ? 'bg-primary text-white shadow-xs' : 'bg-slate-200 text-slate-700'
+                }`}>
+                  <i className={`fas ${domain.icon}`}></i>
+                </div>
+                <div className="min-w-0 flex-1 truncate">
+                  <div className="text-[10px] uppercase tracking-wider text-slate-400 font-bold leading-tight">
+                    Domaine {index + 1}
+                  </div>
+                  <div className="truncate font-semibold">{domain.label}</div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
 
-          return (
-            <button
-              key={tab.key}
-              type="button"
-              className={`flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-xl transition-all whitespace-nowrap cursor-pointer ${
-                isActive
-                  ? 'bg-primary text-white shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/70'
-              }`}
-              onClick={() => handleTabChange(tab.key)}
-            >
-              <i className={`fas ${tab.icon}`}></i>
-              <span>{tab.label}</span>
-              {badgeCount > 0 && (
-                <span
-                  className={`px-2 py-0.5 rounded-full text-xs font-bold ${
-                    isActive ? 'bg-white/20 text-white' : (tab.badgeColor || 'bg-slate-200 text-slate-700')
+        {/* Niveau 2 : Rapports et Sous-onglets du Domaine Sélectionné */}
+        {currentDomain && (
+          <div className="flex flex-wrap items-center gap-2 bg-slate-50 p-2 rounded-2xl border border-slate-200/80">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 px-2 flex items-center gap-1.5 shrink-0">
+              <i className="fas fa-layer-group text-primary"></i> Rapports :
+            </span>
+            {currentDomain.tabs.map(tab => {
+              const isActive = activeTab === tab.key;
+              const badgeCount =
+                tab.key === 'owner_statements'
+                  ? ownerStatementsData?.statements?.length || null
+                  : tab.key === 'prefinancing'
+                    ? prefinancingsList.length || eligiblePrefList.length
+                    : tab.key === 'overdue'
+                      ? overdue.length
+                      : null;
+
+              return (
+                <button
+                  key={tab.key}
+                  type="button"
+                  className={`flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-xl transition-all whitespace-nowrap cursor-pointer ${
+                    isActive
+                      ? 'bg-primary text-white shadow-xs font-bold'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-white bg-white/70 border border-slate-200/60'
                   }`}
+                  onClick={() => handleTabChange(tab.key)}
                 >
-                  {badgeCount}
-                </span>
-              )}
-            </button>
-          );
-        })}
+                  <i className={`fas ${tab.icon}`}></i>
+                  <span>{tab.label}</span>
+                  {badgeCount > 0 && (
+                    <span
+                      className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                        isActive ? 'bg-white/20 text-white' : (tab.badgeColor || 'bg-slate-200 text-slate-700')
+                      }`}
+                    >
+                      {badgeCount}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* 4. CONTENU DES ONGLETS MODULAIRES */}
-      {/* Onglet Situation Propriétaire Officielle (Cabinet Me DOUHO MAXIME) */}
+      {/* --- DOMAINE 1 : PROPRIÉTAIRES (BAILLEURS) --- */}
+      {/* 1.1. Situation Propriétaire Officielle (Cabinet Me DOUHO MAXIME) */}
       {activeTab === 'owner_situation' && (
         <div className="mt-2">
           <OwnerSituationReport embedded={true} />
         </div>
       )}
 
-      {!isManager && activeTab === 'overview' && (
-        <ReportOverviewTab
-          dashboard={dashboard}
-          prefSummary={prefSummary}
-          loading={loadingDashboard}
-          onNavigateTab={setActiveTab}
-        />
+      {/* 1.2. Aide Déclaration Fiscale des Revenus Fonciers */}
+      {activeTab === 'tax_declaration' && (
+        <ReportTaxDeclarationTab />
       )}
 
+      {/* 1.3. Relevé Chronologique du Compte Propriétaire (Grand Livre Bailleur) */}
+      {activeTab === 'owner_ledger' && (
+        <ReportOwnerLedgerTab />
+      )}
+
+      {/* Décompte Bailleurs & Locataires (Accordéon hiérarchique) */}
       {activeTab === 'owner_statements' && (
         <ReportOwnersTab
           ownerStatementsData={ownerStatementsData}
@@ -835,39 +949,18 @@ export default function Reports() {
         />
       )}
 
-      {!isManager && activeTab === 'prefinancing' && (
-        <ReportPrefinancingTab
-          prefinancingData={prefinancingData}
-          loading={loadingPrefinancing}
-          handleExportPrefinancingExcel={handleExportPrefinancingExcel}
-          handleExportPrefinancingPDF={handleExportPrefinancingPDF}
-          handleOpenPrefinanceForCase={handleOpenPrefinanceForCase}
-        />
+      {/* --- DOMAINE 2 : SUIVI LOCATAIRES --- */}
+      {/* 2.1. Balance Âgée Locataires */}
+      {activeTab === 'aged_receivables' && (
+        <ReportAgedReceivablesTab />
       )}
 
-      {activeTab === 'collectors' && (
-        <ReportCollectorsTab
-          collectors={collectors}
-          recentTransactions={dashboard?.recentTransactions || []}
-          loading={loadingCollectors}
-          handleExportTourneeExcel={handleExportTourneeExcel}
-          handleExportCollectorsExcel={handleExportCollectorsExcel}
-          handleExportCollectorsPDF={handleExportCollectorsPDF}
-        />
+      {/* 2.3. Inventaire des Dépôts de Garantie (Cautions) */}
+      {activeTab === 'deposits' && (
+        <ReportDepositsTab />
       )}
 
-      {activeTab === 'properties' && (
-        <ReportPropertiesTab
-          properties={properties}
-          dashboard={dashboard}
-          loading={loadingProperties}
-          propertyFilter={propertyFilter}
-          setPropertyFilter={setPropertyFilter}
-          handleExportPropertiesExcel={handleExportPropertiesExcel}
-          handleExportPropertiesPDF={handleExportPropertiesPDF}
-        />
-      )}
-
+      {/* Impayés & Plan de Relance */}
       {activeTab === 'overdue' && (
         <ReportOverdueTab
           overdue={overdue}
@@ -884,6 +977,65 @@ export default function Reports() {
           handleOpenReminderModal={handleOpenReminderModal}
           remindersHistory={remindersHistory}
           setRemindersHistory={setRemindersHistory}
+        />
+      )}
+
+      {/* --- DOMAINE 3 : MANDAT & TRÉSORERIE --- */}
+      {/* 3.2. Rapport de Préfinancement */}
+      {activeTab === 'prefinancing' && (
+        <ReportPrefinancingTab
+          prefinancingData={prefinancingData}
+          loading={loadingPrefinancing}
+          handleExportPrefinancingExcel={handleExportPrefinancingExcel}
+          handleExportPrefinancingPDF={handleExportPrefinancingPDF}
+          handleOpenPrefinanceForCase={handleOpenPrefinanceForCase}
+        />
+      )}
+
+      {/* 3.3. Analyse BFR & Solvabilité du Compte Mandat */}
+      {activeTab === 'mandate_bfr' && (
+        <ReportMandateBfrTab />
+      )}
+
+      {/* --- DOMAINE 4 : PARC IMMOBILIER --- */}
+      {/* 4.1. Vacance Locative & Manque à Gagner Financier */}
+      {activeTab === 'vacancy_loss' && (
+        <ReportVacancyTab />
+      )}
+
+      {/* Biens & Occupation */}
+      {activeTab === 'properties' && (
+        <ReportPropertiesTab
+          properties={properties}
+          dashboard={dashboard}
+          loading={loadingProperties}
+          propertyFilter={propertyFilter}
+          setPropertyFilter={setPropertyFilter}
+          handleExportPropertiesExcel={handleExportPropertiesExcel}
+          handleExportPropertiesPDF={handleExportPropertiesPDF}
+        />
+      )}
+
+      {/* --- DOMAINE 5 : PILOTAGE AGENCE --- */}
+      {/* Vue d'ensemble */}
+      {activeTab === 'overview' && (
+        <ReportOverviewTab
+          dashboard={dashboard}
+          prefSummary={prefSummary}
+          loading={loadingDashboard}
+          onNavigateTab={setActiveTab}
+        />
+      )}
+
+      {/* Performance Récolteurs */}
+      {activeTab === 'collectors' && (
+        <ReportCollectorsTab
+          collectors={collectors}
+          recentTransactions={dashboard?.recentTransactions || []}
+          loading={loadingCollectors}
+          handleExportTourneeExcel={handleExportTourneeExcel}
+          handleExportCollectorsExcel={handleExportCollectorsExcel}
+          handleExportCollectorsPDF={handleExportCollectorsPDF}
         />
       )}
 

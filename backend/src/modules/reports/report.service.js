@@ -416,6 +416,56 @@ class ReportService {
       doc.end();
     });
   }
+
+  /**
+   * Balance Âgée Locataires (0-30j, 31-60j, 61-90j, >90j)
+   */
+  async getAgedReceivables(filters = {}) {
+    return await reportRepository.getAgedReceivables(filters);
+  }
+
+  /**
+   * Inventaire des Dépôts de Garantie (Cautions)
+   */
+  async getDepositsReport(filters = {}) {
+    return await reportRepository.getDepositsReport(filters);
+  }
+
+  /**
+   * Extrait Chronologique du Compte Propriétaire
+   */
+  async getOwnerLedger(ownerId, filters = {}) {
+    const data = await reportRepository.getOwnerLedger(ownerId, filters);
+    if (!data) {
+      throw AppError.notFound('Propriétaire non trouvé.');
+    }
+    return data;
+  }
+
+  /**
+   * Aide à la Déclaration des Revenus Fonciers (Annuel)
+   */
+  async getTaxDeclaration(ownerId, filters = {}) {
+    const data = await reportRepository.getTaxDeclaration(ownerId, filters);
+    if (!data) {
+      throw AppError.notFound('Propriétaire non trouvé.');
+    }
+    return data;
+  }
+
+  /**
+   * Analyse du BFR & Équilibre du Compte Mandat
+   */
+  async getMandateBfr() {
+    return await reportRepository.getMandateBfr();
+  }
+
+  /**
+   * Vacance Locative & Manque à Gagner Financier
+   */
+  async getVacancyLoss(filters = {}) {
+    return await reportRepository.getVacancyLoss(filters);
+  }
 }
 
 module.exports = new ReportService();

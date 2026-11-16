@@ -2321,6 +2321,851 @@ class ReportRepository {
       registrationsTimeSeries,
     };
   }
+
+  /**
+   * 1. Balance Âgée Locataires (Aged Receivables)
+   * Ventile les arriérés en 4 tranches strictes : 0-30j, 31-60j, 61-90j, >90j
+   */
+  async getAgedReceivables({ search, propertyId, ownerId } = {}) {
+    let invWhere = `WHERE inv.status != 'CANCELLED' AND inv.balance_due > 0`;
+    const invParams = [];
+    if (search) {
+      invWhere += ` AND (c.first_name LIKE ? OR c.last_name LIKE ? OR c.phone LIKE ? OR p.name LIKE ? OR p.reference_code LIKE ?)`;
+      const s = `%${search}%`;
+      invParams.push(s, s, s, s, s);
+    }
+    if (propertyId) {
+      invWhere += ` AND inv.property_id = ?`;
+      invParams.push(propertyId);
+    }
+    if (ownerId) {
+      invWhere += ` AND p.owner_id = ?`;
+      invParams.push(ownerId);
+    }
+
+    const [invRows] = await db.query(
+      `SELECT
+         inv.id AS invoice_id,
+         inv.client_id,
+         inv.property_id,
+         inv.invoice_number,
+         inv.due_date,
+         inv.total_amount,
+         inv.paid_amount,
+         inv.balance_due,
+         GREATEST(0, DATEDIFF(CURRENT_DATE, inv.due_date)) AS days_overdue,
+         c.first_name AS client_first_name,
+         c.last_name AS client_last_name,
+         c.phone AS client_phone,
+         c.email AS client_email,
+         p.reference_code AS property_reference,
+         p.name AS property_name,
+         p.rent AS property_rent,
+         p.zone AS property_zone,
+         o.id AS owner_id,
+         CONCAT(COALESCE(o.first_name, ''), ' ', COALESCE(o.last_name, '')) AS owner_name
+       FROM invoices inv
+       JOIN clients c ON inv.client_id = c.id
+       LEFT JOIN properties p ON inv.property_id = p.id
+       LEFT JOIN owners o ON p.owner_id = o.id
+       ${invWhere}
+       ORDER BY inv.due_date ASC`,
+      invParams
+    );
+
+    let cliWhere = `WHERE (c.amount_due - c.amount_paid) > 0 AND c.status != 'deleted'`;
+    const cliParams = [];
+    if (search) {
+      cliWhere += ` AND (c.first_name LIKE ? OR c.last_name LIKE ? OR c.phone LIKE ?)`;
+      const s = `%${search}%`;
+      cliParams.push(s, s, s);
+    }
+    if (propertyId) {
+      cliWhere += ` AND c.property_id = ?`;
+      cliParams.push(propertyId);
+    }
+    if (ownerId) {
+      cliWhere += ` AND p.owner_id = ?`;
+      cliParams.push(ownerId);
+    }
+
+    const [cliRows] = await db.query(
+      `SELECT
+         c.id AS client_id,
+         c.property_id,
+         c.first_name AS client_first_name,
+         c.last_name AS client_last_name,
+         c.phone AS client_phone,
+         c.email AS client_email,
+         c.amount_due,
+         c.amount_paid,
+         (c.amount_due - c.amount_paid) AS net_debt,
+         GREATEST(0, DATEDIFF(CURRENT_DATE, COALESCE(c.updated_at, c.created_at))) AS days_since_update,
+         p.reference_code AS property_reference,
+         p.name AS property_name,
+         p.rent AS property_rent,
+         p.zone AS property_zone,
+         o.id AS owner_id,
+         CONCAT(COALESCE(o.first_name, ''), ' ', COALESCE(o.last_name, '')) AS owner_name
+       FROM clients c
+       LEFT JOIN properties p ON c.property_id = p.id
+       LEFT JOIN owners o ON p.owner_id = o.id
+       ${cliWhere}`,
+      cliParams
+    );
+
+    const clientsMap = new Map();
+
+    for (const inv of invRows) {
+      const cid = inv.client_id;
+      if (!clientsMap.has(cid)) {
+        clientsMap.set(cid, {
+          clientId: cid,
+          clientName: `${inv.client_first_name || ''} ${inv.client_last_name || ''}`.trim() || `Locataire #${cid}`,
+          phone: inv.client_phone || '—',
+          email: inv.client_email || '—',
+          propertyReference: inv.property_reference || `BIEN-${inv.property_id || '—'}`,
+          propertyName: inv.property_name || '—',
+          propertyZone: inv.property_zone || '—',
+          monthlyRent: Number(inv.property_rent || 0),
+          ownerName: (inv.owner_name || '').trim() || '—',
+          bucket_0_30: 0,
+          bucket_31_60: 0,
+          bucket_61_90: 0,
+          bucket_over_90: 0,
+          totalDue: 0,
+          maxDaysOverdue: 0,
+          invoicesCount: 0,
+        });
+      }
+      const entry = clientsMap.get(cid);
+      const bal = Number(inv.balance_due || 0);
+      const days = Number(inv.days_overdue || 0);
+
+      entry.totalDue += bal;
+      entry.invoicesCount += 1;
+      if (days > entry.maxDaysOverdue) entry.maxDaysOverdue = days;
+
+      if (days <= 30) {
+        entry.bucket_0_30 += bal;
+      } else if (days <= 60) {
+        entry.bucket_31_60 += bal;
+      } else if (days <= 90) {
+        entry.bucket_61_90 += bal;
+      } else {
+        entry.bucket_over_90 += bal;
+      }
+    }
+
+    for (const cli of cliRows) {
+      const cid = cli.client_id;
+      const netDebt = Number(cli.net_debt || 0);
+      if (!clientsMap.has(cid)) {
+        const days = Math.min(120, Number(cli.days_since_update || 15));
+        const entry = {
+          clientId: cid,
+          clientName: `${cli.client_first_name || ''} ${cli.client_last_name || ''}`.trim() || `Locataire #${cid}`,
+          phone: cli.client_phone || '—',
+          email: cli.client_email || '—',
+          propertyReference: cli.property_reference || `BIEN-${cli.property_id || '—'}`,
+          propertyName: cli.property_name || '—',
+          propertyZone: cli.property_zone || '—',
+          monthlyRent: Number(cli.property_rent || cli.amount_due || 0),
+          ownerName: (cli.owner_name || '').trim() || '—',
+          bucket_0_30: 0,
+          bucket_31_60: 0,
+          bucket_61_90: 0,
+          bucket_over_90: 0,
+          totalDue: netDebt,
+          maxDaysOverdue: days,
+          invoicesCount: 0,
+        };
+        if (days <= 30) entry.bucket_0_30 = netDebt;
+        else if (days <= 60) entry.bucket_31_60 = netDebt;
+        else if (days <= 90) entry.bucket_61_90 = netDebt;
+        else entry.bucket_over_90 = netDebt;
+
+        clientsMap.set(cid, entry);
+      } else {
+        const entry = clientsMap.get(cid);
+        if (netDebt > entry.totalDue) {
+          const diff = netDebt - entry.totalDue;
+          entry.bucket_0_30 += diff;
+          entry.totalDue = netDebt;
+        }
+      }
+    }
+
+    const clientsList = Array.from(clientsMap.values()).sort((a, b) => b.totalDue - a.totalDue);
+
+    let sumTotal = 0;
+    let sum0_30 = 0;
+    let sum31_60 = 0;
+    let sum61_90 = 0;
+    let sumOver90 = 0;
+
+    let count0_30 = 0;
+    let count31_60 = 0;
+    let count61_90 = 0;
+    let countOver90 = 0;
+
+    for (const c of clientsList) {
+      sumTotal += c.totalDue;
+      sum0_30 += c.bucket_0_30;
+      sum31_60 += c.bucket_31_60;
+      sum61_90 += c.bucket_61_90;
+      sumOver90 += c.bucket_over_90;
+
+      if (c.bucket_0_30 > 0) count0_30++;
+      if (c.bucket_31_60 > 0) count31_60++;
+      if (c.bucket_61_90 > 0) count61_90++;
+      if (c.bucket_over_90 > 0) countOver90++;
+    }
+
+    return {
+      summary: {
+        totalAgedOverdue: sumTotal,
+        totalClientsInArrears: clientsList.length,
+        bucket_0_30: { amount: sum0_30, count: count0_30, pct: sumTotal > 0 ? Number(((sum0_30 / sumTotal) * 100).toFixed(1)) : 0 },
+        bucket_31_60: { amount: sum31_60, count: count31_60, pct: sumTotal > 0 ? Number(((sum31_60 / sumTotal) * 100).toFixed(1)) : 0 },
+        bucket_61_90: { amount: sum61_90, count: count61_90, pct: sumTotal > 0 ? Number(((sum61_90 / sumTotal) * 100).toFixed(1)) : 0 },
+        bucket_over_90: { amount: sumOver90, count: countOver90, pct: sumTotal > 0 ? Number(((sumOver90 / sumTotal) * 100).toFixed(1)) : 0 },
+      },
+      clients: clientsList,
+    };
+  }
+
+  /**
+   * 2. Inventaire des Dépôts de Garantie (Cautions)
+   */
+  async getDepositsReport({ search, ownerId } = {}) {
+    let whereClauses = [`(COALESCE(c.deposit, 0) > 0 OR p.id IS NOT NULL)`];
+    const params = [];
+
+    if (search) {
+      whereClauses.push(`(c.first_name LIKE ? OR c.last_name LIKE ? OR c.phone LIKE ? OR p.name LIKE ? OR p.reference_code LIKE ?)`);
+      const s = `%${search}%`;
+      params.push(s, s, s, s, s);
+    }
+    if (ownerId) {
+      whereClauses.push(`p.owner_id = ?`);
+      params.push(ownerId);
+    }
+
+    const [rows] = await db.query(
+      `SELECT
+         c.id AS client_id,
+         CONCAT(COALESCE(c.first_name, ''), ' ', COALESCE(c.last_name, '')) AS client_name,
+         c.phone AS client_phone,
+         c.email AS client_email,
+         c.status AS client_status,
+         COALESCE(c.deposit, 0) AS deposit,
+         COALESCE(c.amount_due, 0) AS amount_due,
+         COALESCE(c.amount_paid, 0) AS amount_paid,
+         GREATEST(0, COALESCE(c.amount_due, 0) - COALESCE(c.amount_paid, 0)) AS arrears,
+         p.id AS property_id,
+         p.reference_code AS property_reference,
+         p.name AS property_name,
+         p.zone AS property_zone,
+         COALESCE(p.rent, 0) AS property_rent,
+         o.id AS owner_id,
+         CONCAT(COALESCE(o.first_name, ''), ' ', COALESCE(o.last_name, '')) AS owner_name
+       FROM clients c
+       LEFT JOIN properties p ON c.property_id = p.id
+       LEFT JOIN owners o ON p.owner_id = o.id
+       WHERE ${whereClauses.join(' AND ')}
+       ORDER BY c.deposit DESC, c.id DESC`,
+      params
+    );
+
+    let totalDepositsHeld = 0;
+    let activeDepositsAmount = 0;
+    let activeDepositsCount = 0;
+    let departedDepositsAmount = 0;
+    let departedDepositsCount = 0;
+    let totalNetRefundable = 0;
+    let totalRetainedForArrears = 0;
+
+    const items = rows.map(r => {
+      const dep = Number(r.deposit || 0);
+      const arr = Number(r.arrears || 0);
+      const isDeparted = ['departed', 'resilie', 'cloture', 'inactif', 'inactive'].includes(String(r.client_status || '').toLowerCase());
+      const retained = Math.min(dep, arr);
+      const refundable = Math.max(0, dep - arr);
+      const uncoveredArrears = Math.max(0, arr - dep);
+
+      totalDepositsHeld += dep;
+      totalRetainedForArrears += retained;
+      totalNetRefundable += refundable;
+
+      if (isDeparted) {
+        departedDepositsAmount += dep;
+        departedDepositsCount += 1;
+      } else {
+        activeDepositsAmount += dep;
+        activeDepositsCount += 1;
+      }
+
+      return {
+        clientId: r.client_id,
+        clientName: (r.client_name || '').trim() || `Locataire #${r.client_id}`,
+        clientPhone: r.client_phone || '—',
+        clientEmail: r.client_email || '—',
+        clientStatus: isDeparted ? 'Bail Clôturé' : 'Bail Actif',
+        isDeparted,
+        propertyId: r.property_id,
+        propertyReference: r.property_reference || `BIEN-${r.property_id || '—'}`,
+        propertyName: r.property_name || '—',
+        propertyZone: r.property_zone || '—',
+        monthlyRent: Number(r.property_rent || 0),
+        ownerName: (r.owner_name || '').trim() || '—',
+        deposit: dep,
+        arrears: arr,
+        retainedForArrears: retained,
+        netRefundableAfterArrears: refundable,
+        uncoveredArrears: uncoveredArrears,
+        coverageRatio: arr > 0 ? Math.min(100, Math.round((dep / arr) * 100)) : (dep > 0 ? 100 : 0)
+      };
+    });
+
+    return {
+      summary: {
+        totalDepositsHeld,
+        totalDepositsCount: items.length,
+        activeDeposits: { amount: activeDepositsAmount, count: activeDepositsCount },
+        departedDeposits: { amount: departedDepositsAmount, count: departedDepositsCount },
+        totalRetainedForArrears,
+        totalNetRefundable,
+      },
+      items
+    };
+  }
+
+  /**
+   * 3. Extrait Chronologique du Compte Propriétaire (Grand Livre Bailleur)
+   */
+  async getOwnerLedger(ownerId, { startDate, endDate } = {}) {
+    const [ownerRows] = await db.query(
+      `SELECT id, first_name, last_name, phone, email, address
+       FROM owners WHERE id = ?`,
+      [ownerId]
+    );
+    if (!ownerRows.length) return null;
+    const owner = ownerRows[0];
+    const ownerName = `${owner.first_name || ''} ${owner.last_name || ''}`.trim();
+
+    // 1. Crédits : Encaissements reçus sur les biens du propriétaire
+    let txQuery = `
+      SELECT
+        t.id,
+        t.reference,
+        t.date,
+        t.amount AS credit,
+        0 AS debit,
+        'LOYER' AS category,
+        CONCAT('Encaissement loyer - ', COALESCE(c.first_name, ''), ' ', COALESCE(c.last_name, ''), ' (', COALESCE(p.reference_code, p.name), ')') AS label,
+        p.name AS property_name,
+        p.reference_code AS property_reference
+      FROM transactions t
+      JOIN clients c ON t.client_id = c.id
+      JOIN properties p ON c.property_id = p.id
+      WHERE p.owner_id = ? AND t.status IN ('validated', 'processed', 'completed', 'paid')
+    `;
+    const txParams = [ownerId];
+    if (startDate) {
+      txQuery += ` AND t.date >= ?`;
+      txParams.push(startDate);
+    }
+    if (endDate) {
+      txQuery += ` AND t.date <= ?`;
+      txParams.push(endDate);
+    }
+    const [txRows] = await db.query(txQuery, txParams);
+
+    // 2. Débits : Reversements et préfinancements versés au propriétaire
+    let stlQuery = `
+      SELECT
+        os.id,
+        COALESCE(os.payout_reference, CONCAT('REV-', os.id)) AS reference,
+        COALESCE(os.payout_date, os.created_at) AS date,
+        0 AS credit,
+        COALESCE(os.amount_paid, os.net_owner_payout) AS debit,
+        UPPER(COALESCE(os.payout_mode, 'SETTLEMENT')) AS category,
+        CONCAT('Reversement propriétaire (', COALESCE(os.payout_mode, 'Intégral'), ') - Réf: ', COALESCE(os.payout_reference, CONCAT('REV-', os.id))) AS label,
+        COALESCE(p.name, 'Tous les biens') AS property_name,
+        COALESCE(p.reference_code, 'PARC') AS property_reference
+      FROM owner_settlements os
+      LEFT JOIN properties p ON os.property_id = p.id
+      WHERE os.owner_id = ? AND os.status != 'CANCELLED'
+    `;
+    const stlParams = [ownerId];
+    if (startDate) {
+      stlQuery += ` AND COALESCE(os.payout_date, os.created_at) >= ?`;
+      stlParams.push(startDate);
+    }
+    if (endDate) {
+      stlQuery += ` AND COALESCE(os.payout_date, os.created_at) <= ?`;
+      stlParams.push(endDate);
+    }
+    const [stlRows] = await db.query(stlQuery, stlParams);
+
+    // 3. Débits : Commissions d'agence retenues (déductions formalisées)
+    let comQuery = `
+      SELECT
+        os.id,
+        CONCAT('COM-', os.id) AS reference,
+        COALESCE(os.payout_date, os.created_at) AS date,
+        0 AS credit,
+        COALESCE(os.agency_commission, 0) AS debit,
+        'COMMISSION' AS category,
+        CONCAT('Commission agence (', COALESCE(os.commission_rate, 10), '%) sur loyers perçus') AS label,
+        COALESCE(p.name, 'Biens sous mandat') AS property_name,
+        COALESCE(p.reference_code, 'MANDAT') AS property_reference
+      FROM owner_settlements os
+      LEFT JOIN properties p ON os.property_id = p.id
+      WHERE os.owner_id = ? AND os.agency_commission > 0 AND os.status != 'CANCELLED'
+    `;
+    const comParams = [ownerId];
+    if (startDate) {
+      comQuery += ` AND COALESCE(os.payout_date, os.created_at) >= ?`;
+      comParams.push(startDate);
+    }
+    if (endDate) {
+      comQuery += ` AND COALESCE(os.payout_date, os.created_at) <= ?`;
+      comParams.push(endDate);
+    }
+    const [comRows] = await db.query(comQuery, comParams);
+
+    // 4. Débits : Retenues pour travaux et réparations
+    let repRows = [];
+    try {
+      let repQuery = `
+        SELECT
+          tr.id,
+          COALESCE(tr.receipt_ref, CONCAT('REP-', tr.id)) AS reference,
+          COALESCE(tr.repair_date, tr.created_at) AS date,
+          0 AS credit,
+          COALESCE(tr.total_cost, 0) AS debit,
+          'TRAVAUX' AS category,
+          CONCAT('Retenue travaux / entretien - ', COALESCE(tr.description, 'Réparation')) AS label,
+          p.name AS property_name,
+          p.reference_code AS property_reference
+        FROM tenant_repairs tr
+        JOIN properties p ON tr.property_id = p.id
+        WHERE p.owner_id = ? AND tr.status IN ('approved', 'completed', 'validated')
+      `;
+      const repParams = [ownerId];
+      if (startDate) {
+        repQuery += ` AND COALESCE(tr.repair_date, tr.created_at) >= ?`;
+        repParams.push(startDate);
+      }
+      if (endDate) {
+        repQuery += ` AND COALESCE(tr.repair_date, tr.created_at) <= ?`;
+        repParams.push(endDate);
+      }
+      const [rows] = await db.query(repQuery, repParams);
+      repRows = rows;
+    } catch {
+      repRows = [];
+    }
+
+    const allEntries = [...txRows, ...stlRows, ...comRows, ...repRows].sort((a, b) => {
+      const da = new Date(a.date).getTime();
+      const db = new Date(b.date).getTime();
+      return da - db;
+    });
+
+    let runningBalance = 0;
+    let totalCredit = 0;
+    let totalDebit = 0;
+
+    const entries = allEntries.map(e => {
+      const cr = Number(e.credit || 0);
+      const dbVal = Number(e.debit || 0);
+      totalCredit += cr;
+      totalDebit += dbVal;
+      runningBalance += (cr - dbVal);
+      return {
+        id: e.id,
+        date: e.date,
+        reference: e.reference,
+        category: e.category,
+        label: e.label,
+        propertyName: e.property_name,
+        propertyReference: e.property_reference,
+        credit: cr,
+        debit: dbVal,
+        runningBalance: runningBalance
+      };
+    });
+
+    return {
+      owner: {
+        id: owner.id,
+        name: ownerName,
+        phone: owner.phone,
+        email: owner.email,
+        address: owner.address
+      },
+      period: {
+        startDate: startDate || null,
+        endDate: endDate || null
+      },
+      summary: {
+        totalCredit,
+        totalDebit,
+        netBalance: runningBalance,
+        totalEntries: entries.length
+      },
+      entries: entries.reverse()
+    };
+  }
+
+  /**
+   * 4. Aide à la Déclaration des Revenus Fonciers (Annuel)
+   */
+  async getTaxDeclaration(ownerId, { year = new Date().getFullYear() } = {}) {
+    const yr = parseInt(year, 10) || new Date().getFullYear();
+    const startDate = `${yr}-01-01`;
+    const endDate = `${yr}-12-31`;
+
+    const [ownerRows] = await db.query(
+      `SELECT id, first_name, last_name, phone, email, address
+       FROM owners WHERE id = ?`,
+      [ownerId]
+    );
+    if (!ownerRows.length) return null;
+    const owner = ownerRows[0];
+    const ownerName = `${owner.first_name || ''} ${owner.last_name || ''}`.trim();
+
+    // Recettes brutes mensuelles (Loyers encaissés)
+    const [monthlyRents] = await db.query(
+      `SELECT
+         MONTH(t.date) AS month_num,
+         SUM(t.amount) AS gross_rent
+       FROM transactions t
+       JOIN clients c ON t.client_id = c.id
+       JOIN properties p ON c.property_id = p.id
+       WHERE p.owner_id = ? 
+         AND t.status IN ('validated', 'processed', 'completed', 'paid')
+         AND t.date BETWEEN ? AND ?
+       GROUP BY MONTH(t.date)`,
+      [ownerId, startDate, endDate]
+    );
+
+    // Commissions déductibles mensuelles
+    const [monthlyComms] = await db.query(
+      `SELECT
+         MONTH(COALESCE(os.payout_date, os.created_at)) AS month_num,
+         SUM(os.agency_commission) AS commission
+       FROM owner_settlements os
+       WHERE os.owner_id = ?
+         AND os.status != 'CANCELLED'
+         AND COALESCE(os.payout_date, os.created_at) BETWEEN ? AND ?
+       GROUP BY MONTH(COALESCE(os.payout_date, os.created_at))`,
+      [ownerId, startDate, endDate]
+    );
+
+    // Travaux déductibles mensuels
+    let monthlyRepairs = [];
+    try {
+      const [mRep] = await db.query(
+        `SELECT
+           MONTH(COALESCE(tr.repair_date, tr.created_at)) AS month_num,
+           SUM(tr.total_cost) AS repair_cost
+         FROM tenant_repairs tr
+         JOIN properties p ON tr.property_id = p.id
+         WHERE p.owner_id = ?
+           AND tr.status IN ('approved', 'completed', 'validated')
+           AND COALESCE(tr.repair_date, tr.created_at) BETWEEN ? AND ?
+         GROUP BY MONTH(COALESCE(tr.repair_date, tr.created_at))`,
+        [ownerId, startDate, endDate]
+      );
+      monthlyRepairs = mRep;
+    } catch {
+      monthlyRepairs = [];
+    }
+
+    const MONTH_LABELS = [
+      'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+      'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
+    ];
+
+    const monthsBreakdown = [];
+    let annualGrossRent = 0;
+    let annualCommissions = 0;
+    let annualRepairs = 0;
+
+    for (let m = 1; m <= 12; m++) {
+      const rentRow = monthlyRents.find(r => r.month_num === m);
+      const commRow = monthlyComms.find(r => r.month_num === m);
+      const repRow = monthlyRepairs.find(r => r.month_num === m);
+
+      const gross = Number(rentRow?.gross_rent || 0);
+      const comm = Number(commRow?.commission || 0);
+      const rep = Number(repRow?.repair_cost || 0);
+      const net = gross - comm - rep;
+
+      annualGrossRent += gross;
+      annualCommissions += comm;
+      annualRepairs += rep;
+
+      monthsBreakdown.push({
+        monthNumber: m,
+        monthName: MONTH_LABELS[m - 1],
+        grossRent: gross,
+        deductibleCommission: comm,
+        deductibleRepairs: rep,
+        netIncome: net
+      });
+    }
+
+    // Ventilation par bien immobilier du propriétaire
+    const [propertiesRows] = await db.query(
+      `SELECT
+         p.id,
+         p.reference_code,
+         p.name,
+         p.type,
+         p.zone,
+         p.rent,
+         COALESCE(SUM(t.amount), 0) AS gross_rent_year
+       FROM properties p
+       LEFT JOIN clients c ON c.property_id = p.id
+       LEFT JOIN transactions t ON (t.client_id = c.id 
+         AND t.status IN ('validated', 'processed', 'completed', 'paid')
+         AND t.date BETWEEN ? AND ?)
+       WHERE p.owner_id = ?
+       GROUP BY p.id
+       ORDER BY p.name ASC`,
+      [startDate, endDate, ownerId]
+    );
+
+    const propertiesBreakdown = propertiesRows.map(p => {
+      const gross = Number(p.gross_rent_year || 0);
+      const comm = Math.round(gross * 0.10);
+      return {
+        propertyId: p.id,
+        referenceCode: p.reference_code || `BIEN-${p.id}`,
+        name: p.name,
+        type: p.type || 'Appartement',
+        zone: p.zone || 'Abidjan',
+        monthlyRent: Number(p.rent || 0),
+        grossRentYear: gross,
+        estimatedCommissionYear: comm,
+        estimatedNetIncome: gross - comm
+      };
+    });
+
+    const annualNetTaxable = annualGrossRent - annualCommissions - annualRepairs;
+
+    return {
+      owner: {
+        id: owner.id,
+        name: ownerName,
+        phone: owner.phone,
+        email: owner.email,
+        address: owner.address
+      },
+      year: yr,
+      annualTotals: {
+        totalGrossRents: annualGrossRent,
+        totalCommissionsDeductible: annualCommissions,
+        totalRepairsDeductible: annualRepairs,
+        totalDeductions: annualCommissions + annualRepairs,
+        totalNetTaxableIncome: annualNetTaxable
+      },
+      monthsBreakdown,
+      propertiesBreakdown
+    };
+  }
+
+  /**
+   * 5. Analyse du BFR & Équilibre du Compte Mandat
+   */
+  async getMandateBfr() {
+    // 1. Besoins : Créances locataires échues
+    const [overdueRows] = await db.query(
+      `SELECT
+         COALESCE(SUM(balance_due), 0) AS total_overdue
+       FROM invoices
+       WHERE status != 'CANCELLED' AND balance_due > 0`
+    );
+    const invoiceOverdue = Number(overdueRows[0]?.total_overdue || 0);
+
+    const [clientDebtRows] = await db.query(
+      `SELECT COALESCE(SUM(GREATEST(0, amount_due - amount_paid)), 0) AS client_debt
+       FROM clients WHERE status != 'deleted'`
+    );
+    const clientDebt = Number(clientDebtRows[0]?.client_debt || 0);
+    const totalActiveOverdue = Math.max(invoiceOverdue, clientDebt);
+
+    // 2. Besoins : Avances de préfinancement actives
+    const [prefRows] = await db.query(
+      `SELECT
+         COALESCE(SUM(GREATEST(0, COALESCE(amount_paid, net_owner_payout) - total_collected)), 0) AS active_prefinancing
+       FROM owner_settlements
+       WHERE (is_prefinanced = 1 OR payout_mode = 'prefinancing' OR UPPER(status) = 'PREFINANCED')
+         AND UPPER(status) != 'REIMBURSED'`
+    );
+    const activePrefinancing = Number(prefRows[0]?.active_prefinancing || 0);
+
+    const totalFinancingNeeds = totalActiveOverdue + activePrefinancing;
+
+    // 3. Ressources : Dépôts de garantie
+    const [depRows] = await db.query(
+      `SELECT COALESCE(SUM(deposit), 0) AS total_deposits
+       FROM clients WHERE status != 'deleted'`
+    );
+    const totalDeposits = Number(depRows[0]?.total_deposits || 0);
+
+    // 4. Ressources : Reversements en attente
+    const [pendingSettlementRows] = await db.query(
+      `SELECT COALESCE(SUM(net_owner_payout), 0) AS pending_settlements
+       FROM owner_settlements
+       WHERE status IN ('CALCULATED', 'APPROVED', 'pending')`
+    );
+    const pendingSettlements = Number(pendingSettlementRows[0]?.pending_settlements || 0);
+
+    // 5. Ressources : Encaissements du mois
+    const currentMonthStart = new Date().toISOString().slice(0, 7) + '-01';
+    const [currentMonthRows] = await db.query(
+      `SELECT COALESCE(SUM(amount), 0) AS month_collections
+       FROM transactions
+       WHERE status IN ('validated', 'processed', 'completed', 'paid')
+         AND date >= ?`,
+      [currentMonthStart]
+    );
+    const monthCollections = Number(currentMonthRows[0]?.month_collections || 0);
+
+    const totalAvailableResources = totalDeposits + pendingSettlements + monthCollections;
+    const netBfr = totalFinancingNeeds - totalAvailableResources;
+    const coverageRatio = totalAvailableResources > 0 ? Number(((totalFinancingNeeds / totalAvailableResources) * 100).toFixed(1)) : 0;
+
+    let riskLevel = 'OPTIMAL';
+    let riskMessage = 'La trésorerie du compte mandat et les ressources disponibles couvrent largement les besoins de financement.';
+    if (coverageRatio > 120 || netBfr > 5000000) {
+      riskLevel = 'TENSION';
+      riskMessage = 'Tension sur le BFR Mandat : les avances de préfinancement et impayés dépassent les ressources sécurisées en compte.';
+    } else if (coverageRatio > 80 || netBfr > 0) {
+      riskLevel = 'MODERATE';
+      riskMessage = 'Équilibre sous vigilance : surveiller les remboursements de préfinancements et accélérer les relances à 30 jours.';
+    }
+
+    return {
+      summary: {
+        totalFinancingNeeds,
+        totalAvailableResources,
+        netBfr,
+        coverageRatio,
+        riskLevel,
+        riskMessage
+      },
+      breakdown: {
+        needs: {
+          activeOverdueReceivables: totalActiveOverdue,
+          activePrefinancingAdvances: activePrefinancing,
+          total: totalFinancingNeeds
+        },
+        resources: {
+          totalDepositsHeld: totalDeposits,
+          pendingOwnerSettlements: pendingSettlements,
+          currentMonthCollections: monthCollections,
+          total: totalAvailableResources
+        }
+      }
+    };
+  }
+
+  /**
+   * 6. Vacance Locative & Manque à Gagner Financier
+   */
+  async getVacancyLoss({ zone } = {}) {
+    let whereClause = `WHERE (p.status IN ('available', 'disponible', 'vacant', 'maintenance', 'en_renovation') OR p.tenant_id IS NULL)`;
+    const params = [];
+    if (zone && zone !== 'all') {
+      whereClause += ` AND p.zone = ?`;
+      params.push(zone);
+    }
+
+    const [rows] = await db.query(
+      `SELECT
+         p.id AS property_id,
+         p.reference_code,
+         p.name AS property_name,
+         p.zone AS property_zone,
+         p.type AS property_type,
+         p.floor_level,
+         p.unit_type,
+         p.status AS property_status,
+         COALESCE(p.rent, 0) AS monthly_rent,
+         COALESCE(p.value, 0) AS property_value,
+         COALESCE(p.updated_at, p.created_at) AS vacant_since_date,
+         GREATEST(1, DATEDIFF(CURRENT_DATE, COALESCE(p.updated_at, p.created_at))) AS vacant_days,
+         o.id AS owner_id,
+         CONCAT(COALESCE(o.first_name, ''), ' ', COALESCE(o.last_name, '')) AS owner_name,
+         o.phone AS owner_phone
+       FROM properties p
+       LEFT JOIN owners o ON p.owner_id = o.id
+       ${whereClause}
+       ORDER BY p.rent DESC, p.id ASC`,
+      params
+    );
+
+    let totalPotentialMonthlyRent = 0;
+    let totalCumulativeLoss = 0;
+    let totalDays = 0;
+    const zoneLossMap = {};
+
+    const vacantProperties = rows.map(r => {
+      const rent = Number(r.monthly_rent || 0);
+      const days = Number(r.vacant_days || 1);
+      const loss = Math.round((rent / 30) * days);
+
+      totalPotentialMonthlyRent += rent;
+      totalCumulativeLoss += loss;
+      totalDays += days;
+
+      const z = r.property_zone || 'Non spécifiée';
+      if (!zoneLossMap[z]) {
+        zoneLossMap[z] = { zone: z, count: 0, monthlyRent: 0, cumulativeLoss: 0 };
+      }
+      zoneLossMap[z].count += 1;
+      zoneLossMap[z].monthlyRent += rent;
+      zoneLossMap[z].cumulativeLoss += loss;
+
+      return {
+        propertyId: r.property_id,
+        referenceCode: r.reference_code || `BIEN-${r.property_id}`,
+        propertyName: r.property_name,
+        propertyZone: r.property_zone || '—',
+        propertyType: r.unit_type || r.property_type || 'Maison',
+        floorLevel: r.floor_level || 'RDC',
+        status: r.property_status,
+        monthlyRent: rent,
+        vacantSince: r.vacant_since_date,
+        vacantDays: days,
+        estimatedLoss: loss,
+        ownerId: r.owner_id,
+        ownerName: (r.owner_name || '').trim() || '—',
+        ownerPhone: r.owner_phone || '—'
+      };
+    });
+
+    const averageVacancyDays = vacantProperties.length > 0 ? Math.round(totalDays / vacantProperties.length) : 0;
+    const lossByZone = Object.values(zoneLossMap).sort((a, b) => b.cumulativeLoss - a.cumulativeLoss);
+
+    return {
+      summary: {
+        totalVacantProperties: vacantProperties.length,
+        totalPotentialMonthlyRent,
+        totalCumulativeLoss,
+        averageVacancyDays,
+      },
+      lossByZone,
+      vacantProperties: vacantProperties.sort((a, b) => b.estimatedLoss - a.estimatedLoss)
+    };
+  }
 }
 
 module.exports = new ReportRepository();

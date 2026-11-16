@@ -149,6 +149,86 @@ class ReportController {
       next(error);
     }
   }
+
+  /**
+   * GET /api/reports/aged-receivables
+   * Balance Âgée Locataires (0-30j, 31-60j, 61-90j, >90j)
+   */
+  async getAgedReceivables(req, res, next) {
+    try {
+      const data = await reportService.getAgedReceivables(req.query);
+      res.status(200).json(ApiResponse.success(data));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/reports/deposits
+   * Inventaire des Dépôts de Garantie (Cautions)
+   */
+  async getDepositsReport(req, res, next) {
+    try {
+      const data = await reportService.getDepositsReport(req.query);
+      res.status(200).json(ApiResponse.success(data));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/reports/owner-ledger/:ownerId
+   * Extrait Chronologique du Compte Propriétaire
+   */
+  async getOwnerLedger(req, res, next) {
+    try {
+      const { ownerId } = req.params;
+      const data = await reportService.getOwnerLedger(ownerId, req.query);
+      res.status(200).json(ApiResponse.success(data));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/reports/tax-declaration/:ownerId
+   * Aide à la Déclaration des Revenus Fonciers (Annuel)
+   */
+  async getTaxDeclaration(req, res, next) {
+    try {
+      const { ownerId } = req.params;
+      const data = await reportService.getTaxDeclaration(ownerId, req.query);
+      res.status(200).json(ApiResponse.success(data));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/reports/mandate-bfr
+   * Analyse du BFR & Équilibre du Compte Mandat
+   */
+  async getMandateBfr(req, res, next) {
+    try {
+      const data = await reportService.getMandateBfr();
+      res.status(200).json(ApiResponse.success(data));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/reports/vacancy-loss
+   * Vacance Locative & Manque à Gagner Financier
+   */
+  async getVacancyLoss(req, res, next) {
+    try {
+      const data = await reportService.getVacancyLoss(req.query);
+      res.status(200).json(ApiResponse.success(data));
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 module.exports = new ReportController();

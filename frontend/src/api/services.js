@@ -333,6 +333,24 @@ export const API = {
         getOwnerSituation: (ownerId, params = {}) =>
             httpClient.get(`/reports/owner-situation/${ownerId}`, { params }),
 
+        getAgedReceivables: (params = {}) =>
+            httpClient.get('/reports/aged-receivables', { params }),
+
+        getDepositsReport: (params = {}) =>
+            httpClient.get('/reports/deposits', { params }),
+
+        getOwnerLedger: (ownerId, params = {}) =>
+            httpClient.get(`/reports/owner-ledger/${ownerId}`, { params }),
+
+        getTaxDeclaration: (ownerId, params = {}) =>
+            httpClient.get(`/reports/tax-declaration/${ownerId}`, { params }),
+
+        getMandateBfr: () =>
+            httpClient.get('/reports/mandate-bfr'),
+
+        getVacancyLoss: (params = {}) =>
+            httpClient.get('/reports/vacancy-loss', { params }),
+
         getAgent: (filters = {}) =>
             httpClient.get('/reports/collectors', { params: { ...filters } })
     },

@@ -80,6 +80,42 @@ router.get('/owner-statements/:ownerId/pdf', reportController.exportOwnerStateme
 router.get('/owner-situation/:ownerId', reportController.getOwnerSituation);
 
 /**
+ * @route   GET /api/reports/aged-receivables
+ * @desc    Balance Âgée Locataires (0-30j, 31-60j, 61-90j, >90j)
+ */
+router.get('/aged-receivables', reportController.getAgedReceivables);
+
+/**
+ * @route   GET /api/reports/deposits
+ * @desc    Inventaire des Dépôts de Garantie (Cautions)
+ */
+router.get('/deposits', reportController.getDepositsReport);
+
+/**
+ * @route   GET /api/reports/owner-ledger/:ownerId
+ * @desc    Extrait Chronologique du Compte Propriétaire (Grand Livre Bailleur)
+ */
+router.get('/owner-ledger/:ownerId', reportController.getOwnerLedger);
+
+/**
+ * @route   GET /api/reports/tax-declaration/:ownerId
+ * @desc    Aide à la Déclaration des Revenus Fonciers (Annuel 12 mois)
+ */
+router.get('/tax-declaration/:ownerId', reportController.getTaxDeclaration);
+
+/**
+ * @route   GET /api/reports/mandate-bfr
+ * @desc    Analyse du BFR & Équilibre du Compte Mandat
+ */
+router.get('/mandate-bfr', reportController.getMandateBfr);
+
+/**
+ * @route   GET /api/reports/vacancy-loss
+ * @desc    Vacance Locative & Manque à Gagner Financier
+ */
+router.get('/vacancy-loss', reportController.getVacancyLoss);
+
+/**
  * @route   GET /api/reports/export/csv/:type
  */
 router.get('/export/csv/:type', exportTypeValidator, reportController.exportCsv);
