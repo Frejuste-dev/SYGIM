@@ -72,6 +72,16 @@ class ReportController {
     }
   }
 
+  async getOwnerSituation(req, res, next) {
+    try {
+      const { ownerId } = req.params;
+      const data = await reportService.getOwnerSituation(ownerId, req.query);
+      res.status(200).json(ApiResponse.success(data));
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async exportCsv(req, res, next) {
     try {
       const csv = await reportService.exportToCsv(req.params.type, req.query);

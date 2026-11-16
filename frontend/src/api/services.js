@@ -330,6 +330,9 @@ export const API = {
         downloadOwnerStatementPdf: (ownerId, filters = {}) =>
             httpClient.get(`/reports/owner-statements/${ownerId}/pdf`, { params: filters, responseType: 'blob' }),
 
+        getOwnerSituation: (ownerId, params = {}) =>
+            httpClient.get(`/reports/owner-situation/${ownerId}`, { params }),
+
         getAgent: (filters = {}) =>
             httpClient.get('/reports/collectors', { params: { ...filters } })
     },

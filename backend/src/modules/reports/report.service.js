@@ -114,6 +114,17 @@ class ReportService {
     return data;
   }
 
+  /**
+   * Situation officielle du Propriétaire (Cabinet Me DOUHO MAXIME)
+   */
+  async getOwnerSituation(ownerId, filters = {}) {
+    const data = await reportRepository.getOwnerSituation(ownerId, filters);
+    if (!data) {
+      throw AppError.notFound('Propriétaire non trouvé.');
+    }
+    return data;
+  }
+
   async _getExportRows(reportType, filters = {}) {
     if (reportType === 'collectors') {
       return await reportRepository.getCollectorPerformance(filters);

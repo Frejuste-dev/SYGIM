@@ -56,6 +56,16 @@ const propertyValidator = [
     .optional({ nullable: true })
     .isFloat({ min: 0 }).withMessage('Le montant fixe de commission doit être positif'),
 
+  body('floor_level')
+    .optional({ nullable: true })
+    .isString().withMessage('L\'étage doit être une chaîne de caractères')
+    .trim(),
+
+  body('unit_type')
+    .optional({ nullable: true })
+    .isString().withMessage('Le type d\'unité doit être une chaîne de caractères')
+    .trim(),
+
   handleValidationErrors
 ];
 
@@ -102,6 +112,16 @@ const updatePropertyValidator = [
   body('commission_fixed_amount')
     .optional({ nullable: true })
     .isFloat({ min: 0 }).withMessage('Le montant fixe de commission doit être positif'),
+
+  body('floor_level')
+    .optional({ nullable: true })
+    .isString().withMessage('L\'étage doit être une chaîne de caractères')
+    .trim(),
+
+  body('unit_type')
+    .optional({ nullable: true })
+    .isString().withMessage('Le type d\'unité doit être une chaîne de caractères')
+    .trim(),
 
   handleValidationErrors
 ];

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useOwners, useOwnerStats, useCreateOwner, useUpdateOwner, useDeleteOwner } from '../hooks/queries/useOwners';
 import { useProperties } from '../hooks/queries/useProperties';
 import { useQueryClient } from '@tanstack/react-query';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useDebounce } from '../hooks/useDebounce';
 import { useToast } from '../components/ToastContext';
 import { useConfirm } from '../components/ConfirmContext';
@@ -85,6 +85,7 @@ const EMPTY_FORM = () => ({
 });
 
 export default function Owners() {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const urlSearch = searchParams.get('search') || '';
   const [searchTerm, setSearchTerm] = useState(urlSearch);
@@ -651,6 +652,15 @@ export default function Owners() {
 
                       <td className="py-4 px-4 text-sm text-right">
                         <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => navigate(`/admin/owner-situation?ownerId=${o.id}`)}
+                            className="h-8 px-2.5 bg-sky-50 text-sky-700 border border-sky-200 hover:bg-sky-100 rounded-lg text-xs font-bold transition-colors inline-flex items-center gap-1.5 shadow-2xs"
+                            title="Générer la Situation Propriétaire officielle (Cabinet Me DOUHO MAXIME)"
+                          >
+                            <i className="fas fa-file-contract"></i>
+                            <span>Situation</span>
+                          </button>
                           <button
                             type="button"
                             onClick={() => handleOpenPayout(o)}

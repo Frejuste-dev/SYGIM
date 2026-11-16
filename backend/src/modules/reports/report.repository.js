@@ -933,6 +933,212 @@ class ReportRepository {
   }
 
   /**
+   * Situation officielle du Propriétaire (Document officiel Cabinet Maître DOUHO MAXIME)
+   */
+  async getOwnerSituation(ownerId, { month, year, commissionRate } = {}) {
+    const [[owner]] = await db.query(
+      `SELECT o.id, o.first_name, o.last_name, 
+              COALESCE(o.display_name, CONCAT(o.first_name, ' ', o.last_name)) AS name,
+              o.phone, o.email, o.address, o.commission_rate
+       FROM owners o
+       WHERE o.id = ?`,
+      [ownerId]
+    );
+
+    if (!owner) {
+      return null;
+    }
+
+    // Zone prédominante du patrimoine
+    const [[zoneRow]] = await db.query(
+      `SELECT zone, COUNT(*) as count 
+       FROM properties 
+       WHERE owner_id = ? AND zone IS NOT NULL AND zone != ''
+       GROUP BY zone 
+       ORDER BY count DESC 
+       LIMIT 1`,
+      [ownerId]
+    );
+    const primaryZone = zoneRow?.zone || owner.address || 'SOWETO';
+
+    // Résolution de la période
+    const now = new Date();
+    const m = month ? parseInt(month, 10) : (now.getMonth() + 1);
+    const y = year ? parseInt(year, 10) : now.getFullYear();
+    const lastDay = new Date(y, m, 0).getDate();
+    const startDate = `${y}-${String(m).padStart(2, '0')}-01`;
+    const endDate = `${y}-${String(m).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+
+    const monthNames = [
+      'janvier', 'février', 'mars', 'avril', 'mai', 'juin',
+      'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'
+    ];
+    const monthName = monthNames[m - 1] || 'novembre';
+
+    // Biens et locataires
+    const [props] = await db.query(
+      `SELECT 
+        p.id, p.reference_code, p.name, p.type, p.floor_level, p.unit_type, p.zone, p.address, p.rent,
+        p.status AS property_status,
+        c.id AS client_id, c.first_name, c.last_name, c.phone AS tenant_phone,
+        c.amount_due, c.amount_paid AS client_total_paid
+      FROM properties p
+      LEFT JOIN clients c ON p.tenant_id = c.id
+      WHERE p.owner_id = ?
+      ORDER BY 
+        CASE 
+          WHEN UPPER(COALESCE(p.floor_level, '')) LIKE '%3%ETAGE%' THEN 1
+          WHEN UPPER(COALESCE(p.floor_level, '')) LIKE '%2%ETAGE%' THEN 2
+          WHEN UPPER(COALESCE(p.floor_level, '')) LIKE '%1%ETAGE%' THEN 3
+          WHEN UPPER(COALESCE(p.floor_level, '')) LIKE '%REZ%' THEN 4
+          ELSE 5
+        END ASC,
+        p.floor_level DESC,
+        p.reference_code ASC,
+        p.id ASC`,
+      [ownerId]
+    );
+
+    // Encaissements réels validés sur le mois pour ces biens
+    const propIds = props.map(p => p.id);
+    const txPaidMap = new Map();
+    if (propIds.length > 0) {
+      const [txRows] = await db.query(
+        `SELECT 
+          c.property_id,
+          COALESCE(SUM(t.amount), 0) AS totalPaidInMonth
+        FROM transactions t
+        JOIN clients c ON t.client_id = c.id
+        WHERE c.property_id IN (?)
+          AND t.status IN ('processed', 'paid', 'completed', 'partiel', 'partial')
+          AND t.amount > 0
+          AND COALESCE(t.payment_type, 'payment') NOT IN ('assignment', 'departure')
+          AND COALESCE(t.method, '') NOT IN ('assignment', 'departure', '')
+          AND DATE(COALESCE(t.date, t.created_at)) BETWEEN ? AND ?
+        GROUP BY c.property_id`,
+        [propIds, startDate, endDate]
+      );
+
+      for (const tx of txRows) {
+        txPaidMap.set(tx.property_id, Number(tx.totalPaidInMonth || 0));
+      }
+    }
+
+    // Préfinancements enregistrés sur la période
+    const [prefRows] = await db.query(
+      `SELECT os.property_id, os.amount_paid, os.status
+       FROM owner_settlements os
+       WHERE os.owner_id = ?
+         AND (os.is_prefinanced = 1 OR os.payout_mode = 'prefinancing' OR UPPER(os.status) IN ('PREFINANCED', 'REIMBURSED'))
+         AND DATE(COALESCE(os.payout_date, os.period_start, os.created_at)) BETWEEN ? AND ?`,
+      [ownerId, startDate, endDate]
+    );
+    const prefMap = new Map();
+    for (const pr of prefRows) {
+      if (pr.property_id) prefMap.set(pr.property_id, pr);
+    }
+
+    let totalRent = 0;
+    let totalCollected = 0;
+    let totalArrears = 0;
+
+    const units = props.map((p, idx) => {
+      const indexStr = String(idx + 1).padStart(2, '0');
+      const isOccupied = p.client_id && p.property_status !== 'vacant';
+      const tenantName = isOccupied 
+        ? `${p.first_name || ''} ${p.last_name || ''}`.trim() || 'Locataire'
+        : 'VACANT';
+      
+      const rentAmount = Number(p.rent || 0);
+      const amountPaid = isOccupied ? (txPaidMap.get(p.id) || 0) : 0;
+      const arrears = isOccupied ? Math.max(0, (Number(p.amount_due || 0) - Number(p.client_total_paid || 0))) : 0;
+      const contacts = isOccupied ? (p.tenant_phone || '—') : '—';
+
+      totalRent += rentAmount;
+      totalCollected += amountPaid;
+      totalArrears += arrears;
+
+      const floorLevel = p.floor_level?.trim() ? p.floor_level.trim().toUpperCase() : 'REZ-DE-CHAUSSEE';
+      const unitType = p.unit_type?.trim() ? p.unit_type.trim().toUpperCase() : (p.type ? p.type.toUpperCase() : 'STUDIO');
+
+      let observation = '';
+      const isPrefinanced = prefMap.has(p.id);
+
+      if (!isOccupied) {
+        observation = 'Bien vacant';
+      } else if (isPrefinanced) {
+        if (amountPaid === 0) {
+          observation = arrears > rentAmount 
+            ? `Doit ${Math.round(arrears - rentAmount).toLocaleString('fr-FR')} + ${monthName} (préfinancé)`
+            : `Doit ${monthName} (préfinancé)`;
+        } else if (amountPaid < rentAmount) {
+          observation = `Reste ${Math.round(rentAmount - amountPaid).toLocaleString('fr-FR')} sur ${monthName} (préfinancé)`;
+        } else {
+          observation = 'A jour (préfinancement régularisé)';
+        }
+      } else {
+        if (amountPaid >= rentAmount && arrears <= 0) {
+          observation = 'A jour';
+        } else if (amountPaid === 0) {
+          observation = arrears > rentAmount
+            ? `Doit arriérés (${Math.round(arrears).toLocaleString('fr-FR')} F) + ${monthName}`
+            : `Doit ${monthName}`;
+        } else if (amountPaid < rentAmount) {
+          observation = `Reste ${Math.round(rentAmount - amountPaid).toLocaleString('fr-FR')} sur ${monthName}`;
+        } else {
+          observation = 'A jour';
+        }
+      }
+
+      return {
+        id: p.id,
+        index: indexStr,
+        referenceCode: p.reference_code,
+        name: p.name,
+        tenantName,
+        unitType,
+        floorLevel,
+        rentAmount,
+        amountPaid,
+        arrears,
+        contacts,
+        observation
+      };
+    });
+
+    const effRate = Number(commissionRate) || Number(owner.commission_rate) || 10;
+    const commissionAmount = Math.round((totalCollected * effRate) / 100);
+    const netToPayOwner = totalCollected - commissionAmount;
+
+    return {
+      owner: {
+        id: owner.id,
+        name: owner.name,
+        phone: owner.phone,
+        email: owner.email,
+        zone: primaryZone
+      },
+      period: {
+        month: m,
+        year: y,
+        monthName,
+        startDate,
+        endDate
+      },
+      units,
+      summary: {
+        totalUnits: units.length,
+        totalRent,
+        totalCollected,
+        totalArrears,
+        commissionRate: effRate,
+        commissionAmount,
+        netToPayOwner
+      }
+    };
+  }
+
+  /**
    * Rapport hiérarchique Décompte Bailleurs & Locataires (Master-Detail)
    * Ligne Propriétaire: Loyer Global | Loyer Encaissé | Reste | Préfinancé | Commission | Net
    * Sous-lignes Locataires: Locataire | Bien | Loyer Attendu | Loyer Payé | Arriéré | Préfinancé

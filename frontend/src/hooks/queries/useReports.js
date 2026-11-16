@@ -80,3 +80,13 @@ export const usePerformanceDashboard = (params = {}) => {
     placeholderData: (prev) => prev,
   });
 };
+
+export const useOwnerSituation = (ownerId, params = {}, options = {}) => {
+  return useQuery({
+    queryKey: ['reports', 'owner-situation', ownerId, params],
+    queryFn: () => API.Reports.getOwnerSituation(ownerId, params).then(unwrapData),
+    staleTime: 30_000,
+    placeholderData: (prev) => prev,
+    enabled: Boolean(ownerId) && (options.enabled !== undefined ? options.enabled : true),
+  });
+};

@@ -29,6 +29,7 @@ import Profile from './pages/Profile';
 import Activity from './pages/Activity';
 import PropertyAssignments from './pages/PropertyAssignments';
 import Notifications from './pages/Notifications';
+import OwnerSituationReport from './pages/OwnerSituationReport';
 
 export default function App() {
     return (
@@ -98,6 +99,16 @@ export default function App() {
                                 element={
                                     <ProtectedRoute allowedRoles={['admin', 'super_admin', 'director', 'accounting', 'collector_manager', 'manager', 'gestionnaire']}>
                                         <Owners />
+                                    </ProtectedRoute>
+                                } 
+                            />
+
+                            {/* Owner Situation Route (Cabinet Me DOUHO MAXIME) */}
+                            <Route 
+                                path="owner-situation" 
+                                element={
+                                    <ProtectedRoute allowedRoles={['admin', 'super_admin', 'director', 'accounting', 'collector_manager', 'manager', 'gestionnaire']}>
+                                        <OwnerSituationReport />
                                     </ProtectedRoute>
                                 } 
                             />

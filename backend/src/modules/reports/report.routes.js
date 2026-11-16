@@ -74,6 +74,12 @@ router.get('/owner-statements/export/excel', reportController.exportOwnerStateme
 router.get('/owner-statements/:ownerId/pdf', reportController.exportOwnerStatementPdf);
 
 /**
+ * @route   GET /api/reports/owner-situation/:ownerId
+ * @desc    Situation officielle du Propriétaire (Cabinet Me DOUHO MAXIME)
+ */
+router.get('/owner-situation/:ownerId', reportController.getOwnerSituation);
+
+/**
  * @route   GET /api/reports/export/csv/:type
  */
 router.get('/export/csv/:type', exportTypeValidator, reportController.exportCsv);
