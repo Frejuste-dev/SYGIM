@@ -145,38 +145,59 @@ export default function ReportOwnerLedgerTab() {
 
       {/* 2. CARTES KPI CRÉDIT / DÉBIT / SOLDE */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-emerald-100 shadow-2xs">
-          <div className="text-xs font-bold uppercase tracking-wider text-emerald-700 mb-1">
-            Total Crédits (Loyers Encaissés)
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs hover:shadow-sm transition-all">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+              Total Crédits (Encaissés)
+            </span>
+            <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center text-xs">
+              <i className="fas fa-arrow-down"></i>
+            </div>
           </div>
-          <div className="text-xl sm:text-2xl font-black text-emerald-700 tabular-nums">
+          <div className="text-2xl font-black text-emerald-700 tabular-nums tracking-tight">
             {formatXOF(summary.totalCredit || 0, { compact: false })}
           </div>
-          <div className="text-xs text-slate-500 mt-1">Fonds encaissés pour le compte du bailleur</div>
+          <div className="text-xs text-slate-400 mt-2">
+            Loyers bruts encaissés sur les biens du bailleur
+          </div>
         </div>
 
-        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-rose-100 shadow-2xs">
-          <div className="text-xs font-bold uppercase tracking-wider text-rose-700 mb-1">
-            Total Débits (Reversements &amp; Frais)
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs hover:shadow-sm transition-all">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+              Total Débits (Reversements &amp; Frais)
+            </span>
+            <div className="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center text-xs">
+              <i className="fas fa-arrow-up"></i>
+            </div>
           </div>
-          <div className="text-xl sm:text-2xl font-black text-rose-700 tabular-nums">
+          <div className="text-2xl font-black text-rose-700 tabular-nums tracking-tight">
             {formatXOF(summary.totalDebit || 0, { compact: false })}
           </div>
-          <div className="text-xs text-slate-500 mt-1">Virements émis, commissions et réparations</div>
+          <div className="text-xs text-slate-400 mt-2">
+            Virements émis, commissions et déductions travaux
+          </div>
         </div>
 
-        <div className={`bg-white p-4 sm:p-5 rounded-2xl border shadow-2xs ${
-          (summary.netBalance || 0) >= 0 ? 'border-primary/20 bg-primary/5' : 'border-amber-200 bg-amber-50/30'
+        <div className={`p-5 rounded-2xl border shadow-xs transition-all ${
+          (summary.netBalance || 0) >= 0 ? 'bg-primary/5 border-primary/20' : 'bg-amber-50/50 border-amber-200'
         }`}>
-          <div className="text-xs font-bold uppercase tracking-wider text-primary mb-1">
-            Solde Courant Net
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-600">
+              Solde Courant Net
+            </span>
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs ${
+              (summary.netBalance || 0) >= 0 ? 'bg-primary text-white' : 'bg-amber-100 text-amber-800'
+            }`}>
+              <i className="fas fa-wallet"></i>
+            </div>
           </div>
-          <div className={`text-xl sm:text-2xl font-black tabular-nums ${
+          <div className={`text-2xl font-black tabular-nums tracking-tight ${
             (summary.netBalance || 0) >= 0 ? 'text-primary' : 'text-amber-800'
           }`}>
             {formatXOF(summary.netBalance || 0, { compact: false })}
           </div>
-          <div className="text-xs text-slate-500 mt-1">
+          <div className="text-xs text-slate-500 mt-2">
             {(summary.netBalance || 0) >= 0 ? 'Fonds disponibles à reverser au bailleur' : 'Avances excédentaires / Solde débiteur'}
           </div>
         </div>
@@ -185,26 +206,27 @@ export default function ReportOwnerLedgerTab() {
       {/* 3. TABLEAU CHRONOLOGIQUE DES ÉCRITURES */}
       <div className="bg-white border border-slate-200 rounded-2xl shadow-2xs overflow-hidden print:border-none print:shadow-none">
         <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between">
-          <div className="font-bold text-slate-900 text-sm">
-            Relevé des Mouvements &bull; {owner.name || 'Propriétaire'}
+          <div className="font-bold text-slate-900 text-sm flex items-center gap-2">
+            <i className="fas fa-book-open text-primary"></i>
+            <span>Relevé des Mouvements &bull; {owner.name || 'Propriétaire'}</span>
           </div>
-          <div className="text-xs text-slate-500">
-            {entries.length} opération(s) enregistrée(s)
+          <div className="text-xs text-slate-500 font-medium">
+            <span className="font-bold text-slate-800">{entries.length}</span> opération(s) enregistrée(s)
           </div>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
-              <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-[11px]">
+              <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-[11px]">
                 <th className="py-3.5 px-3 w-28">Date</th>
                 <th className="py-3.5 px-3 w-28">Réf.</th>
                 <th className="py-3.5 px-3 w-24">Catégorie</th>
                 <th className="py-3.5 px-4">Libellé de l'Opération</th>
                 <th className="py-3.5 px-4">Bien Rattaché</th>
-                <th className="py-3.5 px-4 text-right text-emerald-800 bg-emerald-50/40">Crédit (+)</th>
-                <th className="py-3.5 px-4 text-right text-rose-800 bg-rose-50/40">Débit (-)</th>
-                <th className="py-3.5 px-4 text-right font-black text-slate-900 bg-slate-100/60">Solde Progressif</th>
+                <th className="py-3.5 px-4 text-right">Crédit (+)</th>
+                <th className="py-3.5 px-4 text-right">Débit (-)</th>
+                <th className="py-3.5 px-4 text-right">Solde Progressif</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">

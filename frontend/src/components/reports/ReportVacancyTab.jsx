@@ -196,7 +196,7 @@ export default function ReportVacancyTab() {
                 <th className="py-3.5 px-4">Propriétaire</th>
                 <th className="py-3.5 px-4 text-right">Loyer Facial</th>
                 <th className="py-3.5 px-4 text-center">Jours Vacants</th>
-                <th className="py-3.5 px-4 text-right text-rose-800 bg-rose-50/40">Perte Estimée</th>
+                <th className="py-3.5 px-4 text-right">Perte Estimée</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">

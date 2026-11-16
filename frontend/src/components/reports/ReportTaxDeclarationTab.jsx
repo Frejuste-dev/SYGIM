@@ -134,52 +134,81 @@ export default function ReportTaxDeclarationTab() {
 
       {/* 2. RECAPITULATIF FISCAL LIGNES 211, 221, 224, 250 */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-sky-100 shadow-2xs">
-          <div className="text-xs font-bold uppercase tracking-wider text-sky-700 mb-1">
-            Recettes Brutes [Ligne 211]
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs hover:shadow-sm transition-all">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+              Recettes Brutes [Ligne 211]
+            </span>
+            <div className="w-8 h-8 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center text-xs">
+              <i className="fas fa-file-invoice-dollar"></i>
+            </div>
           </div>
-          <div className="text-xl sm:text-2xl font-black text-slate-900 tabular-nums">
+          <div className="text-2xl font-black text-slate-900 tabular-nums tracking-tight">
             {formatXOF(annualTotals.totalGrossRents || 0, { compact: false })}
           </div>
-          <div className="text-xs text-slate-500 mt-1">Total des loyers encaissés dans l'année</div>
+          <div className="text-xs text-slate-400 mt-2">
+            Total des loyers encaissés dans l'année
+          </div>
         </div>
 
-        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-amber-100 shadow-2xs">
-          <div className="text-xs font-bold uppercase tracking-wider text-amber-700 mb-1">
-            Frais de Gestion [Ligne 221]
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs hover:shadow-sm transition-all">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+              Frais de Gestion [Ligne 221]
+            </span>
+            <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center text-xs">
+              <i className="fas fa-percent"></i>
+            </div>
           </div>
-          <div className="text-xl sm:text-2xl font-black text-amber-800 tabular-nums">
+          <div className="text-2xl font-black text-amber-700 tabular-nums tracking-tight">
             {formatXOF(annualTotals.totalCommissionsDeductible || 0, { compact: false })}
           </div>
-          <div className="text-xs text-slate-500 mt-1">Commissions d'agence déductibles</div>
+          <div className="text-xs text-slate-400 mt-2">
+            Commissions d'agence déductibles
+          </div>
         </div>
 
-        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-orange-100 shadow-2xs">
-          <div className="text-xs font-bold uppercase tracking-wider text-orange-700 mb-1">
-            Travaux &amp; Entretien [Ligne 224]
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs hover:shadow-sm transition-all">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+              Travaux Déductibles [Ligne 224]
+            </span>
+            <div className="w-8 h-8 rounded-lg bg-orange-50 text-orange-600 flex items-center justify-center text-xs">
+              <i className="fas fa-wrench"></i>
+            </div>
           </div>
-          <div className="text-xl sm:text-2xl font-black text-orange-800 tabular-nums">
+          <div className="text-2xl font-black text-orange-700 tabular-nums tracking-tight">
             {formatXOF(annualTotals.totalRepairsDeductible || 0, { compact: false })}
           </div>
-          <div className="text-xs text-slate-500 mt-1">Dépenses de réparation déductibles</div>
+          <div className="text-xs text-slate-400 mt-2">
+            Dépenses de réparation &amp; entretien déductibles
+          </div>
         </div>
 
-        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-emerald-100 bg-emerald-50/20 shadow-2xs">
-          <div className="text-xs font-bold uppercase tracking-wider text-emerald-800 mb-1">
-            Revenu Net Foncier [Ligne 250]
+        <div className="bg-white p-5 rounded-2xl border border-emerald-200/80 shadow-xs hover:shadow-sm transition-all">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+              Revenu Net Foncier [Ligne 250]
+            </span>
+            <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center text-xs">
+              <i className="fas fa-coins"></i>
+            </div>
           </div>
-          <div className="text-xl sm:text-2xl font-black text-emerald-800 tabular-nums">
+          <div className="text-2xl font-black text-emerald-700 tabular-nums tracking-tight">
             {formatXOF(annualTotals.totalNetTaxableIncome || 0, { compact: false })}
           </div>
-          <div className="text-xs text-emerald-600 mt-1">Assiette nette imposable déclarée</div>
+          <div className="text-xs text-slate-400 mt-2">
+            Assiette nette imposable déclarée
+          </div>
         </div>
       </div>
 
       {/* 3. TABLEAU MENSUEL DES 12 MOIS DE L'ANNÉE */}
       <div className="bg-white border border-slate-200 rounded-2xl shadow-2xs overflow-hidden">
         <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between">
-          <div className="font-bold text-slate-900 text-sm">
-            Ventilation Mensuelle des Recettes &amp; Charges Déductibles &bull; {selectedYear}
+          <div className="font-bold text-slate-900 text-sm flex items-center gap-2">
+            <i className="fas fa-calendar-alt text-primary"></i>
+            <span>Ventilation Mensuelle des Recettes &amp; Charges Déductibles &bull; {selectedYear}</span>
           </div>
           <div className="text-xs text-slate-500 font-medium">
             Bailleur : <span className="font-bold text-slate-800">{owner.name || 'Propriétaire'}</span>
@@ -189,12 +218,12 @@ export default function ReportTaxDeclarationTab() {
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
-              <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-[11px]">
+              <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-[11px]">
                 <th className="py-3.5 px-4">Mois d'imposition</th>
-                <th className="py-3.5 px-4 text-right text-sky-800 bg-sky-50/40">Loyers Encaissés (Brut)</th>
-                <th className="py-3.5 px-4 text-right text-amber-800 bg-amber-50/40">Commissions Déductibles</th>
-                <th className="py-3.5 px-4 text-right text-orange-800 bg-orange-50/40">Travaux Déductibles</th>
-                <th className="py-3.5 px-4 text-right font-black text-emerald-800 bg-emerald-50/40">Revenu Net Mensuel</th>
+                <th className="py-3.5 px-4 text-right">Loyers Encaissés (Brut)</th>
+                <th className="py-3.5 px-4 text-right">Commissions Déductibles</th>
+                <th className="py-3.5 px-4 text-right">Travaux Déductibles</th>
+                <th className="py-3.5 px-4 text-right">Revenu Net Mensuel</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">

@@ -56,70 +56,86 @@ export default function ReportAgedReceivablesTab() {
       {/* 1. EN-TÊTE & CARTES KPI PAR TRANCHE */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* 0 - 30 Jours */}
-        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-emerald-100 shadow-2xs hover:shadow-xs transition-shadow">
-          <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-emerald-700 mb-1">
-            <span>0 à 30 Jours</span>
-            <span className="px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-[10px]">
-              {summary.bucket_0_30?.count || 0} dossier(s)
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs hover:shadow-sm transition-all">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+              0 à 30 Jours (Courant)
             </span>
+            <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center text-xs">
+              <i className="fas fa-calendar-check"></i>
+            </div>
           </div>
-          <div className="text-xl sm:text-2xl font-black text-slate-900 tabular-nums">
+          <div className="text-2xl font-black text-slate-900 tabular-nums tracking-tight">
             {formatXOF(summary.bucket_0_30?.amount || 0, { compact: false })}
           </div>
-          <div className="flex items-center justify-between text-xs text-slate-500 mt-2">
-            <span>Part du risque :</span>
-            <span className="font-bold text-emerald-700">{summary.bucket_0_30?.pct || 0}%</span>
+          <div className="flex items-center justify-between text-xs text-slate-400 mt-2">
+            <span>Part du risque : <strong className="text-emerald-700">{summary.bucket_0_30?.pct || 0}%</strong></span>
+            <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-[10px]">
+              {summary.bucket_0_30?.count || 0} dossier(s)
+            </span>
           </div>
         </div>
 
         {/* 31 - 60 Jours */}
-        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-amber-100 shadow-2xs hover:shadow-xs transition-shadow">
-          <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-amber-700 mb-1">
-            <span>31 à 60 Jours</span>
-            <span className="px-2 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-[10px]">
-              {summary.bucket_31_60?.count || 0} dossier(s)
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs hover:shadow-sm transition-all">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+              31 à 60 Jours (Relance)
             </span>
+            <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center text-xs">
+              <i className="fas fa-bell"></i>
+            </div>
           </div>
-          <div className="text-xl sm:text-2xl font-black text-slate-900 tabular-nums">
+          <div className="text-2xl font-black text-slate-900 tabular-nums tracking-tight">
             {formatXOF(summary.bucket_31_60?.amount || 0, { compact: false })}
           </div>
-          <div className="flex items-center justify-between text-xs text-slate-500 mt-2">
-            <span>Relance prioritaire :</span>
-            <span className="font-bold text-amber-700">{summary.bucket_31_60?.pct || 0}%</span>
+          <div className="flex items-center justify-between text-xs text-slate-400 mt-2">
+            <span>Part du risque : <strong className="text-amber-700">{summary.bucket_31_60?.pct || 0}%</strong></span>
+            <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 font-bold text-[10px]">
+              {summary.bucket_31_60?.count || 0} dossier(s)
+            </span>
           </div>
         </div>
 
         {/* 61 - 90 Jours */}
-        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-orange-100 shadow-2xs hover:shadow-xs transition-shadow">
-          <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-orange-700 mb-1">
-            <span>61 à 90 Jours</span>
-            <span className="px-2 py-0.5 rounded-full bg-orange-50 border border-orange-200 text-[10px]">
-              {summary.bucket_61_90?.count || 0} dossier(s)
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs hover:shadow-sm transition-all">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+              61 à 90 Jours (Mise en demeure)
             </span>
+            <div className="w-8 h-8 rounded-lg bg-orange-50 text-orange-600 flex items-center justify-center text-xs">
+              <i className="fas fa-triangle-exclamation"></i>
+            </div>
           </div>
-          <div className="text-xl sm:text-2xl font-black text-slate-900 tabular-nums">
+          <div className="text-2xl font-black text-slate-900 tabular-nums tracking-tight">
             {formatXOF(summary.bucket_61_90?.amount || 0, { compact: false })}
           </div>
-          <div className="flex items-center justify-between text-xs text-slate-500 mt-2">
-            <span>Pré-contentieux :</span>
-            <span className="font-bold text-orange-700">{summary.bucket_61_90?.pct || 0}%</span>
+          <div className="flex items-center justify-between text-xs text-slate-400 mt-2">
+            <span>Part du risque : <strong className="text-orange-700">{summary.bucket_61_90?.pct || 0}%</strong></span>
+            <span className="px-2 py-0.5 rounded-full bg-orange-50 text-orange-700 border border-orange-200 font-bold text-[10px]">
+              {summary.bucket_61_90?.count || 0} dossier(s)
+            </span>
           </div>
         </div>
 
         {/* > 90 Jours (Risque Contentieux) */}
-        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-rose-100 shadow-2xs hover:shadow-xs transition-shadow">
-          <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-rose-700 mb-1">
-            <span>&gt; 90 Jours (Contentieux)</span>
-            <span className="px-2 py-0.5 rounded-full bg-rose-50 border border-rose-200 text-[10px]">
-              {summary.bucket_over_90?.count || 0} dossier(s)
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs hover:shadow-sm transition-all">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+              &gt; 90 Jours (Contentieux)
             </span>
+            <div className="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center text-xs">
+              <i className="fas fa-gavel"></i>
+            </div>
           </div>
-          <div className="text-xl sm:text-2xl font-black text-rose-700 tabular-nums">
+          <div className="text-2xl font-black text-rose-700 tabular-nums tracking-tight">
             {formatXOF(summary.bucket_over_90?.amount || 0, { compact: false })}
           </div>
-          <div className="flex items-center justify-between text-xs text-slate-500 mt-2">
-            <span>Contentieux / Huissier :</span>
-            <span className="font-bold text-rose-700">{summary.bucket_over_90?.pct || 0}%</span>
+          <div className="flex items-center justify-between text-xs text-slate-400 mt-2">
+            <span>Contentieux avocat : <strong className="text-rose-700">{summary.bucket_over_90?.pct || 0}%</strong></span>
+            <span className="px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200 font-bold text-[10px]">
+              {summary.bucket_over_90?.count || 0} dossier(s)
+            </span>
           </div>
         </div>
       </div>
@@ -133,7 +149,7 @@ export default function ReportAgedReceivablesTab() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Rechercher locataire, bien, propriétaire..."
-            className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:border-primary focus:bg-white"
+            className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:border-primary focus:bg-white transition-colors"
           />
         </div>
 
@@ -142,7 +158,7 @@ export default function ReportAgedReceivablesTab() {
             type="button"
             onClick={handleExportCSV}
             disabled={!clients.length}
-            className="px-3.5 py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-bold hover:bg-emerald-100 transition-colors inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+            className="px-3.5 py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-bold hover:bg-emerald-100 transition-colors inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-2xs"
           >
             <i className="fas fa-file-excel"></i>
             <span>Exporter Balance Âgée (Excel)</span>
@@ -152,19 +168,29 @@ export default function ReportAgedReceivablesTab() {
 
       {/* 3. TABLEAU MATRICIEL BALANCE ÂGÉE */}
       <div className="bg-white border border-slate-200 rounded-2xl shadow-2xs overflow-hidden">
+        <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between">
+          <div className="font-bold text-slate-900 text-sm flex items-center gap-2">
+            <i className="fas fa-history text-primary"></i>
+            <span>Matrice Âgée des Créances Locatives</span>
+          </div>
+          <div className="text-xs text-slate-500 font-medium">
+            <span className="font-bold text-slate-800">{clients.length}</span> locataire(s) avec arriéré
+          </div>
+        </div>
+
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
-              <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-[11px]">
+              <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-[11px]">
                 <th className="py-3.5 px-3 w-12 text-center">N°</th>
                 <th className="py-3.5 px-4">Locataire &amp; Contact</th>
                 <th className="py-3.5 px-4">Bien &amp; Zone</th>
                 <th className="py-3.5 px-4">Propriétaire</th>
                 <th className="py-3.5 px-3 text-right">Loyer Mensuel</th>
-                <th className="py-3.5 px-3 text-right text-emerald-800 bg-emerald-50/40">0 - 30 Jours</th>
-                <th className="py-3.5 px-3 text-right text-amber-800 bg-amber-50/40">31 - 60 Jours</th>
-                <th className="py-3.5 px-3 text-right text-orange-800 bg-orange-50/40">61 - 90 Jours</th>
-                <th className="py-3.5 px-3 text-right text-rose-800 bg-rose-50/40">&gt; 90 Jours</th>
+                <th className="py-3.5 px-3 text-right">0 - 30 Jours</th>
+                <th className="py-3.5 px-3 text-right">31 - 60 Jours</th>
+                <th className="py-3.5 px-3 text-right">61 - 90 Jours</th>
+                <th className="py-3.5 px-3 text-right">&gt; 90 Jours</th>
                 <th className="py-3.5 px-4 text-right font-black text-slate-900">Total Arriéré</th>
               </tr>
             </thead>
