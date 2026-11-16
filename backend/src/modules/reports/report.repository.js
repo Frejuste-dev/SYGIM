@@ -184,6 +184,29 @@ class ReportRepository {
       txParams
     );
 
+    // 7. Évolution des recettes (Croissance des revenus pour graphique)
+    const formatKey = period === 'today' ? '%H:00' : (period === 'year' || period === 'all' ? '%Y-%m' : '%Y-%m-%d');
+    const [trendRows] = await db.query(
+      `SELECT
+         DATE_FORMAT(COALESCE(t.date, t.created_at), '${formatKey}') AS dateKey,
+         MIN(COALESCE(t.date, t.created_at)) AS rawDate,
+         COALESCE(SUM(t.amount), 0) AS amount,
+         COUNT(t.id) AS count
+       FROM transactions t
+       LEFT JOIN clients c ON c.id = t.client_id
+       LEFT JOIN properties p ON p.id = c.property_id
+       WHERE t.status IN ('processed', 'paid', 'completed', 'partial', 'partiel')
+         AND t.amount > 0
+         AND COALESCE(t.payment_type, 'payment') NOT IN ('assignment', 'departure')
+         AND COALESCE(t.method, '') NOT IN ('assignment', 'departure', '')
+         ${whereTx}
+       GROUP BY dateKey
+       ORDER BY rawDate ASC`,
+      txParams
+    );
+
+    const revenueTrends = this._buildContinuousTrends(period, trendRows);
+
     const totalProperties = Number(propRow?.totalProperties || 0);
     const occupiedCount = Number(propRow?.occupiedCount || 0);
     const occupancyRate = totalProperties > 0 ? Math.round((occupiedCount / totalProperties) * 100) : 0;
@@ -209,6 +232,7 @@ class ReportRepository {
       totalClients: Number(overdueRow?.totalClients || 0),
       collectionRate,
       ...settlementStats,
+      revenueTrends,
       byMethod: byMethodRows.map(r => ({
         method: r.method,
         count: Number(r.count || 0),
@@ -225,6 +249,100 @@ class ReportRepository {
         date: r.date
       }))
     };
+  }
+
+  /**
+   * Génère une série temporelle continue avec zéros pour les périodes sans transaction
+   */
+  _buildContinuousTrends(period, rawRows = []) {
+    const map = new Map();
+    for (const r of rawRows) {
+      map.set(r.dateKey, {
+        amount: Number(r.amount || 0),
+        count: Number(r.count || 0)
+      });
+    }
+
+    const result = [];
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth(); // 0..11
+
+    if (period === 'month') {
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      for (let day = 1; day <= daysInMonth; day++) {
+        const dStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const dObj = new Date(year, month, day);
+        const label = dObj.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
+        const found = map.get(dStr) || { amount: 0, count: 0 };
+        result.push({
+          dateKey: dStr,
+          label: label.charAt(0).toUpperCase() + label.slice(1),
+          amount: found.amount,
+          count: found.count
+        });
+      }
+    } else if (period === 'year') {
+      for (let m = 0; m < 12; m++) {
+        const mStr = `${year}-${String(m + 1).padStart(2, '0')}`;
+        const dObj = new Date(year, m, 1);
+        const label = dObj.toLocaleDateString('fr-FR', { month: 'short' });
+        const found = map.get(mStr) || { amount: 0, count: 0 };
+        result.push({
+          dateKey: mStr,
+          label: label.charAt(0).toUpperCase() + label.slice(1),
+          amount: found.amount,
+          count: found.count
+        });
+      }
+    } else if (period === 'week') {
+      const d = new Date(now);
+      const dayOfWeek = d.getDay();
+      const diffToMonday = (dayOfWeek === 0 ? -6 : 1) - dayOfWeek;
+      const monday = new Date(d);
+      monday.setDate(d.getDate() + diffToMonday);
+
+      for (let i = 0; i < 7; i++) {
+        const cur = new Date(monday);
+        cur.setDate(monday.getDate() + i);
+        const dStr = `${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, '0')}-${String(cur.getDate()).padStart(2, '0')}`;
+        const label = cur.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric' });
+        const found = map.get(dStr) || { amount: 0, count: 0 };
+        result.push({
+          dateKey: dStr,
+          label: label.charAt(0).toUpperCase() + label.slice(1),
+          amount: found.amount,
+          count: found.count
+        });
+      }
+    } else if (period === 'today') {
+      for (let h = 8; h <= 20; h++) {
+        const hStr = `${String(h).padStart(2, '0')}:00`;
+        const found = map.get(hStr) || { amount: 0, count: 0 };
+        result.push({
+          dateKey: hStr,
+          label: `${h}h`,
+          amount: found.amount,
+          count: found.count
+        });
+      }
+    } else {
+      // 'all' ou autre plage
+      if (rawRows.length === 0) {
+        return [];
+      }
+      for (const r of rawRows) {
+        const d = new Date(r.rawDate);
+        const label = d.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' });
+        result.push({
+          dateKey: r.dateKey,
+          label: label.charAt(0).toUpperCase() + label.slice(1),
+          amount: Number(r.amount || 0),
+          count: Number(r.count || 0)
+        });
+      }
+    }
+    return result;
   }
 
   /**
@@ -761,6 +879,25 @@ class ReportRepository {
         ${txDateClause}
     `, txParams);
 
+    // Tendances de recettes pour le graphique "Croissance des revenus"
+    const formatKey = period === 'today' ? '%H:00' : (period === 'year' || period === 'all' ? '%Y-%m' : '%Y-%m-%d');
+    const [trendRows] = await db.query(`
+      SELECT 
+        DATE_FORMAT(COALESCE(date, created_at), '${formatKey}') AS dateKey,
+        MIN(COALESCE(date, created_at)) AS rawDate,
+        COALESCE(SUM(CASE WHEN status IN ('paid', 'processed', 'completed', 'partiel', 'partial') THEN amount ELSE 0 END), 0) AS amount,
+        COUNT(id) AS count
+      FROM transactions t
+      WHERE amount > 0
+        AND COALESCE(payment_type, 'payment') NOT IN ('assignment', 'departure')
+        AND COALESCE(method, '') NOT IN ('assignment', 'departure', '')
+        ${txDateClause}
+      GROUP BY dateKey
+      ORDER BY rawDate ASC
+    `, txParams);
+
+    const revenueTrends = this._buildContinuousTrends(period, trendRows);
+
     const [[propertyStats]] = await db.query(`
       SELECT
         COUNT(*) AS totalProperties,
@@ -791,6 +928,7 @@ class ReportRepository {
       totalProperties,
       occupiedCount,
       occupancyRate: totalProperties > 0 ? Math.round((occupiedCount / totalProperties) * 100) : 0,
+      revenueTrends,
     };
   }
 

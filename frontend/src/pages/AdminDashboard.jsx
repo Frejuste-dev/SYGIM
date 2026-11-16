@@ -11,7 +11,42 @@ import { useToast } from '../components/ToastContext';
 import { useDebounce } from '../hooks/useDebounce';
 import Modal from '../components/Modal';
 import { formatXOF, formatDate, formatMethod, formatStatus, transactionSearchDate } from '../utils/formatters';
-import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import {
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+} from 'recharts';
+
+function RevenueChartTooltip({ active, payload, label }) {
+  if (!active || !payload || !payload.length) return null;
+  const data = payload[0]?.payload || {};
+  return (
+    <div className="bg-white border border-slate-200 rounded-xl p-3 shadow-lg text-xs space-y-1.5 min-w-[180px]">
+      <div className="font-bold text-slate-800 pb-1 border-b border-slate-100 flex items-center justify-between">
+        <span>{data.label || label}</span>
+        {data.count > 0 && (
+          <span className="text-[10px] text-slate-400 font-normal">
+            {data.count} opération{data.count > 1 ? 's' : ''}
+          </span>
+        )}
+      </div>
+      <div className="flex items-center justify-between pt-0.5">
+        <span className="text-slate-500">Recettes :</span>
+        <span className="font-bold text-sky-700 tabular-nums">
+          {formatXOF(data.amount || 0, { compact: false })}
+        </span>
+      </div>
+    </div>
+  );
+}
 
 
 const CLIENT_INIT = { lastName: '', firstName: '', phone: '', email: '', address: '', amountDue: 50000, status: 'pending' };
@@ -90,6 +125,7 @@ export default function AdminDashboard() {
   const collectionRate       = kpis.collectionRate       ?? 0;
   const occupiedCount        = kpis.occupiedCount        ?? 0;
   const occupancyRate        = kpis.occupancyRate        ?? 0;
+  const revenueTrends        = kpis.revenueTrends        ?? [];
 
   const loading = clientsLoading || propsLoading || txLoading || kpisLoading;
   const error = null;
@@ -304,12 +340,84 @@ export default function AdminDashboard() {
               )}
             </div>
             
-            <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col justify-center items-center text-center">
-              <div className="w-16 h-16 bg-slate-50 text-slate-400 rounded-full flex items-center justify-center mb-4">
-                <i className="fas fa-chart-line text-2xl"></i>
+            <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4 pb-3 border-b border-slate-100">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-lg font-bold text-slate-900">Croissance des revenus</h3>
+                    <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-sky-50 text-sky-700 border border-sky-100">
+                      {PERIOD_LABELS[selectedPeriod] || selectedPeriod}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Évolution chronologique des encaissements de loyers validés
+                  </p>
+                </div>
+                <div className="sm:text-right">
+                  <div className="text-[11px] text-slate-400 font-medium uppercase tracking-wider">Total encaissé</div>
+                  <div className="text-base sm:text-lg font-extrabold text-sky-700 tabular-nums">
+                    {formatXOF(totalRevenue, { compact: false })}
+                  </div>
+                </div>
               </div>
-              <h3 className="text-slate-900 font-medium mb-1">Croissance des revenus</h3>
-              <p className="text-slate-500 text-sm">Collectez plus de données pour débloquer l'analyse temporelle.</p>
+
+              <div className="h-[250px] w-full">
+                {revenueTrends.length > 0 && revenueTrends.some(t => t.amount > 0) ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={revenueTrends} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="adminRevenueGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#0284c7" stopOpacity={0.3} />
+                          <stop offset="95%" stopColor="#0284c7" stopOpacity={0.0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                      <XAxis
+                        dataKey="label"
+                        stroke="#94a3b8"
+                        fontSize={11}
+                        tickLine={false}
+                        axisLine={{ stroke: '#e2e8f0' }}
+                        interval={selectedPeriod === 'month' ? 4 : 0}
+                      />
+                      <YAxis
+                        stroke="#94a3b8"
+                        fontSize={11}
+                        tickLine={false}
+                        axisLine={false}
+                        tickFormatter={(v) => {
+                          if (v >= 1000000) return `${(v / 1000000).toFixed(1)}M`;
+                          if (v >= 1000) return `${(v / 1000).toFixed(0)}k`;
+                          return v;
+                        }}
+                      />
+                      <Tooltip content={<RevenueChartTooltip />} />
+                      <Area
+                        type="monotone"
+                        dataKey="amount"
+                        name="Recettes"
+                        stroke="#0284c7"
+                        strokeWidth={2.5}
+                        fill="url(#adminRevenueGrad)"
+                        dot={{ r: 3, fill: '#0284c7', strokeWidth: 1.5, stroke: '#ffffff' }}
+                        activeDot={{ r: 5, fill: '#0369a1', strokeWidth: 2, stroke: '#ffffff' }}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 text-sm gap-2">
+                    <div className="w-12 h-12 bg-slate-50 text-slate-300 rounded-full flex items-center justify-center">
+                      <i className="fas fa-chart-line text-xl"></i>
+                    </div>
+                    <span className="font-medium text-slate-500">
+                      Aucun encaissement sur {PERIOD_LABELS[selectedPeriod]?.toLowerCase() || 'cette période'}
+                    </span>
+                    <span className="text-xs text-slate-400">
+                      Les données apparaîtront automatiquement dès qu'un paiement sera validé sur cette plage.
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
