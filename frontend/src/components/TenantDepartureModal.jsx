@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import Modal from './Modal';
 import { useToast } from './ToastContext';
 import { API } from '../api/services';
+import { FormField, FormSection } from './ui/forms';
 
 export default function TenantDepartureModal({ isOpen, onClose, client, onSuccess }) {
   const { showToast } = useToast();
@@ -74,62 +75,60 @@ export default function TenantDepartureModal({ isOpen, onClose, client, onSucces
           </div>
         </div>
 
-        <div>
-          <label className="block text-xs uppercase tracking-wider font-bold text-slate-600 mb-1.5">
-            Date de départ effective <span className="text-rose-500">*</span>
-          </label>
-          <input
-            type="date"
-            required
-            value={formData.departureDate}
-            onChange={(e) => setFormData({ ...formData, departureDate: e.target.value })}
-            className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-          />
-        </div>
+        <FormSection
+          icon="fa-calendar-xmark"
+          title="Modalités de Fin de Bail"
+          subtitle="Date de libération effective et motif"
+        >
+          <FormField label="Date de départ effective" required hint="Date de remise des clés">
+            <input
+              type="date"
+              required
+              value={formData.departureDate}
+              onChange={(e) => setFormData({ ...formData, departureDate: e.target.value })}
+              className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+            />
+          </FormField>
 
-        <div>
-          <label className="block text-xs uppercase tracking-wider font-bold text-slate-600 mb-1.5">
-            Motif du départ <span className="text-rose-500">*</span>
-          </label>
-          <select
-            value={formData.departureReason}
-            onChange={(e) => setFormData({ ...formData, departureReason: e.target.value })}
-            className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-          >
-            <option value="Fin de bail / Départ volontaire">Fin de bail / Départ volontaire</option>
-            <option value="Déménagement">Déménagement (mutation / changement de ville)</option>
-            <option value="Résiliation anticipée">Résiliation anticipée</option>
-            <option value="Non-renouvellement de contrat">Non-renouvellement de contrat</option>
-            <option value="Expulsion / Contentieux">Expulsion / Contentieux</option>
-            <option value="Autre motif">Autre motif</option>
-          </select>
-        </div>
+          <FormField label="Motif du départ" required>
+            <select
+              value={formData.departureReason}
+              onChange={(e) => setFormData({ ...formData, departureReason: e.target.value })}
+              className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 cursor-pointer"
+            >
+              <option value="Fin de bail / Départ volontaire">Fin de bail / Départ volontaire</option>
+              <option value="Déménagement">Déménagement (mutation / changement de ville)</option>
+              <option value="Résiliation anticipée">Résiliation anticipée</option>
+              <option value="Non-renouvellement de contrat">Non-renouvellement de contrat</option>
+              <option value="Expulsion / Contentieux">Expulsion / Contentieux</option>
+              <option value="Autre motif">Autre motif</option>
+            </select>
+          </FormField>
 
-        <div>
-          <label className="block text-xs uppercase tracking-wider font-bold text-slate-600 mb-1.5">
-            État des lieux de sortie & Observations
-          </label>
-          <textarea
-            rows="3"
-            placeholder="Clés remises, état du logement, dégradations éventuelles, caution..."
-            value={formData.departureNotes}
-            onChange={(e) => setFormData({ ...formData, departureNotes: e.target.value })}
-            className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-          ></textarea>
-        </div>
+          <FormField label="État des lieux de sortie & Observations" optional hint="Remise des clés, dégradations, relevé compteurs...">
+            <textarea
+              rows="3"
+              placeholder="Clés remises, état du logement, dégradations éventuelles, caution..."
+              value={formData.departureNotes}
+              onChange={(e) => setFormData({ ...formData, departureNotes: e.target.value })}
+              className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+            ></textarea>
+          </FormField>
+        </FormSection>
 
         <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-200">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition"
+            disabled={isSubmitting}
+            className="px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition cursor-pointer"
           >
             Annuler
           </button>
           <button
             type="submit"
             disabled={isSubmitting}
-            className="px-5 py-2.5 text-sm font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-xl shadow-sm transition disabled:opacity-50 flex items-center gap-2"
+            className="px-5 py-2.5 text-sm font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-xl shadow-sm transition disabled:opacity-50 flex items-center gap-2 cursor-pointer"
           >
             {isSubmitting ? (
               <>
@@ -137,7 +136,7 @@ export default function TenantDepartureModal({ isOpen, onClose, client, onSucces
               </>
             ) : (
               <>
-                <i className="fas fa-door-open"></i> Confirmer départ & Libérer logement
+                <i className="fas fa-door-open"></i> Confirmer départ &amp; Libérer logement
               </>
             )}
           </button>
@@ -146,4 +145,3 @@ export default function TenantDepartureModal({ isOpen, onClose, client, onSucces
     </Modal>
   );
 }
-

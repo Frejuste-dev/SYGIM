@@ -3,6 +3,7 @@ import Modal from './Modal';
 import { useToast } from './ToastContext';
 import { API } from '../api/services';
 import { formatXOF } from '../utils/formatters';
+import { FormField, MoneyInput, PhoneInput, FormSection } from './ui/forms';
 
 export default function AssignPropertyModal({ isOpen, onClose, property, clients = [], onSuccess }) {
   const { showToast } = useToast();
@@ -10,8 +11,8 @@ export default function AssignPropertyModal({ isOpen, onClose, property, clients
   const [mode, setMode] = useState('existing'); // 'existing' | 'new'
 
   const [selectedClientId, setSelectedClientId] = useState('');
-  const [rent, setRent] = useState('');
-  const [deposit, setDeposit] = useState('');
+  const [rent, setRent] = useState(0);
+  const [deposit, setDeposit] = useState(0);
   const [startDate, setStartDate] = useState(new Date().toISOString().slice(0, 10));
 
   const [newTenant, setNewTenant] = useState({
@@ -25,8 +26,9 @@ export default function AssignPropertyModal({ isOpen, onClose, property, clients
   // Initialisation à l'ouverture
   React.useEffect(() => {
     if (isOpen && property) {
-      setRent(property.rent || '');
-      setDeposit(property.deposit || (property.rent ? property.rent * 2 : ''));
+      const initialRent = Number(property.rent || 0);
+      setRent(initialRent);
+      setDeposit(property.deposit ? Number(property.deposit) : initialRent * 2);
       setStartDate(new Date().toISOString().slice(0, 10));
       setSelectedClientId('');
     }
@@ -34,13 +36,16 @@ export default function AssignPropertyModal({ isOpen, onClose, property, clients
 
   if (!isOpen || !property) return null;
 
+  const numericRent = Number(rent) || 0;
+  const numericDeposit = Number(deposit) || 0;
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
     try {
       let payload = {
-        rent: parseFloat(rent || property.rent || 0),
-        deposit: parseFloat(deposit || 0),
+        rent: numericRent || parseFloat(property.rent || 0),
+        deposit: numericDeposit,
         startDate
       };
 
@@ -57,10 +62,18 @@ export default function AssignPropertyModal({ isOpen, onClose, property, clients
           setIsSubmitting(false);
           return;
         }
+        const cleanPhone = String(newTenant.phone).replace(/\D/g, '');
+        const actualDigits = cleanPhone.startsWith('225') ? cleanPhone.slice(3) : cleanPhone;
+        if (actualDigits.length < 10) {
+          showToast({ type: 'error', message: 'Le numéro de téléphone ivoirien doit comporter 10 chiffres (ex: 07 09 88 14 42).' });
+          setIsSubmitting(false);
+          return;
+        }
+
         payload.newTenant = {
           firstName: newTenant.firstName.trim(),
           lastName: newTenant.lastName.trim(),
-          phone: newTenant.phone.trim(),
+          phone: cleanPhone.startsWith('225') ? `+${cleanPhone}` : cleanPhone,
           email: newTenant.email.trim() || null,
           address: newTenant.address.trim() || property.address || null
         };
@@ -90,6 +103,12 @@ export default function AssignPropertyModal({ isOpen, onClose, property, clients
     }
   };
 
+  const depositPresets = [];
+  if (numericRent > 0) {
+    depositPresets.push({ label: '2 mois (recommandé)', value: numericRent * 2 });
+    depositPresets.push({ label: '1 mois', value: numericRent });
+  }
+
   return (
     <Modal
       isOpen={isOpen}
@@ -117,9 +136,9 @@ export default function AssignPropertyModal({ isOpen, onClose, property, clients
           <button
             type="button"
             onClick={() => setMode('existing')}
-            className={`flex-1 py-2 text-xs font-bold rounded-lg transition ${
+            className={`flex-1 py-2 text-xs font-bold rounded-lg transition cursor-pointer ${
               mode === 'existing'
-                ? 'bg-white text-primary shadow-sm'
+                ? 'bg-white text-primary shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
@@ -128,9 +147,9 @@ export default function AssignPropertyModal({ isOpen, onClose, property, clients
           <button
             type="button"
             onClick={() => setMode('new')}
-            className={`flex-1 py-2 text-xs font-bold rounded-lg transition ${
+            className={`flex-1 py-2 text-xs font-bold rounded-lg transition cursor-pointer ${
               mode === 'new'
-                ? 'bg-white text-primary shadow-sm'
+                ? 'bg-white text-primary shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
@@ -140,15 +159,12 @@ export default function AssignPropertyModal({ isOpen, onClose, property, clients
 
         {/* Formulaire selon mode */}
         {mode === 'existing' ? (
-          <div>
-            <label className="block text-xs uppercase tracking-wider font-bold text-slate-600 mb-1.5">
-              Sélectionner le locataire <span className="text-rose-500">*</span>
-            </label>
+          <FormField label="Sélectionner le locataire" required hint="Recherchez un locataire déjà inscrit dans SYGIM">
             <select
               required
               value={selectedClientId}
               onChange={(e) => setSelectedClientId(e.target.value)}
-              className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+              className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-semibold text-slate-900 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 cursor-pointer"
             >
               <option value="">-- Choisir un locataire --</option>
               {clients.map((c) => (
@@ -158,128 +174,118 @@ export default function AssignPropertyModal({ isOpen, onClose, property, clients
                 </option>
               ))}
             </select>
-          </div>
+          </FormField>
         ) : (
-          <div className="space-y-3 bg-slate-50/80 rounded-2xl p-3.5 border border-slate-200">
+          <FormSection
+            icon="fa-user-plus"
+            title="Nouveau Locataire"
+            subtitle="Création immédiate de la fiche locataire lors de la prise à bail"
+          >
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs uppercase tracking-wider font-bold text-slate-600 mb-1">
-                  Nom <span className="text-rose-500">*</span>
-                </label>
+              <FormField label="Nom de famille" required>
                 <input
                   type="text"
                   required
                   placeholder="Ex : KOUAME"
                   value={newTenant.lastName}
                   onChange={(e) => setNewTenant({ ...newTenant, lastName: e.target.value })}
-                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-sm focus:outline-none focus:border-primary"
+                  className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-primary"
                 />
-              </div>
-              <div>
-                <label className="block text-xs uppercase tracking-wider font-bold text-slate-600 mb-1">
-                  Prénom
-                </label>
+              </FormField>
+              <FormField label="Prénom" optional>
                 <input
                   type="text"
                   placeholder="Ex : Jean-Luc"
                   value={newTenant.firstName}
                   onChange={(e) => setNewTenant({ ...newTenant, firstName: e.target.value })}
-                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-sm focus:outline-none focus:border-primary"
+                  className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-primary"
                 />
-              </div>
+              </FormField>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs uppercase tracking-wider font-bold text-slate-600 mb-1">
-                  Téléphone <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="tel"
-                  required
-                  placeholder="Ex : 0707070707"
+              <FormField label="Téléphone portable" required hint="10 chiffres (CI)">
+                <PhoneInput
                   value={newTenant.phone}
-                  onChange={(e) => setNewTenant({ ...newTenant, phone: e.target.value })}
-                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-sm focus:outline-none focus:border-primary"
+                  onChange={(e, clean) => setNewTenant({ ...newTenant, phone: clean ?? e?.target?.value })}
+                  placeholder="07 09 88 14 42"
                 />
-              </div>
-              <div>
-                <label className="block text-xs uppercase tracking-wider font-bold text-slate-600 mb-1">
-                  Email
-                </label>
+              </FormField>
+              <FormField label="Email" optional>
                 <input
                   type="email"
                   placeholder="Ex : jean@example.com"
                   value={newTenant.email}
                   onChange={(e) => setNewTenant({ ...newTenant, email: e.target.value })}
-                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-sm focus:outline-none focus:border-primary"
+                  className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-primary"
                 />
-              </div>
+              </FormField>
             </div>
-          </div>
+          </FormSection>
         )}
 
         {/* Modalités contractuelles du bien attribué */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div>
-            <label className="block text-xs uppercase tracking-wider font-bold text-slate-600 mb-1.5">
-              Loyer convenu (FCFA) <span className="text-rose-500">*</span>
-            </label>
-            <input
-              type="number"
-              required
-              min="0"
-              step="1000"
-              value={rent}
-              onChange={(e) => setRent(e.target.value)}
-              className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:border-primary"
-            />
-          </div>
+        <FormSection
+          icon="fa-file-signature"
+          title="Conditions Contractuelles du Bail"
+          subtitle="Loyer convenu, dépôt de garantie (caution séquestre) et date d'effet"
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-start">
+            <FormField label="Loyer convenu" required hint="Appelé mensuellement">
+              <MoneyInput
+                value={rent}
+                onChange={(e, num) => {
+                  const newRent = (num ?? Number(e?.target?.value)) || 0;
+                  setRent(newRent);
+                  // Met à jour la suggestion de caution si caution égale à 2x l'ancien loyer
+                  if (deposit === 0 || deposit === numericRent * 2) {
+                    setDeposit(newRent * 2);
+                  }
+                }}
+                currency="FCFA"
+                size="md"
+              />
+            </FormField>
 
-          <div>
-            <label className="block text-xs uppercase tracking-wider font-bold text-slate-600 mb-1.5">
-              Caution versée (FCFA)
-            </label>
-            <input
-              type="number"
-              min="0"
-              step="1000"
-              value={deposit}
-              onChange={(e) => setDeposit(e.target.value)}
-              className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:border-primary"
-            />
-          </div>
+            <FormField label="Caution versée" optional hint="Dépôt de garantie séquestre">
+              <MoneyInput
+                value={deposit}
+                onChange={(e, num) => setDeposit((num ?? Number(e?.target?.value)) || 0)}
+                presets={depositPresets}
+                currency="FCFA"
+                size="md"
+              />
+            </FormField>
 
-          <div>
-            <label className="block text-xs uppercase tracking-wider font-bold text-slate-600 mb-1.5">
-              Date d'entrée <span className="text-rose-500">*</span>
-            </label>
-            <input
-              type="date"
-              required
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-sm focus:outline-none focus:border-primary"
-            />
+            <FormField label="Date d'entrée" required hint="Début d'effet du contrat">
+              <input
+                type="date"
+                required
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-primary"
+              />
+            </FormField>
           </div>
-        </div>
+        </FormSection>
 
         <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-200">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition"
+            disabled={isSubmitting}
+            className="px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition cursor-pointer"
           >
             Annuler
           </button>
           <button
             type="submit"
-            disabled={isSubmitting}
-            className="px-5 py-2.5 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-sm transition disabled:opacity-50 flex items-center gap-2"
+            disabled={isSubmitting || !numericRent}
+            className="px-5 py-2.5 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-sm transition disabled:opacity-50 flex items-center gap-2 cursor-pointer"
           >
             {isSubmitting ? (
               <>
-                <i className="fas fa-spinner fa-spin"></i> Attribution...
+                <i className="fas fa-spinner fa-spin"></i> Attribution en cours...
               </>
             ) : (
               <>
@@ -292,4 +298,3 @@ export default function AssignPropertyModal({ isOpen, onClose, property, clients
     </Modal>
   );
 }
-

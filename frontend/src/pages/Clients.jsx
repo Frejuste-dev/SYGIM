@@ -10,6 +10,7 @@ import StatsCard from '../components/StatsCard';
 import Modal from '../components/Modal';
 import TenantStatementModal from '../components/TenantStatementModal';
 import TableSkeleton from '../components/ui/TableSkeleton';
+import { FormField, MoneyInput, PhoneInput, FormSection } from '../components/ui/forms';
 import { formatXOF, formatStatus } from '../utils/formatters';
 import { exportToExcel, exportToPDF } from '../utils/exportUtils';
 
@@ -140,7 +141,17 @@ export default function Clients() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.lastName || !form.phone) {
-      setFormError('Le nom et le téléphone sont obligatoires.');
+      setFormError('Le nom de famille et le numéro de téléphone sont obligatoires.');
+      return;
+    }
+    const cleanPhone = String(form.phone).replace(/\D/g, '');
+    const actualDigits = cleanPhone.startsWith('225') ? cleanPhone.slice(3) : cleanPhone;
+    if (actualDigits.length < 10) {
+      setFormError('Le numéro de téléphone ivoirien doit comporter exactement 10 chiffres (ex: 07 09 88 14 42).');
+      return;
+    }
+    if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+      setFormError('Veuillez saisir une adresse email valide.');
       return;
     }
     setFormError('');
@@ -156,12 +167,15 @@ export default function Clients() {
       };
       if (editingClient) {
         await updateClient.mutateAsync({ id: editingClient.id, ...payload });
+        showToast({ type: 'success', message: 'Locataire mis à jour avec succès.' });
       } else {
         await createClient.mutateAsync(payload);
+        showToast({ type: 'success', message: 'Nouveau locataire enregistré avec succès.' });
       }
       setShowModal(false);
     } catch (err) {
-      setFormError(err.message || 'Erreur serveur.');
+      const msg = err.message || 'Erreur serveur.';
+      setFormError(msg);
     }
   };
 
@@ -446,7 +460,7 @@ export default function Clients() {
           subtitle="Identité du locataire, coordonnées et rattachement au bien loué"
           icon="fa-user-check"
           onClose={() => setShowModal(false)}
-          maxWidth="640px"
+          maxWidth="680px"
         >
           {formError && (
             <div className="bg-rose-50 border border-rose-200 text-rose-700 p-3.5 rounded-xl text-sm mb-5 flex items-center gap-2 font-medium">
@@ -455,77 +469,85 @@ export default function Clients() {
             </div>
           )}
           <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="firstName" className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Prénom</label>
-                <input
-                  id="firstName"
-                  type="text"
-                  placeholder="Ex : Awa"
-                  value={form.firstName}
-                  onChange={e => setForm({ ...form, firstName: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
-                />
-              </div>
-              <div>
-                <label htmlFor="lastName" className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
-                  Nom de famille <span className="text-rose-600">*</span>
-                </label>
-                <input
-                  id="lastName"
-                  type="text"
-                  required
-                  placeholder="Ex : Koné"
-                  value={form.lastName}
-                  onChange={e => setForm({ ...form, lastName: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
-                />
-              </div>
-            </div>
+            {/* 1. Identité */}
+            <FormSection
+              icon="fa-id-card"
+              title="1. Identité du Locataire"
+              subtitle="Coordonnées personnelles et contact direct"
+            >
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FormField label="Prénom" id="firstName">
+                  <input
+                    id="firstName"
+                    type="text"
+                    placeholder="Ex : Awa"
+                    value={form.firstName}
+                    onChange={e => setForm({ ...form, firstName: e.target.value })}
+                    className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+                  />
+                </FormField>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="phone" className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
-                  Téléphone <span className="text-rose-600">*</span>
-                </label>
-                <input
-                  id="phone"
-                  type="tel"
-                  required
-                  placeholder="Ex : +225 07 00 00 00 00"
-                  value={form.phone}
-                  onChange={e => setForm({ ...form, phone: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
-                />
-              </div>
-              <div>
-                <label htmlFor="email" className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Email</label>
-                <input
-                  id="email"
-                  type="email"
-                  placeholder="Ex : locataire@email.com"
-                  value={form.email}
-                  onChange={e => setForm({ ...form, email: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
-                />
-              </div>
-            </div>
-
-            <div className="bg-slate-50/90 p-4 rounded-2xl border border-slate-200/90 space-y-4">
-              <div className="flex items-center gap-2 border-b border-slate-200/80 pb-2">
-                <div className="w-7 h-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                  <i className="fas fa-home text-xs"></i>
-                </div>
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800">
-                  Affectation Immobilière & Loyer
-                </h4>
+                <FormField label="Nom de famille" required id="lastName">
+                  <input
+                    id="lastName"
+                    type="text"
+                    required
+                    placeholder="Ex : Koné"
+                    value={form.lastName}
+                    onChange={e => setForm({ ...form, lastName: e.target.value })}
+                    className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+                  />
+                </FormField>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="propertyId" className="block text-xs font-semibold text-slate-700 mb-1.5">
-                    Bien immobilier occupé
-                  </label>
+                <FormField
+                  label="Téléphone portable"
+                  required
+                  id="phone"
+                  hint="Numéro à 10 chiffres (Côte d'Ivoire)"
+                  error={formError && formError.toLowerCase().includes('téléphone') ? formError : ''}
+                >
+                  <PhoneInput
+                    id="phone"
+                    value={form.phone}
+                    onChange={(e, clean) => setForm({ ...form, phone: clean ?? e?.target?.value })}
+                    hasError={Boolean(formError && formError.toLowerCase().includes('téléphone'))}
+                    placeholder="07 09 88 14 42"
+                  />
+                </FormField>
+
+                <FormField
+                  label="Adresse Email"
+                  optional
+                  id="email"
+                  hint="Pour envoi de quittances et notifications"
+                  error={formError && formError.toLowerCase().includes('email') ? formError : ''}
+                >
+                  <input
+                    id="email"
+                    type="email"
+                    placeholder="Ex : locataire@email.com"
+                    value={form.email}
+                    onChange={e => setForm({ ...form, email: e.target.value })}
+                    className={`w-full px-3.5 py-2.5 bg-white border rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none transition-all ${
+                      formError && formError.toLowerCase().includes('email')
+                        ? 'border-rose-300 focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20'
+                        : 'border-slate-300 focus:border-primary focus:ring-2 focus:ring-primary/20'
+                    }`}
+                  />
+                </FormField>
+              </div>
+            </FormSection>
+
+            {/* 2. Affectation Immobilière & Loyer */}
+            <FormSection
+              icon="fa-home"
+              title="2. Logement & Conditions de Bail"
+              subtitle="Bien occupé, loyer contractuel et assignation du collecteur"
+            >
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FormField label="Bien immobilier occupé" optional id="propertyId" hint="Attribue le bien au locataire">
                   <select
                     id="propertyId"
                     value={form.propertyId || ''}
@@ -539,35 +561,29 @@ export default function Clients() {
                         amountDue: prop ? (prop.rent ? String(prop.rent) : prop.amount_due ? String(prop.amount_due) : form.amountDue) : form.amountDue
                       });
                     }}
-                    className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-medium text-slate-900 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer"
+                    className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-semibold text-slate-900 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer"
                   >
-                    <option value="">-- Sélectionner un bien immobilier --</option>
+                    <option value="">-- Sans bien attribué (En attente) --</option>
                     {properties.map(p => (
                       <option key={p.id} value={p.id}>
-                        {p.name} {p.address ? `(${p.address})` : ''} {p.rent ? `— ${Number(p.rent).toLocaleString()} XOF` : ''}
+                        {p.name} {p.address ? `(${p.address})` : ''} {p.rent ? `— ${Number(p.rent).toLocaleString()} FCFA` : ''}
                       </option>
                     ))}
                   </select>
-                </div>
-                <div>
-                  <label htmlFor="amountDue" className="block text-xs font-semibold text-slate-700 mb-1.5">
-                    Loyer mensuel (XOF)
-                  </label>
-                  <input
+                </FormField>
+
+                <FormField label="Loyer mensuel exigible" id="amountDue" hint="Montant appelé chaque mois">
+                  <MoneyInput
                     id="amountDue"
-                    type="number"
-                    placeholder="Ex : 150000"
                     value={form.amountDue}
-                    onChange={e => setForm({ ...form, amountDue: e.target.value })}
-                    className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+                    onChange={(e, num) => setForm({ ...form, amountDue: (num ?? Number(e?.target?.value)) || 0 })}
+                    placeholder="Ex : 150 000"
+                    currency="FCFA"
                   />
-                </div>
+                </FormField>
               </div>
 
-              <div>
-                <label htmlFor="collectorId" className="block text-xs font-semibold text-slate-700 mb-1.5">
-                  Agent Collecteur assigné (Tournée de collecte)
-                </label>
+              <FormField label="Agent Collecteur assigné" optional id="collectorId" hint="Agent en charge de la tournée d'encaissement">
                 <select
                   id="collectorId"
                   value={form.collectorId || ''}
@@ -581,20 +597,22 @@ export default function Clients() {
                     </option>
                   ))}
                 </select>
-              </div>
-            </div>
+              </FormField>
+            </FormSection>
 
+            {/* Footer boutons actions */}
             <div className="pt-4 flex justify-end gap-3 border-t border-slate-100">
               <button
                 type="button"
-                className="px-4 py-2.5 text-sm font-semibold text-slate-700 bg-white border border-slate-300 rounded-xl hover:bg-slate-50 transition-colors"
+                className="px-4 py-2.5 text-sm font-semibold text-slate-700 bg-white border border-slate-300 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer"
                 onClick={() => setShowModal(false)}
+                disabled={formSubmitting}
               >
                 Annuler
               </button>
               <button
                 type="submit"
-                className="px-5 py-2.5 text-sm font-bold text-white bg-primary rounded-xl hover:bg-primary-dark transition-colors shadow-sm shadow-primary/20 flex items-center justify-center gap-2 min-w-[140px]"
+                className="px-5 py-2.5 text-sm font-bold text-white bg-primary rounded-xl hover:bg-primary-dark transition-colors shadow-sm shadow-primary/20 flex items-center justify-center gap-2 min-w-[140px] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 disabled={formSubmitting}
               >
                 {formSubmitting ? (
@@ -605,7 +623,7 @@ export default function Clients() {
                 ) : (
                   <>
                     <i className={`fas ${editingClient ? 'fa-save' : 'fa-check-circle'}`}></i>
-                    <span>{editingClient ? 'Enregistrer' : 'Créer le locataire'}</span>
+                    <span>{editingClient ? 'Enregistrer les modifications' : 'Créer le locataire'}</span>
                   </>
                 )}
               </button>

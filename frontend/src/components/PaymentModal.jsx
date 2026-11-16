@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { formatXOF } from '../utils/formatters';
+import { FormField, MoneyInput } from './ui/forms';
 
 const PAYMENT_METHODS = [
   { id: 'cash',         name: 'Espèces',           sub: 'Main à main',          icon: 'fa-money-bill-wave',       color: 'text-emerald-600 bg-emerald-50' },
@@ -8,12 +9,9 @@ const PAYMENT_METHODS = [
   { id: 'bank_transfer',name: 'Virement bancaire', sub: 'Direct compte',       icon: 'fa-university',           color: 'text-sky-600 bg-sky-50' },
 ];
 
-const INPUT_CLS = 'w-full px-4 py-3 bg-white border border-slate-300 rounded-xl text-base text-slate-900 shadow-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all';
-const LABEL_CLS = 'block text-xs uppercase tracking-wider font-bold text-slate-600 mb-1.5';
-
 export default function PaymentModal({ isOpen, onClose, client, onProceedToSignature }) {
-  const [amount, setAmount] = useState('');
-  const [method, setMethod] = useState('');
+  const [amount, setAmount] = useState(0);
+  const [method, setMethod] = useState('mobile_money');
   const [reference, setReference] = useState('');
   const [validationError, setValidationError] = useState('');
 
@@ -49,11 +47,11 @@ export default function PaymentModal({ isOpen, onClose, client, onProceedToSigna
     const net = Math.max(0, effRem - repDed);
 
     if (client.suggestedAmount !== undefined) {
-      setAmount(String(client.suggestedAmount));
+      setAmount(Number(client.suggestedAmount) || 0);
     } else {
-      setAmount(String(net > 0 ? net : (effRem > 0 ? effRem : clientRem)));
+      setAmount(net > 0 ? net : (effRem > 0 ? effRem : clientRem));
     }
-    setMethod('mobile_money'); // Défaut terrain Côte d'Ivoire
+    setMethod('mobile_money');
     setReference('');
     setValidationError('');
   }, [isOpen, client]);
@@ -73,7 +71,7 @@ export default function PaymentModal({ isOpen, onClose, client, onProceedToSigna
   const property = client.property ?? client.propertyName ?? client.property_title ?? client.address ?? 'Bien non renseigné';
 
   const numericAmount = Number(amount) || 0;
-  const isValidAmount = Boolean(amount !== '' && !isNaN(numericAmount) && numericAmount > 0);
+  const isValidAmount = Boolean(numericAmount > 0);
 
   const handleValidate = () => {
     if (!method) {
@@ -81,12 +79,26 @@ export default function PaymentModal({ isOpen, onClose, client, onProceedToSigna
       return;
     }
     if (!isValidAmount) {
-      setValidationError('Le montant doit être supérieur à 0.');
+      setValidationError('Le montant doit être supérieur à 0 FCFA.');
       return;
     }
     setValidationError('');
     onProceedToSignature({ amount: numericAmount, method, reference: reference.trim() || `REC-${Date.now()}` });
   };
+
+  // Presets pour MoneyInput
+  const presets = [];
+  if (repairDeduction > 0 && netCollectible > 0) {
+    presets.push({ label: 'Loyer net', value: netCollectible });
+  }
+  if (remaining > 0) {
+    presets.push({ label: 'Tout solder', value: remaining });
+    if (remaining >= 20000) {
+      presets.push({ label: '50%', value: Math.round(remaining / 2) });
+    }
+  }
+
+  const calculatedBalanceAfter = Math.max(0, remaining - numericAmount);
 
   return (
     <div
@@ -103,7 +115,7 @@ export default function PaymentModal({ isOpen, onClose, client, onProceedToSigna
             </div>
             <div>
               <h2 className="text-base sm:text-lg font-bold text-slate-900 leading-tight">Enregistrer paiement</h2>
-              <p className="text-xs text-slate-500">Collecte terrain</p>
+              <p className="text-xs text-slate-500">Collecte de loyer &amp; signature</p>
             </div>
           </div>
           <button
@@ -122,7 +134,7 @@ export default function PaymentModal({ isOpen, onClose, client, onProceedToSigna
           {/* Fiche locataire résumée */}
           <div className="bg-slate-50/90 rounded-2xl border border-slate-200/90 p-3.5 space-y-2">
             <div className="flex items-center justify-between text-sm">
-              <span className="text-slate-500 text-xs">Locataire</span>
+              <span className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Locataire</span>
               <span className="font-bold text-slate-900">{lastName} {firstName}</span>
             </div>
             <div className="flex items-center justify-between text-xs">
@@ -130,7 +142,7 @@ export default function PaymentModal({ isOpen, onClose, client, onProceedToSigna
               <span className="font-medium text-slate-700 text-right max-w-[65%] truncate" title={property}>{property}</span>
             </div>
             <div className="flex items-center justify-between pt-2 border-t border-slate-200">
-              <span className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Loyer contractuel dû</span>
+              <span className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Loyer dû</span>
               <span className={`text-base font-extrabold ${remaining > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
                 {formatXOF(remaining, { compact: false })}
               </span>
@@ -154,7 +166,7 @@ export default function PaymentModal({ isOpen, onClose, client, onProceedToSigna
                 <span className="text-amber-900 font-black">+{formatXOF(pendingAmount, { compact: false })}</span>
               </div>
               <p className="text-[11px] text-amber-800 leading-tight">
-                Transmis à la comptabilité &bull; Reste suggéré à percevoir : <strong className="text-slate-900">{formatXOF(netCollectible)}</strong>
+                Transmis à la comptabilité &bull; Reste suggéré : <strong className="text-slate-900">{formatXOF(netCollectible)}</strong>
               </p>
             </div>
           )}
@@ -167,7 +179,7 @@ export default function PaymentModal({ isOpen, onClose, client, onProceedToSigna
                   <i className="fas fa-wrench text-amber-600"></i>
                   Réparation imputée au loyer
                 </span>
-                <span className="text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200">
+                <span className="text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200 font-bold">
                   -{formatXOF(repairDeduction, { compact: false })}
                 </span>
               </div>
@@ -181,72 +193,44 @@ export default function PaymentModal({ isOpen, onClose, client, onProceedToSigna
             </div>
           )}
 
-          {/* Saisie montant avec touches rapides */}
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className={LABEL_CLS}>
-                Montant encaissé (XOF) <span className="text-rose-500">*</span>
-              </label>
-            </div>
-
-            <div className="relative">
-              <input
-                type="number"
-                inputMode="numeric"
-                min="0"
-                step="1000"
-                value={amount}
-                onChange={e => {
-                  const val = e.target.value;
-                  setAmount(val);
-                  setValidationError('');
-                }}
-                className={`${INPUT_CLS} text-xl font-black text-center text-slate-900 tracking-wide`}
-              />
-            </div>
-
-            {/* Raccourcis rapides pour écran tactile smartphone */}
-            {remaining > 0 && (
-              <div className="flex items-center gap-1.5 mt-2 overflow-x-auto pb-1">
-                {repairDeduction > 0 && netCollectible > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => { setAmount(String(netCollectible)); setValidationError(''); }}
-                    className="px-3 py-1.5 text-xs font-bold bg-amber-500 text-white shadow-sm rounded-xl hover:bg-amber-600 active:scale-95 transition whitespace-nowrap"
-                  >
-                    <i className="fas fa-wrench text-[10px] mr-1"></i> Loyer net ({formatXOF(netCollectible)})
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={() => { setAmount(String(remaining)); setValidationError(''); }}
-                  className="px-3 py-1.5 text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl hover:bg-emerald-100 active:scale-95 transition whitespace-nowrap"
-                >
-                  <i className="fas fa-check-double text-[10px] mr-1"></i> Tout solder ({formatXOF(remaining)})
-                </button>
-                {remaining >= 20000 && (
-                  <button
-                    type="button"
-                    onClick={() => { setAmount(String(Math.round(remaining / 2))); setValidationError(''); }}
-                    className="px-3 py-1.5 text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200 rounded-xl hover:bg-slate-200 active:scale-95 transition whitespace-nowrap"
-                  >
-                    50% ({formatXOF(Math.round(remaining / 2))})
-                  </button>
-                )}
-              </div>
-            )}
-
-            {numericAmount > 0 && numericAmount < remaining && (
-              <p className="text-xs text-amber-600 mt-1.5 flex items-center gap-1 font-medium">
-                <i className="fas fa-info-circle"></i>
-                Paiement partiel : reste {formatXOF(remaining - numericAmount, { compact: false })} après validation.
-              </p>
-            )}
-          </div>
+          {/* Saisie montant avec MoneyInput standardisé et raccourcis rapides */}
+          <FormField
+            label="Montant encaissé"
+            required
+            error={validationError && !amount ? validationError : ''}
+            hint={
+              numericAmount > 0 ? (
+                calculatedBalanceAfter > 0 ? (
+                  <span className="text-amber-600 font-medium">
+                    Paiement partiel : solde restant de <strong>{formatXOF(calculatedBalanceAfter)}</strong> après cette opération.
+                  </span>
+                ) : (
+                  <span className="text-emerald-600 font-bold">
+                    Paiement intégral : solde locataire entièrement apuré (0 FCFA).
+                  </span>
+                )
+              ) : 'Saisissez le montant perçu ou utilisez un raccourci.'
+            }
+          >
+            <MoneyInput
+              value={amount}
+              onChange={(e, num) => {
+                const val = typeof num === 'number' ? num : Number(e?.target?.value) || 0;
+                setAmount(val);
+                setValidationError('');
+              }}
+              presets={presets}
+              hasError={Boolean(validationError && !amount)}
+              size="lg"
+              placeholder="0"
+              currency="FCFA"
+              autoFocus
+            />
+          </FormField>
 
           {/* Mode de paiement tactile en tuiles */}
           <div>
-            <label className={LABEL_CLS}>
+            <label className="block text-xs uppercase tracking-wider font-bold text-slate-600 mb-1.5">
               Mode de paiement <span className="text-rose-500">*</span>
             </label>
             <div className="grid grid-cols-2 gap-2.5">
@@ -257,9 +241,9 @@ export default function PaymentModal({ isOpen, onClose, client, onProceedToSigna
                     key={m.id}
                     type="button"
                     onClick={() => { setMethod(m.id); setValidationError(''); }}
-                    className={`flex items-center gap-2.5 p-3 rounded-2xl border text-left transition-all active:scale-95 ${
+                    className={`flex items-center gap-2.5 p-3 rounded-2xl border text-left transition-all active:scale-95 cursor-pointer ${
                       isSelected
-                        ? 'bg-primary/10 border-primary text-primary ring-2 ring-primary/20 shadow-sm'
+                        ? 'bg-primary/10 border-primary text-primary ring-2 ring-primary/20 shadow-xs'
                         : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50'
                     }`}
                   >
@@ -274,7 +258,7 @@ export default function PaymentModal({ isOpen, onClose, client, onProceedToSigna
                 );
               })}
             </div>
-            {validationError ? (
+            {validationError && !method ? (
               <p className="text-xs text-rose-600 mt-2 flex items-center gap-1 font-semibold">
                 <i className="fas fa-exclamation-circle"></i> {validationError}
               </p>
@@ -282,18 +266,15 @@ export default function PaymentModal({ isOpen, onClose, client, onProceedToSigna
           </div>
 
           {/* Référence ou Note optionnelle */}
-          <div>
-            <label className={LABEL_CLS}>
-              Référence / Reçu <span className="text-[11px] text-slate-400 font-normal lowercase">(optionnel)</span>
-            </label>
+          <FormField label="Référence / Reçu" optional hint="Ex: Wave Ref #89324 ou N° Chèque">
             <input
               type="text"
               value={reference}
               onChange={e => setReference(e.target.value)}
               placeholder="Ex : Wave Ref #89324"
-              className={INPUT_CLS}
+              className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
             />
-          </div>
+          </FormField>
 
         </div>
 

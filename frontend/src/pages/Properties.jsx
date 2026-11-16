@@ -8,6 +8,7 @@ import { useConfirm } from '../components/ConfirmContext';
 import StatsCard from '../components/StatsCard';
 import Modal from '../components/Modal';
 import TableSkeleton from '../components/ui/TableSkeleton';
+import { FormField, MoneyInput, FormSection } from '../components/ui/forms';
 import { formatXOF, formatStatus } from '../utils/formatters';
 import { exportToExcel, exportToPDF } from '../utils/exportUtils';
 
@@ -539,7 +540,7 @@ export default function Properties() {
           subtitle="Caractéristiques, valorisation locative et rattachement au propriétaire"
           icon="fa-building"
           onClose={() => setShowModal(false)}
-          maxWidth="680px"
+          maxWidth="720px"
         >
           {formError && (
             <div className="bg-rose-50 border border-rose-200 text-rose-700 p-3.5 rounded-xl text-sm mb-5 flex items-center gap-2 font-medium">
@@ -547,314 +548,164 @@ export default function Properties() {
               <span>{formError}</span>
             </div>
           )}
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {/* 1. Identification & Localisation */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="name" className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
-                  Nom / Désignation du bien <span className="text-rose-600">*</span>
-                </label>
-                <input
-                  id="name"
-                  type="text"
-                  required
-                  placeholder="Ex : Villa Cocody Ambassades"
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
-                />
-              </div>
-              <div>
-                <label htmlFor="type" className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
-                  Type de bien
-                </label>
-                <select
-                  id="type"
-                  value={form.type}
-                  onChange={(e) => setForm({ ...form, type: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-medium text-slate-900 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer"
-                >
-                  <option value="appartement">Appartement</option>
-                  <option value="maison">Maison / Villa</option>
-                  <option value="terrain">Terrain</option>
-                  <option value="commercial">Local Commercial / Bureau</option>
-                </select>
-              </div>
-            </div>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Section 1 : Identité & Typologie */}
+            <FormSection
+              icon="fa-tag"
+              title="1. Identité & Typologie"
+              subtitle="Désignation, code unique et statut d'occupation du bien"
+            >
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FormField label="Nom / Désignation du bien" required id="name">
+                  <input
+                    id="name"
+                    type="text"
+                    required
+                    placeholder="Ex : Villa Cocody Ambassades"
+                    value={form.name}
+                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                    className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-semibold text-slate-900 placeholder-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+                  />
+                </FormField>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="reference_code" className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
-                  Code Référence (Unique)
-                </label>
-                <input
-                  id="reference_code"
-                  type="text"
-                  placeholder="Auto-généré si vide (ex: BIEN-001)"
-                  value={form.reference_code}
-                  onChange={(e) => setForm({ ...form, reference_code: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-mono text-slate-900 placeholder-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
-                />
-              </div>
-              <div>
-                <label htmlFor="zone" className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
-                  Zone géographique
-                </label>
-                <input
-                  id="zone"
-                  type="text"
-                  placeholder="Ex : Cocody Riviera, Marcory Zone 4"
-                  value={form.zone}
-                  onChange={(e) => setForm({ ...form, zone: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label htmlFor="address" className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
-                Adresse géographique <span className="text-rose-600">*</span>
-              </label>
-              <input
-                id="address"
-                type="text"
-                required
-                placeholder="Ex : Cocody Riviera 3, Rue des Jardins, Lot 42"
-                value={form.address}
-                onChange={(e) => setForm({ ...form, address: e.target.value })}
-                className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
-              />
-            </div>
-
-            {/* 2. Données Financières & Techniques */}
-            <div className="bg-slate-50/90 p-4 rounded-2xl border border-slate-200/90 space-y-4">
-              <div className="flex items-center gap-2 border-b border-slate-200/80 pb-2">
-                <div className="w-7 h-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                  <i className="fas fa-coins text-xs"></i>
-                </div>
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800">
-                  Valorisation & Caractéristiques Physiques
-                </h4>
+                <FormField label="Type de bien" id="type">
+                  <select
+                    id="type"
+                    value={form.type}
+                    onChange={(e) => setForm({ ...form, type: e.target.value })}
+                    className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-semibold text-slate-900 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer"
+                  >
+                    <option value="appartement">Appartement</option>
+                    <option value="maison">Maison / Villa</option>
+                    <option value="terrain">Terrain</option>
+                    <option value="commercial">Local Commercial / Bureau</option>
+                  </select>
+                </FormField>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="rent" className="block text-xs font-semibold text-slate-700 mb-1.5">
-                    Loyer mensuel (F CFA)
-                  </label>
+                <FormField label="Code Référence (Unique)" optional id="reference_code" hint="Auto-généré si vide (ex: BIEN-001)">
                   <input
-                    id="rent"
-                    type="number"
-                    placeholder="Ex : 250000"
-                    value={form.rent}
-                    onChange={(e) => setForm({ ...form, rent: e.target.value })}
-                    className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-bold text-emerald-700 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+                    id="reference_code"
+                    type="text"
+                    placeholder="Ex : BIEN-042"
+                    value={form.reference_code}
+                    onChange={(e) => setForm({ ...form, reference_code: e.target.value })}
+                    className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-mono text-slate-900 placeholder-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
                   />
-                </div>
-                <div>
-                  <label htmlFor="value" className="block text-xs font-semibold text-slate-700 mb-1.5">
-                    Valeur estimée du bien (F CFA)
-                  </label>
+                </FormField>
+
+                <FormField label="Statut d'occupation" id="status">
+                  <select
+                    id="status"
+                    value={form.status}
+                    onChange={(e) => setForm({ ...form, status: e.target.value })}
+                    className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-semibold text-slate-900 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer"
+                  >
+                    <option value="vacant">Vacant (Disponible à la location)</option>
+                    <option value="loue">Loué (Occupé par un locataire)</option>
+                    <option value="en_renovation">En rénovation / Travaux</option>
+                    <option value="vendu">Vendu</option>
+                  </select>
+                </FormField>
+              </div>
+            </FormSection>
+
+            {/* Section 2 : Localisation & Niveaux */}
+            <FormSection
+              icon="fa-location-dot"
+              title="2. Localisation & Niveaux"
+              subtitle="Adresse, zone, situation officielle par étage et caractéristiques physiques"
+            >
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FormField label="Zone géographique" optional id="zone" hint="Commune ou quartier d'Abidjan">
                   <input
-                    id="value"
-                    type="number"
-                    placeholder="Ex : 45000000"
-                    value={form.value}
-                    onChange={(e) => setForm({ ...form, value: e.target.value })}
-                    className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-medium text-slate-900 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+                    id="zone"
+                    type="text"
+                    placeholder="Ex : Cocody Riviera, Marcory Zone 4"
+                    value={form.zone}
+                    onChange={(e) => setForm({ ...form, zone: e.target.value })}
+                    className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
                   />
-                </div>
-                <div>
-                  <label htmlFor="area" className="block text-xs font-semibold text-slate-700 mb-1.5">Surface (m²)</label>
+                </FormField>
+
+                <FormField label="Adresse géographique" required id="address">
+                  <input
+                    id="address"
+                    type="text"
+                    required
+                    placeholder="Ex : Rue des Jardins, Lot 42"
+                    value={form.address}
+                    onChange={(e) => setForm({ ...form, address: e.target.value })}
+                    className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+                  />
+                </FormField>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FormField label="Étage / Niveau (Situation officielle)" optional id="floor_level" hint="Pour les tableaux de synthèse propriétaires">
+                  <input
+                    id="floor_level"
+                    type="text"
+                    placeholder="Ex : 3ème ETAGE, 2ème ETAGE, RDC"
+                    value={form.floor_level}
+                    onChange={(e) => setForm({ ...form, floor_level: e.target.value })}
+                    className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all uppercase"
+                  />
+                </FormField>
+
+                <FormField label="Type d'unité / logement" optional id="unit_type" hint="Ex : STUDIO 1 BALCON, APPARTEMENT 3P">
+                  <input
+                    id="unit_type"
+                    type="text"
+                    placeholder="Ex : STUDIO 1 BALCON, MAGASIN, 4 PIECES"
+                    value={form.unit_type}
+                    onChange={(e) => setForm({ ...form, unit_type: e.target.value })}
+                    className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all uppercase"
+                  />
+                </FormField>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField label="Surface (m²)" optional id="area">
                   <input
                     id="area"
                     type="number"
+                    min="0"
                     placeholder="Ex : 120"
                     value={form.area}
                     onChange={(e) => setForm({ ...form, area: e.target.value })}
                     className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
                   />
-                </div>
-                <div>
-                  <label htmlFor="rooms" className="block text-xs font-semibold text-slate-700 mb-1.5">Nombre de pièces</label>
+                </FormField>
+
+                <FormField label="Nombre de pièces" optional id="rooms">
                   <input
                     id="rooms"
                     type="number"
+                    min="1"
                     placeholder="Ex : 4"
                     value={form.rooms}
                     onChange={(e) => setForm({ ...form, rooms: e.target.value })}
                     className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
                   />
-                </div>
-                <div>
-                  <label htmlFor="floor_level" className="block text-xs font-semibold text-slate-700 mb-1.5">
-                    Étage / Niveau (Situation officielle)
-                  </label>
-                  <input
-                    id="floor_level"
-                    type="text"
-                    placeholder="Ex : 3ème ETAGE, 2ème ETAGE, REZ-DE-CHAUSSEE"
-                    value={form.floor_level}
-                    onChange={(e) => setForm({ ...form, floor_level: e.target.value })}
-                    className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all uppercase"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="unit_type" className="block text-xs font-semibold text-slate-700 mb-1.5">
-                    Type de maison / d'unité
-                  </label>
-                  <input
-                    id="unit_type"
-                    type="text"
-                    placeholder="Ex : STUDIO 1 BALCON, STUDIO SIMPLE, MAGASIN"
-                    value={form.unit_type}
-                    onChange={(e) => setForm({ ...form, unit_type: e.target.value })}
-                    className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all uppercase"
-                  />
-                </div>
+                </FormField>
               </div>
-            </div>
+            </FormSection>
 
-            {/* 3. Paramètres de Commission Agence sur ce Bien */}
-            <div className="p-4 bg-slate-50/80 border border-slate-200 rounded-2xl space-y-3">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
-                    <i className="fas fa-hand-holding-dollar text-primary"></i>
-                    Commission Agence sur ce bien
-                  </label>
-                  <p className="text-[11px] text-slate-500 mt-0.5">
-                    Indiquez le pourcentage (%) ou le montant fixe (FCFA) gagné par l'agence sur ce bien.
-                  </p>
-                </div>
-                <div className="inline-flex p-1 bg-white border border-slate-200 rounded-xl shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => setForm({ ...form, commission_type: 'percentage' })}
-                    className={`px-3 py-1 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
-                      form.commission_type === 'percentage'
-                        ? 'bg-primary text-white shadow-xs'
-                        : 'text-slate-600 hover:text-slate-900'
-                    }`}
-                  >
-                    <i className="fas fa-percent text-[10px]"></i>
-                    <span>Pourcentage (%)</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setForm({ ...form, commission_type: 'fixed' })}
-                    className={`px-3 py-1 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
-                      form.commission_type === 'fixed'
-                        ? 'bg-primary text-white shadow-xs'
-                        : 'text-slate-600 hover:text-slate-900'
-                    }`}
-                  >
-                    <i className="fas fa-money-bill-wave text-[10px]"></i>
-                    <span>Prix Fixe (FCFA)</span>
-                  </button>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center pt-1">
-                {form.commission_type === 'percentage' ? (
-                  <div>
-                    <label htmlFor="commission_rate" className="block text-xs font-semibold text-slate-700 mb-1">
-                      Taux de commission (%)
-                    </label>
-                    <div className="relative">
-                      <input
-                        id="commission_rate"
-                        type="number"
-                        step="0.5"
-                        min="0"
-                        max="100"
-                        placeholder="Ex : 10"
-                        value={form.commission_rate}
-                        onChange={(e) => setForm({ ...form, commission_rate: e.target.value })}
-                        className="w-full pl-3.5 pr-8 py-2 bg-white border border-slate-300 rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
-                      />
-                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">%</span>
-                    </div>
-                  </div>
-                ) : (
-                  <div>
-                    <label htmlFor="commission_fixed_amount" className="block text-xs font-semibold text-slate-700 mb-1">
-                      Montant fixe de commission (FCFA)
-                    </label>
-                    <div className="relative">
-                      <input
-                        id="commission_fixed_amount"
-                        type="number"
-                        step="500"
-                        min="0"
-                        placeholder="Ex : 25 000"
-                        value={form.commission_fixed_amount}
-                        onChange={(e) => setForm({ ...form, commission_fixed_amount: e.target.value })}
-                        className="w-full pl-3.5 pr-14 py-2 bg-white border border-slate-300 rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
-                      />
-                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">FCFA</span>
-                    </div>
-                  </div>
-                )}
-
-                {/* Estimation en direct selon le loyer saisi */}
-                <div className="p-3 bg-white border border-slate-200 rounded-xl text-xs">
-                  <div className="font-semibold text-slate-700 flex items-center gap-1.5 mb-1">
-                    <i className="fas fa-calculator text-primary"></i> Simulation sur loyer :
-                  </div>
-                  {parseFloat(form.rent) > 0 ? (
-                    (() => {
-                      const r = parseFloat(form.rent);
-                      const comm = form.commission_type === 'fixed'
-                        ? Math.min(r, parseFloat(form.commission_fixed_amount || 0))
-                        : Math.round((r * parseFloat(form.commission_rate || 0)) / 100);
-                      const net = Math.max(0, r - comm);
-                      return (
-                        <div className="space-y-0.5">
-                          <div className="text-slate-800">
-                            Commission agence : <strong className="text-emerald-700 font-extrabold">{formatXOF(comm)}</strong>
-                          </div>
-                          <div className="text-[11px] text-slate-500">
-                            Net propriétaire : <strong className="text-primary font-bold">{formatXOF(net)}</strong>
-                          </div>
-                        </div>
-                      );
-                    })()
-                  ) : (
-                    <span className="text-slate-400 italic">Saisissez un loyer mensuel ci-dessus pour visualiser le gain agence.</span>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* 4. Statut & Propriétaire */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="status" className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
-                  Statut d'occupation
-                </label>
-                <select
-                  id="status"
-                  value={form.status}
-                  onChange={(e) => setForm({ ...form, status: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-medium text-slate-900 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer"
-                >
-                  <option value="vacant">Vacant (Disponible)</option>
-                  <option value="loue">Loué (Occupé)</option>
-                  <option value="en_renovation">En rénovation</option>
-                  <option value="vendu">Vendu</option>
-                </select>
-              </div>
-              <div>
-                <label htmlFor="owner_id" className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
-                  Propriétaire bailleur <span className="text-rose-500">*</span>
-                </label>
+            {/* Section 3 : Conditions Financières & Propriétaire */}
+            <FormSection
+              icon="fa-coins"
+              title="3. Conditions Financières & Propriétaire"
+              subtitle="Rattachement bailleur, loyer mensuel, valeur et paramètres de commission"
+            >
+              <FormField label="Propriétaire bailleur" required id="owner_id">
                 <select
                   id="owner_id"
                   required
                   value={form.owner_id}
                   onChange={(e) => setForm({ ...form, owner_id: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-medium text-slate-900 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer"
+                  className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-semibold text-slate-900 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer"
                 >
                   <option value="">-- Sélectionner un propriétaire obligatoire --</option>
                   {owners.map(o => (
@@ -863,34 +714,150 @@ export default function Properties() {
                     </option>
                   ))}
                 </select>
+              </FormField>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FormField label="Loyer mensuel" id="rent" hint="Loyer facial hors charges">
+                  <MoneyInput
+                    id="rent"
+                    value={form.rent}
+                    onChange={(e, num) => setForm({ ...form, rent: (num ?? Number(e?.target?.value)) || 0 })}
+                    placeholder="Ex : 250 000"
+                    currency="FCFA"
+                  />
+                </FormField>
+
+                <FormField label="Valeur vénale estimée" optional id="value" hint="Valorisation du patrimoine">
+                  <MoneyInput
+                    id="value"
+                    value={form.value}
+                    onChange={(e, num) => setForm({ ...form, value: (num ?? Number(e?.target?.value)) || 0 })}
+                    placeholder="Ex : 45 000 000"
+                    currency="FCFA"
+                  />
+                </FormField>
               </div>
-            </div>
 
-            <div>
-              <label htmlFor="description" className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
-                Description & Équipements
-              </label>
-              <textarea
-                id="description"
-                rows="2"
-                placeholder="Détails complémentaires sur le bien..."
-                value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
-                className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
-              ></textarea>
-            </div>
+              {/* Commission agence avec bascule pourcentage / montant fixe */}
+              <div className="p-3.5 bg-white border border-slate-200 rounded-xl space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <span className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                      Commission Agence sur ce bien
+                    </span>
+                    <span className="text-[11px] text-slate-500">
+                      Pourcentage (%) ou honoraire fixe prélevé par mandat
+                    </span>
+                  </div>
+                  <div className="inline-flex p-1 bg-slate-100 rounded-xl shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setForm({ ...form, commission_type: 'percentage' })}
+                      className={`px-3 py-1 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                        form.commission_type === 'percentage'
+                          ? 'bg-primary text-white shadow-xs'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      <i className="fas fa-percent text-[10px]"></i>
+                      <span>Pourcentage (%)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setForm({ ...form, commission_type: 'fixed' })}
+                      className={`px-3 py-1 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                        form.commission_type === 'fixed'
+                          ? 'bg-primary text-white shadow-xs'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      <i className="fas fa-money-bill-wave text-[10px]"></i>
+                      <span>Montant Fixe</span>
+                    </button>
+                  </div>
+                </div>
 
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
+                  {form.commission_type === 'percentage' ? (
+                    <FormField label="Taux de commission (%)" id="commission_rate">
+                      <div className="relative">
+                        <input
+                          id="commission_rate"
+                          type="number"
+                          step="0.5"
+                          min="0"
+                          max="100"
+                          placeholder="Ex : 10"
+                          value={form.commission_rate}
+                          onChange={(e) => setForm({ ...form, commission_rate: e.target.value })}
+                          className="w-full pl-3.5 pr-8 py-2 bg-white border border-slate-300 rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+                        />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">%</span>
+                      </div>
+                    </FormField>
+                  ) : (
+                    <FormField label="Montant fixe de commission" id="commission_fixed_amount">
+                      <MoneyInput
+                        id="commission_fixed_amount"
+                        value={form.commission_fixed_amount}
+                        onChange={(e, num) => setForm({ ...form, commission_fixed_amount: (num ?? Number(e?.target?.value)) || 0 })}
+                        placeholder="Ex : 25 000"
+                        currency="FCFA"
+                      />
+                    </FormField>
+                  )}
+
+                  {/* Simulation en direct */}
+                  <div className="p-2.5 bg-slate-50 border border-slate-200/90 rounded-xl text-xs space-y-1">
+                    <div className="font-bold text-slate-700 flex items-center gap-1.5">
+                      <i className="fas fa-calculator text-primary"></i> Simulation mensuelle :
+                    </div>
+                    {parseFloat(form.rent) > 0 ? (
+                      (() => {
+                        const r = parseFloat(form.rent);
+                        const comm = form.commission_type === 'fixed'
+                          ? Math.min(r, parseFloat(form.commission_fixed_amount || 0))
+                          : Math.round((r * parseFloat(form.commission_rate || 0)) / 100);
+                        const net = Math.max(0, r - comm);
+                        return (
+                          <div>
+                            <div className="text-slate-700">Honoraires agence : <strong className="text-emerald-700 font-extrabold">{formatXOF(comm)}</strong></div>
+                            <div className="text-slate-500 text-[11px]">Net propriétaire : <strong className="text-primary font-bold">{formatXOF(net)}</strong></div>
+                          </div>
+                        );
+                      })()
+                    ) : (
+                      <span className="text-slate-400 italic text-[11px]">Indiquez un loyer pour calculer la commission.</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <FormField label="Description & Équipements" optional id="description">
+                <textarea
+                  id="description"
+                  rows="2"
+                  placeholder="Détails complémentaires, commodités, compteur CIE/SODECI..."
+                  value={form.description}
+                  onChange={(e) => setForm({ ...form, description: e.target.value })}
+                  className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+                ></textarea>
+              </FormField>
+            </FormSection>
+
+            {/* Footer boutons actions */}
             <div className="pt-4 flex justify-end gap-3 border-t border-slate-100">
               <button
                 type="button"
-                className="px-4 py-2.5 text-sm font-semibold text-slate-700 bg-white border border-slate-300 rounded-xl hover:bg-slate-50 transition-colors"
+                className="px-4 py-2.5 text-sm font-semibold text-slate-700 bg-white border border-slate-300 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer"
                 onClick={() => setShowModal(false)}
+                disabled={formSubmitting}
               >
                 Annuler
               </button>
               <button
                 type="submit"
-                className="px-5 py-2.5 text-sm font-bold text-white bg-primary rounded-xl hover:bg-primary-dark transition-colors shadow-sm shadow-primary/20 flex items-center justify-center gap-2 min-w-[140px]"
+                className="px-5 py-2.5 text-sm font-bold text-white bg-primary rounded-xl hover:bg-primary-dark transition-colors shadow-sm shadow-primary/20 flex items-center justify-center gap-2 min-w-[140px] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 disabled={formSubmitting}
               >
                 {formSubmitting ? (
@@ -901,7 +868,7 @@ export default function Properties() {
                 ) : (
                   <>
                     <i className={`fas ${editingProperty ? 'fa-save' : 'fa-check-circle'}`}></i>
-                    <span>{editingProperty ? 'Enregistrer' : 'Créer le bien'}</span>
+                    <span>{editingProperty ? 'Enregistrer les modifications' : 'Créer le bien'}</span>
                   </>
                 )}
               </button>

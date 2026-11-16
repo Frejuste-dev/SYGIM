@@ -2,12 +2,13 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { API } from '../api/services';
 import { useModalEscape } from '../hooks/useModalEscape';
 import { formatXOF } from '../utils/formatters';
+import { FormField, MoneyInput, FormSection } from './ui/forms';
 
 const PAYMENT_METHODS = [
   { id: 'bank_transfer', label: 'Virement bancaire', icon: 'fa-university' },
   { id: 'mobile_money',  label: 'Mobile Money (Wave/OM)', icon: 'fa-mobile-screen-button' },
   { id: 'cheque',        label: 'Chèque bancaire', icon: 'fa-money-check' },
-  { id: 'cash',          label: 'Espèces', icon: 'fa-money-bill-wave' },
+  { id: 'cash',          label: 'Espèces (Caisse)', icon: 'fa-money-bill-wave' },
 ];
 
 const PAYOUT_MODES = [
@@ -74,7 +75,7 @@ export default function OwnerPayoutModal({ isOpen, onClose, preselectedOwner = n
   // Calcul des montants de référence selon le propriétaire ou le bien choisi
   const financialMetrics = useMemo(() => {
     if (!selectedOwner) {
-      return { expectedRent: 0, collectedRent: 0, unpaidRent: 0, baseAmount: 0, commission: 0, netDue: 0 };
+      return { expectedRent: 0, collectedRent: 0, unpaidRent: 0, baseAmount: 0, commission: 0, netDue: 0, netUnpaidAdvance: 0 };
     }
 
     let expectedRent = 0;
@@ -91,7 +92,6 @@ export default function OwnerPayoutModal({ isOpen, onClose, preselectedOwner = n
     const unpaidRent = Math.max(0, expectedRent - collectedRent);
     const isPref = payoutMode === 'prefinancing';
 
-    // Si préfinancement ou si aucun loyer encaissé renseigné mais loyer attendu > 0, on se base sur le loyer attendu
     const baseAmount = isPref
       ? Math.max(expectedRent, collectedRent)
       : (collectedRent > 0 ? collectedRent : expectedRent);
@@ -154,7 +154,6 @@ export default function OwnerPayoutModal({ isOpen, onClose, preselectedOwner = n
     }
   };
 
-  // Pré-remplir automatiquement les retenues travaux/réparations actives du propriétaire ou du bien
   useEffect(() => {
     if (selectedProperty && selectedProperty.repairDeduction !== undefined) {
       setMaintenanceDeductions(Number(selectedProperty.repairDeduction || 0));
@@ -174,14 +173,21 @@ export default function OwnerPayoutModal({ isOpen, onClose, preselectedOwner = n
 
   if (!isOpen) return null;
 
+  const numericPaid = Number(amountPaid) || 0;
+  const isOverAvailable = payoutMode !== 'prefinancing' && financialMetrics.collectedRent > 0 && numericPaid > financialMetrics.netDue;
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!ownerId) {
       setError('Veuillez sélectionner un propriétaire.');
       return;
     }
-    if (!amountPaid || amountPaid <= 0) {
+    if (!numericPaid || numericPaid <= 0) {
       setError('Le montant à verser doit être supérieur à 0 FCFA.');
+      return;
+    }
+    if (isOverAvailable) {
+      setError('Le montant à verser dépasse le solde net disponible issu des encaissements locataires. Activez le mode Préfinancement pour effectuer une avance.');
       return;
     }
 
@@ -197,7 +203,7 @@ export default function OwnerPayoutModal({ isOpen, onClose, preselectedOwner = n
         total_collected: financialMetrics.collectedRent,
         commission_rate: parseFloat(commissionRate || 0),
         maintenance_deductions: parseFloat(maintenanceDeductions || 0),
-        amount_paid: parseFloat(amountPaid),
+        amount_paid: parseFloat(numericPaid),
         payment_method: paymentMethod,
         payout_mode: payoutMode,
         is_prefinanced: payoutMode === 'prefinancing',
@@ -221,7 +227,18 @@ export default function OwnerPayoutModal({ isOpen, onClose, preselectedOwner = n
     }
   };
 
-  const remainingAfterPayout = Math.max(0, financialMetrics.netDue - (parseFloat(amountPaid) || 0));
+  const remainingAfterPayout = Math.max(0, financialMetrics.netDue - numericPaid);
+
+  const presets = [];
+  if (financialMetrics.netDue > 0) {
+    presets.push({ label: 'Tout reverser (100%)', value: financialMetrics.netDue });
+    if (financialMetrics.netDue >= 50000) {
+      presets.push({ label: '50% Échelonné', value: Math.round(financialMetrics.netDue / 2) });
+    }
+  }
+  if (payoutMode === 'prefinancing' && financialMetrics.netUnpaidAdvance > 0 && financialMetrics.netUnpaidAdvance !== financialMetrics.netDue) {
+    presets.push({ label: 'Avance impayé seul', value: financialMetrics.netUnpaidAdvance });
+  }
 
   return (
     <div
@@ -232,12 +249,12 @@ export default function OwnerPayoutModal({ isOpen, onClose, preselectedOwner = n
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/70">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
-              <i className="fas fa-hand-holding-dollar text-lg"></i>
+            <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold">
+              <i className="fas fa-hand-holding-dollar text-base"></i>
             </div>
             <div>
-              <h2 className="text-lg font-bold text-slate-900">Enregistrer un paiement propriétaire</h2>
-              <p className="text-xs text-slate-500">Reversement de loyer, paiement échelonné ou préfinancement comptable</p>
+              <h2 className="text-lg font-bold text-slate-900 leading-tight">Reversement Propriétaire</h2>
+              <p className="text-xs text-slate-500">Paiement direct, tranche échelonnée ou avance de préfinancement</p>
             </div>
           </div>
           <button
@@ -245,30 +262,27 @@ export default function OwnerPayoutModal({ isOpen, onClose, preselectedOwner = n
             onClick={onClose}
             className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition-colors"
           >
-            <i className="fas fa-times"></i>
+            <i className="fas fa-times text-sm"></i>
           </button>
         </div>
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="custom-scrollbar p-6 space-y-5 overflow-y-auto flex-1">
           {error && (
-            <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-sm flex items-center gap-2">
-              <i className="fas fa-exclamation-circle"></i>
+            <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-xs font-semibold flex items-center gap-2">
+              <i className="fas fa-exclamation-circle text-rose-500 shrink-0"></i>
               <span>{error}</span>
             </div>
           )}
 
           {/* 1. Sélection Propriétaire & Bien */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
-                Propriétaire bénéficiaire <span className="text-rose-500">*</span>
-              </label>
+            <FormField label="Propriétaire bailleur" required>
               <select
                 value={ownerId}
                 onChange={(e) => handleOwnerChange(e.target.value)}
                 required
-                className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-medium text-slate-900 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-semibold text-slate-900 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
               >
                 <option value="">-- Sélectionner un propriétaire --</option>
                 {effectiveOwners.map(o => (
@@ -277,12 +291,9 @@ export default function OwnerPayoutModal({ isOpen, onClose, preselectedOwner = n
                   </option>
                 ))}
               </select>
-            </div>
+            </FormField>
 
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
-                Périmètre des biens
-              </label>
+            <FormField label="Périmètre des biens" optional>
               <select
                 value={propertyId}
                 onChange={(e) => setPropertyId(e.target.value)}
@@ -295,63 +306,74 @@ export default function OwnerPayoutModal({ isOpen, onClose, preselectedOwner = n
                   </option>
                 ))}
               </select>
-            </div>
+            </FormField>
           </div>
 
-          {/* 2. Alerte & Synthèse Locative (Détection Impayé / Préfinancement) */}
+          {/* 2. Synthèse & Calcul Mathématique Transparent */}
           {selectedOwner && (
-            <div className="bg-slate-50 rounded-2xl border border-slate-200 p-4 space-y-3">
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-2.5">
-                <div className="text-xs font-bold text-slate-700 flex items-center gap-2">
-                  <i className="fas fa-building text-primary"></i>
-                  <span>Patrimoine : {ownerProperties.length} bien(s)</span>
-                </div>
-                <div className="flex items-center gap-2 text-xs">
-                  <span className="px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 font-semibold border border-indigo-200">
-                    Préférence : {PAYMENT_METHODS.find(m => m.id === selectedOwner.preferred_payment_method)?.label || 'Virement'}
-                  </span>
-                  <span className="px-2.5 py-0.5 rounded-full bg-slate-200/70 text-slate-700 font-semibold">
-                    Jour souhaité : le {selectedOwner.preferred_payout_day || '5'} du mois
-                  </span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-3 text-center">
+            <FormSection
+              icon="fa-calculator"
+              title="Décomposition Financière & Net à Reverser"
+              subtitle="Calcul automatique : Loyers bruts encaissés - Commission agence - Retenues travaux"
+            >
+              <div className="grid grid-cols-3 gap-2.5 text-center">
                 <div className="bg-white p-2.5 rounded-xl border border-slate-200/80">
-                  <div className="text-[11px] text-slate-500 font-medium">Loyers attendus</div>
-                  <div className="text-sm font-bold text-slate-900 mt-0.5">{formatXOF(financialMetrics.expectedRent)}</div>
+                  <div className="text-[10px] uppercase font-bold text-slate-400">Loyers attendus</div>
+                  <div className="text-xs font-bold text-slate-800 mt-0.5">{formatXOF(financialMetrics.expectedRent)}</div>
                 </div>
                 <div className="bg-white p-2.5 rounded-xl border border-slate-200/80">
-                  <div className="text-[11px] text-slate-500 font-medium">Encaissé (Locataires)</div>
-                  <div className="text-sm font-bold text-emerald-600 mt-0.5">{formatXOF(financialMetrics.collectedRent)}</div>
+                  <div className="text-[10px] uppercase font-bold text-emerald-600">Encaissé locataires</div>
+                  <div className="text-xs font-bold text-emerald-700 mt-0.5">{formatXOF(financialMetrics.collectedRent)}</div>
                 </div>
                 <div className="bg-white p-2.5 rounded-xl border border-slate-200/80">
-                  <div className="text-[11px] text-slate-500 font-medium">Impayés Locataires</div>
-                  <div className={`text-sm font-bold mt-0.5 ${financialMetrics.unpaidRent > 0 ? 'text-rose-600' : 'text-slate-400'}`}>
+                  <div className="text-[10px] uppercase font-bold text-rose-500">Impayés locataires</div>
+                  <div className={`text-xs font-bold mt-0.5 ${financialMetrics.unpaidRent > 0 ? 'text-rose-600' : 'text-slate-400'}`}>
                     {formatXOF(financialMetrics.unpaidRent)}
                   </div>
                 </div>
               </div>
 
+              {/* Barre de calcul transparente */}
+              <div className="bg-white p-3 rounded-xl border border-slate-200 text-xs space-y-1.5">
+                <div className="flex justify-between text-slate-600">
+                  <span>Assiette de calcul ({payoutMode === 'prefinancing' ? 'Loyers garantis' : 'Encaissés'}) :</span>
+                  <span className="font-semibold">{formatXOF(financialMetrics.baseAmount)}</span>
+                </div>
+                <div className="flex justify-between text-slate-600">
+                  <span>Commission agence ({commissionRate}%) :</span>
+                  <span className="font-semibold text-rose-600">-{formatXOF(financialMetrics.commission)}</span>
+                </div>
+                {maintenanceDeductions > 0 && (
+                  <div className="flex justify-between text-slate-600">
+                    <span>Retenue travaux / réparations :</span>
+                    <span className="font-semibold text-rose-600">-{formatXOF(maintenanceDeductions)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between pt-1.5 border-t border-slate-200 font-extrabold text-sm text-slate-900">
+                  <span>Solde net disponible à reverser :</span>
+                  <span className="text-emerald-700">{formatXOF(financialMetrics.netDue)}</span>
+                </div>
+              </div>
+
               {financialMetrics.unpaidRent > 0 && payoutMode !== 'prefinancing' && (
-                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                  <div className="text-xs text-amber-900">
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs">
+                  <div className="text-amber-900">
                     <i className="fas fa-triangle-exclamation text-amber-600 mr-1.5"></i>
-                    <strong>Retard locataire détecté ({formatXOF(financialMetrics.unpaidRent)}) :</strong> Vous pouvez effectuer un <strong>Préfinancement</strong> pour régler le propriétaire sans attendre le locataire.
+                    <strong>Retard locataire ({formatXOF(financialMetrics.unpaidRent)}) :</strong> Activez le mode <strong>Préfinancement</strong> si vous souhaitez faire l'avance de trésorerie au bailleur.
                   </div>
                   <button
                     type="button"
                     onClick={() => setPayoutMode('prefinancing')}
-                    className="shrink-0 px-3 py-1.5 bg-amber-600 text-white text-xs font-bold rounded-lg hover:bg-amber-700 transition"
+                    className="shrink-0 px-3 py-1 bg-amber-600 text-white font-bold rounded-lg hover:bg-amber-700 transition"
                   >
                     Activer Préfinancement
                   </button>
                 </div>
               )}
-            </div>
+            </FormSection>
           )}
 
-          {/* 3. Choix de la Méthode de Règlement (Intégral, Échelonné, Préfinancement) */}
+          {/* 3. Choix de la Méthode de Règlement */}
           <div>
             <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
               Méthode de règlement <span className="text-rose-500">*</span>
@@ -364,7 +386,7 @@ export default function OwnerPayoutModal({ isOpen, onClose, preselectedOwner = n
                     key={m.id}
                     type="button"
                     onClick={() => setPayoutMode(m.id)}
-                    className={`p-3 rounded-xl border text-left transition-all ${
+                    className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
                       active
                         ? m.id === 'prefinancing'
                           ? 'bg-amber-50 border-amber-500 ring-2 ring-amber-500/20 text-amber-900'
@@ -385,10 +407,7 @@ export default function OwnerPayoutModal({ isOpen, onClose, preselectedOwner = n
 
           {/* 4. Moyen de Paiement & Dates/Période */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
-                Moyen de paiement choisi <span className="text-rose-500">*</span>
-              </label>
+            <FormField label="Moyen de paiement" required>
               <select
                 value={paymentMethod}
                 onChange={(e) => setPaymentMethod(e.target.value)}
@@ -398,46 +417,40 @@ export default function OwnerPayoutModal({ isOpen, onClose, preselectedOwner = n
                   <option key={pm.id} value={pm.id}>{pm.label}</option>
                 ))}
               </select>
-            </div>
+            </FormField>
 
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
-                Date de versement / échéance
-              </label>
+            <FormField label="Date de versement effectif">
               <input
                 type="date"
                 value={scheduledDate}
                 onChange={(e) => setScheduledDate(e.target.value)}
                 className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-primary"
               />
-            </div>
+            </FormField>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Début de période</label>
+            <FormField label="Début de période">
               <input
                 type="date"
                 value={periodStart}
                 onChange={(e) => setPeriodStart(e.target.value)}
                 className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-sm text-slate-900"
               />
-            </div>
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Fin de période</label>
+            </FormField>
+            <FormField label="Fin de période">
               <input
                 type="date"
                 value={periodEnd}
                 onChange={(e) => setPeriodEnd(e.target.value)}
                 className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-sm text-slate-900"
               />
-            </div>
+            </FormField>
           </div>
 
-          {/* 5. Calcul Commission & Montant versé */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Commission Agence (%)</label>
+          {/* 5. Ajustements & Saisie Montant */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1 items-start">
+            <FormField label="Taux Commission (%)">
               <input
                 type="number"
                 min="0"
@@ -445,119 +458,39 @@ export default function OwnerPayoutModal({ isOpen, onClose, preselectedOwner = n
                 step="0.5"
                 value={commissionRate}
                 onChange={(e) => setCommissionRate(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-semibold text-slate-900"
+                className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-bold text-slate-900"
               />
-              <span className="text-[11px] text-slate-400">Retenue : {formatXOF(financialMetrics.commission)}</span>
-            </div>
+            </FormField>
 
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Retenue Travaux / Frais</label>
-              <input
-                type="number"
-                min="0"
-                step="1000"
+            <FormField label="Retenue travaux / frais" optional>
+              <MoneyInput
                 value={maintenanceDeductions}
-                onChange={(e) => setMaintenanceDeductions(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-semibold text-slate-900"
+                onChange={(e, num) => setMaintenanceDeductions((num ?? Number(e?.target?.value)) || 0)}
+                placeholder="0"
+                currency="FCFA"
               />
-              <span className="text-[11px] text-slate-400">Net à reverser : {formatXOF(financialMetrics.netDue)}</span>
-            </div>
+            </FormField>
 
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-emerald-700 mb-1.5">
-                Montant versé (XOF) <span className="text-rose-500">*</span>
-              </label>
-              <input
-                type="number"
-                min="0"
-                step="1000"
-                required
+            <FormField
+              label="Montant versé"
+              required
+              error={isOverAvailable ? 'Dépasse le solde disponible' : ''}
+              hint={remainingAfterPayout > 0 ? `Solde restant dû : ${formatXOF(remainingAfterPayout)}` : 'Solde intégral'}
+            >
+              <MoneyInput
                 value={amountPaid}
-                onChange={(e) => setAmountPaid(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-emerald-50/50 border-2 border-emerald-500 rounded-xl text-base font-black text-slate-900"
+                onChange={(e, num) => setAmountPaid((num ?? Number(e?.target?.value)) || 0)}
+                presets={presets}
+                hasError={isOverAvailable}
+                currency="FCFA"
+                size="md"
               />
-              <div className="flex flex-wrap gap-1.5 mt-1.5">
-                {payoutMode === 'prefinancing' ? (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => setAmountPaid(financialMetrics.netDue)}
-                      className={`text-[10px] px-2 py-1 rounded font-bold transition ${Number(amountPaid) === Number(financialMetrics.netDue) ? 'bg-amber-600 text-white shadow-xs' : 'bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200'}`}
-                      title="Avancer l'intégralité du loyer net garanti du mois"
-                    >
-                      <i className="fas fa-bolt mr-1 text-[9px]"></i>
-                      Tout le mois ({formatXOF(financialMetrics.netDue)})
-                    </button>
-                    {financialMetrics.unpaidRent > 0 && financialMetrics.collectedRent > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => setAmountPaid(financialMetrics.netUnpaidAdvance)}
-                        className={`text-[10px] px-2 py-1 rounded font-bold transition ${Number(amountPaid) === Number(financialMetrics.netUnpaidAdvance) ? 'bg-primary text-white shadow-xs' : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200'}`}
-                        title="Avancer uniquement le net de l'impayé locataire restant"
-                      >
-                        <i className="fas fa-hourglass-half mr-1 text-[9px]"></i>
-                        Impayé seul ({formatXOF(financialMetrics.netUnpaidAdvance)})
-                      </button>
-                    )}
-                  </>
-                ) : (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => setAmountPaid(financialMetrics.netDue)}
-                      className="text-[10px] px-2 py-0.5 bg-slate-100 hover:bg-slate-200 rounded font-semibold text-slate-700"
-                    >
-                      100% ({formatXOF(financialMetrics.netDue)})
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => { setPayoutMode('installment'); setAmountPaid(Math.round(financialMetrics.netDue / 2)); }}
-                      className="text-[10px] px-2 py-0.5 bg-slate-100 hover:bg-slate-200 rounded font-semibold text-slate-700"
-                    >
-                      50% Échelonné
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
+            </FormField>
           </div>
-
-          {payoutMode === 'prefinancing' && (
-            <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 space-y-1">
-              <div className="flex items-center justify-between font-bold">
-                <span className="flex items-center gap-1.5">
-                  <i className="fas fa-bolt text-amber-600"></i>
-                  Avance de Trésorerie Propriétaire :
-                </span>
-                <span className="font-black text-amber-900">Total garanti : {formatXOF(financialMetrics.netDue)}</span>
-              </div>
-              <p className="text-[11px] text-amber-800 leading-relaxed">
-                {financialMetrics.collectedRent > 0 ? (
-                  <>
-                    Locataire a payé en caisse : <strong className="text-emerald-700">{formatXOF(financialMetrics.collectedRent)}</strong> (part nette bailleur : {formatXOF(Math.round(financialMetrics.collectedRent * (1 - commissionRate / 100)))}).<br />
-                    Impayé restant à recouvrer : <strong className="text-rose-700">{formatXOF(financialMetrics.unpaidRent)}</strong> ➔ Avance nette sur l'impayé : <strong className="text-slate-900 font-extrabold">{formatXOF(financialMetrics.netUnpaidAdvance)}</strong>.
-                  </>
-                ) : (
-                  <>Le locataire n'a pas encore payé. L'agence avance la totalité du loyer net mensuel au bailleur ({formatXOF(financialMetrics.netDue)}).</>
-                )}
-              </p>
-            </div>
-          )}
-
-          {remainingAfterPayout > 0 && payoutMode === 'installment' && (
-            <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-800 flex items-center justify-between">
-              <span>
-                <i className="fas fa-clock mr-1.5"></i>
-                <strong>Paiement échelonné :</strong> Solde restant à verser au propriétaire après cette tranche :
-              </span>
-              <span className="font-black text-sm">{formatXOF(remainingAfterPayout)}</span>
-            </div>
-          )}
 
           {/* 6. Référence & Notes */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Référence Virement / Reçu</label>
+            <FormField label="Référence Virement / Reçu" optional hint="Ex: VIR-SGBCI-88310 ou Wave #9921">
               <input
                 type="text"
                 placeholder="Ex: VIR-SGBCI-88310 ou Wave #9921"
@@ -565,9 +498,8 @@ export default function OwnerPayoutModal({ isOpen, onClose, preselectedOwner = n
                 onChange={(e) => setReference(e.target.value)}
                 className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-sm text-slate-900"
               />
-            </div>
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Observation comptable</label>
+            </FormField>
+            <FormField label="Observation comptable" optional hint="Ex: 1ère tranche / Avance loyer nov.">
               <input
                 type="text"
                 placeholder="Ex: 1ère tranche échelonnée / Préfinancement loyer nov."
@@ -575,7 +507,7 @@ export default function OwnerPayoutModal({ isOpen, onClose, preselectedOwner = n
                 onChange={(e) => setNotes(e.target.value)}
                 className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-sm text-slate-900"
               />
-            </div>
+            </FormField>
           </div>
 
           {/* Footer */}
@@ -583,14 +515,15 @@ export default function OwnerPayoutModal({ isOpen, onClose, preselectedOwner = n
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2.5 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-xl hover:bg-slate-50"
+              disabled={submitting}
+              className="px-4 py-2.5 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-xl hover:bg-slate-50 disabled:opacity-50"
             >
               Annuler
             </button>
             <button
               type="submit"
-              disabled={submitting}
-              className={`px-5 py-2.5 text-sm font-bold text-white rounded-xl shadow-md transition flex items-center gap-2 ${
+              disabled={submitting || isOverAvailable || !numericPaid}
+              className={`px-5 py-2.5 text-sm font-bold text-white rounded-xl shadow-md transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${
                 payoutMode === 'prefinancing'
                   ? 'bg-amber-600 hover:bg-amber-700 shadow-amber-600/20'
                   : 'bg-primary hover:bg-primary-dark shadow-primary/20'
@@ -609,4 +542,3 @@ export default function OwnerPayoutModal({ isOpen, onClose, preselectedOwner = n
     </div>
   );
 }
-

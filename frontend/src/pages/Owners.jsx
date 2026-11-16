@@ -11,6 +11,7 @@ import StatsCard from '../components/StatsCard';
 import Modal from '../components/Modal';
 import OwnerPayoutModal from '../components/OwnerPayoutModal';
 import TableSkeleton from '../components/ui/TableSkeleton';
+import { FormField, PhoneInput, FormSection } from '../components/ui/forms';
 import { formatXOF } from '../utils/formatters';
 import { exportToExcel, exportToPDF } from '../utils/exportUtils';
 
@@ -242,8 +243,20 @@ export default function Owners() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.last_name) {
-      setFormError('Le nom est obligatoire.');
+    if (!form.last_name?.trim()) {
+      setFormError('Le nom de famille du propriétaire est obligatoire.');
+      return;
+    }
+    if (form.phone) {
+      const cleanPhone = String(form.phone).replace(/\D/g, '');
+      const actualDigits = cleanPhone.startsWith('225') ? cleanPhone.slice(3) : cleanPhone;
+      if (actualDigits.length > 0 && actualDigits.length < 10) {
+        setFormError('Le numéro de téléphone ivoirien doit comporter 10 chiffres (ex: 07 09 88 14 42).');
+        return;
+      }
+    }
+    if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+      setFormError('Veuillez saisir une adresse email valide.');
       return;
     }
     setFormError('');
@@ -739,71 +752,78 @@ export default function Owners() {
             )}
 
             {/* 1. Identité & Coordonnées */}
-            <div className="space-y-4">
+            <FormSection
+              icon="fa-id-card"
+              title="1. Identité & Coordonnées du Bailleur"
+              subtitle="Coordonnées de contact, téléphone pour alertes et reversements"
+            >
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Prénom</label>
+                <FormField label="Prénom" optional id="owner_first_name">
                   <input
+                    id="owner_first_name"
                     type="text"
                     placeholder="Ex : Jean-Marc"
                     value={form.first_name}
                     onChange={(e) => setForm({ ...form, first_name: e.target.value })}
                     className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
                   />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
-                    Nom de famille <span className="text-rose-600">*</span>
-                  </label>
+                </FormField>
+                <FormField label="Nom de famille" required id="owner_last_name">
                   <input
+                    id="owner_last_name"
                     type="text"
                     required
                     placeholder="Ex : Kouassi"
                     value={form.last_name}
                     onChange={(e) => setForm({ ...form, last_name: e.target.value })}
-                    className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+                    className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-semibold text-slate-900 placeholder-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
                   />
-                </div>
+                </FormField>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Téléphone</label>
-                  <input
-                    type="tel"
-                    placeholder="Ex : +225 07 00 00 00 00"
+                <FormField
+                  label="Téléphone principal"
+                  optional
+                  id="owner_phone"
+                  hint="Numéro ivoirien (10 chiffres)"
+                  error={formError && formError.toLowerCase().includes('téléphone') ? formError : ''}
+                >
+                  <PhoneInput
+                    id="owner_phone"
                     value={form.phone}
-                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                    className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+                    onChange={(e, clean) => setForm({ ...form, phone: clean ?? e?.target?.value })}
+                    hasError={Boolean(formError && formError.toLowerCase().includes('téléphone'))}
+                    placeholder="07 09 88 14 42"
                   />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Email</label>
+                </FormField>
+                <FormField
+                  label="Adresse Email"
+                  optional
+                  id="owner_email"
+                  hint="Pour envoi des décomptes et situations mensuelles"
+                  error={formError && formError.toLowerCase().includes('email') ? formError : ''}
+                >
                   <input
+                    id="owner_email"
                     type="email"
                     placeholder="Ex : proprietaire@email.com"
                     value={form.email}
                     onChange={(e) => setForm({ ...form, email: e.target.value })}
                     className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
                   />
-                </div>
+                </FormField>
               </div>
-            </div>
+            </FormSection>
 
             {/* 2. Modalités & Préférences de Reversement */}
-            <div className="bg-slate-50/90 p-4 sm:p-5 rounded-2xl border border-slate-200/90 space-y-4">
-              <div className="flex items-center gap-2 border-b border-slate-200/80 pb-2.5">
-                <div className="w-7 h-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                  <i className="fas fa-money-check-dollar text-xs"></i>
-                </div>
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800">
-                  Modalités &amp; Préférences de Paiement du Propriétaire
-                </h4>
-              </div>
-
+            <FormSection
+              icon="fa-money-check-dollar"
+              title="2. Modalités & Préférences de Reversement"
+              subtitle="Canal bancaire/mobile, périodicité et taux de commission agence"
+            >
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">Moyen de paiement souhaité</label>
+                <FormField label="Moyen de paiement souhaité">
                   <select
                     value={form.preferred_payment_method}
                     onChange={(e) => setForm({ ...form, preferred_payment_method: e.target.value })}
@@ -814,10 +834,9 @@ export default function Owners() {
                     <option value="cheque">Chèque bancaire</option>
                     <option value="cash">Espèces (Caisse agence)</option>
                   </select>
-                </div>
+                </FormField>
 
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">Méthode de règlement</label>
+                <FormField label="Méthode de règlement">
                   <select
                     value={form.payout_schedule}
                     onChange={(e) => setForm({ ...form, payout_schedule: e.target.value })}
@@ -828,10 +847,9 @@ export default function Owners() {
                     <option value="quarterly">Trimestriel</option>
                     <option value="on_demand">À la demande</option>
                   </select>
-                </div>
+                </FormField>
 
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">Période / Date souhaitée</label>
+                <FormField label="Période / Date souhaitée">
                   <select
                     value={form.preferred_payout_day}
                     onChange={(e) => setForm({ ...form, preferred_payout_day: e.target.value })}
@@ -843,10 +861,9 @@ export default function Owners() {
                     <option value="25">Le 25 du mois</option>
                     <option value="fin_de_mois">Fin de mois (le 30)</option>
                   </select>
-                </div>
+                </FormField>
 
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">Commission Agence (%)</label>
+                <FormField label="Commission Agence (%)" hint="Taux standard du mandat">
                   <div className="relative">
                     <input
                       type="number"
@@ -855,14 +872,13 @@ export default function Owners() {
                       step="0.5"
                       value={form.commission_rate}
                       onChange={(e) => setForm({ ...form, commission_rate: e.target.value })}
-                      className="w-full pl-3.5 pr-10 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-semibold text-slate-900 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                      className="w-full pl-3.5 pr-10 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
                     />
                     <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">%</span>
                   </div>
-                </div>
+                </FormField>
 
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">Banque / Opérateur Mobile</label>
+                <FormField label="Banque / Opérateur Mobile" optional>
                   <input
                     type="text"
                     placeholder="Ex : SGBCI, NSIA, Wave, Orange..."
@@ -870,10 +886,9 @@ export default function Owners() {
                     onChange={(e) => setForm({ ...form, bank_name: e.target.value })}
                     className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
                   />
-                </div>
+                </FormField>
 
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">N° Compte / RIB / Mobile</label>
+                <FormField label="N° Compte / RIB / Mobile" optional>
                   <input
                     type="text"
                     placeholder="Ex : CI008 01111... ou 07 00 00 00"
@@ -881,9 +896,9 @@ export default function Owners() {
                     onChange={(e) => setForm({ ...form, bank_account: e.target.value })}
                     className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
                   />
-                </div>
+                </FormField>
               </div>
-            </div>
+            </FormSection>
 
             {/* 3. Attribution Multi-Biens Immobiliers & État d'occupation */}
             <div className="bg-primary/5 p-4 sm:p-5 rounded-2xl border border-primary/20 space-y-3">

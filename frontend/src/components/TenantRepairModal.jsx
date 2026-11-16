@@ -3,15 +3,16 @@ import Modal from './Modal';
 import { useToast } from './ToastContext';
 import { API } from '../api/services';
 import { formatXOF } from '../utils/formatters';
+import { FormField, MoneyInput, FormSection } from './ui/forms';
 
 export default function TenantRepairModal({ isOpen, onClose, client, onSuccess }) {
   const { showToast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     description: '',
-    totalCost: '',
+    totalCost: 0,
     deductionMode: 'monthly', // 'monthly' | 'immediate'
-    monthlyDeduction: '',
+    monthlyDeduction: 0,
     repairDate: new Date().toISOString().slice(0, 10),
     receiptRef: '',
     notes: ''
@@ -23,10 +24,10 @@ export default function TenantRepairModal({ isOpen, onClose, client, onSuccess }
   const propertyTitle = client.property_title || client.propertyName || client.address || 'Logement';
   const rentDue = client.amount_due ?? client.amountDue ?? 0;
 
-  const totalCostNum = parseFloat(formData.totalCost || 0);
+  const totalCostNum = Number(formData.totalCost) || 0;
   const monthlyDedNum = formData.deductionMode === 'immediate'
     ? totalCostNum
-    : parseFloat(formData.monthlyDeduction || 0);
+    : (Number(formData.monthlyDeduction) || 0);
 
   const monthsDuration = (totalCostNum > 0 && monthlyDedNum > 0)
     ? Math.ceil(totalCostNum / monthlyDedNum)
@@ -39,7 +40,7 @@ export default function TenantRepairModal({ isOpen, onClose, client, onSuccess }
       return;
     }
     if (totalCostNum <= 0) {
-      showToast({ type: 'error', message: 'Le montant total des réparations doit être supérieur à 0.' });
+      showToast({ type: 'error', message: 'Le montant total des réparations doit être supérieur à 0 FCFA.' });
       return;
     }
     if (formData.deductionMode === 'monthly' && monthlyDedNum <= 0) {
@@ -85,6 +86,15 @@ export default function TenantRepairModal({ isOpen, onClose, client, onSuccess }
     }
   };
 
+  const deductionPresets = [];
+  if (totalCostNum > 0) {
+    deductionPresets.push({ label: '50% (2 mois)', value: Math.round(totalCostNum / 2) });
+    deductionPresets.push({ label: '100% (1 mois)', value: totalCostNum });
+    if (totalCostNum >= 60000) {
+      deductionPresets.push({ label: '33% (3 mois)', value: Math.round(totalCostNum / 3) });
+    }
+  }
+
   return (
     <Modal
       isOpen={isOpen}
@@ -111,64 +121,57 @@ export default function TenantRepairModal({ isOpen, onClose, client, onSuccess }
           </p>
         </div>
 
-        <div>
-          <label className="block text-xs uppercase tracking-wider font-bold text-slate-600 mb-1.5">
-            Nature des travaux / Description <span className="text-rose-500">*</span>
-          </label>
-          <input
-            type="text"
-            required
-            placeholder="Ex : Réfection plomberie, serrure, étanchéité toiture, électricité..."
-            value={formData.description}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-          />
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs uppercase tracking-wider font-bold text-slate-600 mb-1.5">
-              Montant total des travaux (FCFA) <span className="text-rose-500">*</span>
-            </label>
+        <FormSection
+          icon="fa-screwdriver-wrench"
+          title="Détails des Travaux"
+          subtitle="Description, montant total et date d'exécution"
+        >
+          <FormField label="Nature des travaux / Description" required>
             <input
-              type="number"
+              type="text"
               required
-              min="1000"
-              step="500"
-              placeholder="Ex : 60000"
-              value={formData.totalCost}
-              onChange={(e) => {
-                const cost = e.target.value;
-                setFormData({
-                  ...formData,
-                  totalCost: cost,
-                  // Pré-remplir la déduction mensuelle par défaut avec la moitié ou le tiers si vide
-                  monthlyDeduction: formData.monthlyDeduction || (cost ? String(Math.round(cost / 2)) : '')
-                });
-              }}
-              className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs uppercase tracking-wider font-bold text-slate-600 mb-1.5">
-              Date des travaux <span className="text-rose-500">*</span>
-            </label>
-            <input
-              type="date"
-              required
-              value={formData.repairDate}
-              onChange={(e) => setFormData({ ...formData, repairDate: e.target.value })}
+              placeholder="Ex : Réfection plomberie, serrure, étanchéité toiture..."
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
             />
+          </FormField>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
+            <FormField label="Montant total des travaux" required hint="Dépense totale engagée">
+              <MoneyInput
+                value={formData.totalCost}
+                onChange={(e, num) => {
+                  const cost = (num ?? Number(e?.target?.value)) || 0;
+                  setFormData({
+                    ...formData,
+                    totalCost: cost,
+                    monthlyDeduction: formData.monthlyDeduction || Math.round(cost / 2)
+                  });
+                }}
+                currency="FCFA"
+                size="md"
+              />
+            </FormField>
+
+            <FormField label="Date des travaux" required hint="Date d'intervention">
+              <input
+                type="date"
+                required
+                value={formData.repairDate}
+                onChange={(e) => setFormData({ ...formData, repairDate: e.target.value })}
+                className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-primary"
+              />
+            </FormField>
           </div>
-        </div>
+        </FormSection>
 
         {/* Mode d'imputation / déduction */}
-        <div className="space-y-2">
-          <label className="block text-xs uppercase tracking-wider font-bold text-slate-600">
-            Modalité de remboursement sur le loyer <span className="text-rose-500">*</span>
-          </label>
+        <FormSection
+          icon="fa-scale-balanced"
+          title="Modalité d'Imputation sur Loyer"
+          subtitle="Étalement mensuel ou déduction intégrale immédiate"
+        >
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
             <label
               className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition ${
@@ -212,74 +215,64 @@ export default function TenantRepairModal({ isOpen, onClose, client, onSuccess }
               </div>
             </label>
           </div>
-        </div>
 
-        {formData.deductionMode === 'monthly' && (
-          <div className="bg-slate-50 rounded-xl p-3 border border-slate-200 space-y-2">
-            <label className="block text-xs uppercase tracking-wider font-bold text-slate-700">
-              Montant de la déduction par mois (FCFA) <span className="text-rose-500">*</span>
-            </label>
-            <input
-              type="number"
-              min="1000"
-              step="500"
-              placeholder="Ex : 20000"
-              value={formData.monthlyDeduction}
-              onChange={(e) => setFormData({ ...formData, monthlyDeduction: e.target.value })}
-              className="w-full px-4 py-2 bg-white border border-slate-300 rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:border-primary"
-            />
-            {totalCostNum > 0 && monthlyDedNum > 0 && (
-              <p className="text-xs text-slate-500 flex items-center justify-between">
-                <span>Durée d'amortissement estimée :</span>
-                <span className="font-bold text-slate-800">
-                  {monthsDuration} mois &bull; Net à payer chaque mois :{' '}
-                  <span className="text-emerald-700">{formatXOF(Math.max(0, rentDue - monthlyDedNum))}</span>
-                </span>
-              </p>
-            )}
-          </div>
-        )}
+          {formData.deductionMode === 'monthly' && (
+            <FormField label="Montant de déduction par mois" required hint="Retenu sur chaque appel de loyer">
+              <MoneyInput
+                value={formData.monthlyDeduction}
+                onChange={(e, num) => setFormData({ ...formData, monthlyDeduction: (num ?? Number(e?.target?.value)) || 0 })}
+                presets={deductionPresets}
+                currency="FCFA"
+                size="md"
+              />
+              {totalCostNum > 0 && monthlyDedNum > 0 && (
+                <p className="text-xs text-slate-600 mt-2 flex items-center justify-between p-2.5 bg-slate-100 rounded-xl border border-slate-200">
+                  <span>Durée d'amortissement :</span>
+                  <span className="font-bold text-slate-800">
+                    {monthsDuration} mois &bull; Net à payer chaque mois :{' '}
+                    <span className="text-emerald-700 font-extrabold">{formatXOF(Math.max(0, rentDue - monthlyDedNum))}</span>
+                  </span>
+                </p>
+              )}
+            </FormField>
+          )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs uppercase tracking-wider font-bold text-slate-600 mb-1.5">
-              Réf. Facture / Reçu artisan (facultatif)
-            </label>
-            <input
-              type="text"
-              placeholder="Ex : FACT-PLOMB-2026"
-              value={formData.receiptRef}
-              onChange={(e) => setFormData({ ...formData, receiptRef: e.target.value })}
-              className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-sm focus:outline-none focus:border-primary"
-            />
-          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <FormField label="Réf. Facture / Reçu artisan" optional hint="Ex : FACT-PLOMB-2026">
+              <input
+                type="text"
+                placeholder="Ex : FACT-PLOMB-2026"
+                value={formData.receiptRef}
+                onChange={(e) => setFormData({ ...formData, receiptRef: e.target.value })}
+                className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-sm focus:outline-none focus:border-primary"
+              />
+            </FormField>
 
-          <div>
-            <label className="block text-xs uppercase tracking-wider font-bold text-slate-600 mb-1.5">
-              Notes & Commentaires
-            </label>
-            <input
-              type="text"
-              placeholder="Ex : Validé avec le propriétaire"
-              value={formData.notes}
-              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-sm focus:outline-none focus:border-primary"
-            />
+            <FormField label="Notes & Commentaires" optional hint="Observations agence">
+              <input
+                type="text"
+                placeholder="Ex : Validé avec le propriétaire"
+                value={formData.notes}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-sm focus:outline-none focus:border-primary"
+              />
+            </FormField>
           </div>
-        </div>
+        </FormSection>
 
         <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-200">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition"
+            disabled={isSubmitting}
+            className="px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition cursor-pointer"
           >
             Annuler
           </button>
           <button
             type="submit"
-            disabled={isSubmitting}
-            className="px-5 py-2.5 text-sm font-bold text-white bg-primary hover:bg-primary-dark rounded-xl shadow-sm transition disabled:opacity-50 flex items-center gap-2"
+            disabled={isSubmitting || totalCostNum <= 0}
+            className="px-5 py-2.5 text-sm font-bold text-white bg-primary hover:bg-primary-dark rounded-xl shadow-sm transition disabled:opacity-50 flex items-center gap-2 cursor-pointer"
           >
             {isSubmitting ? (
               <>
@@ -296,4 +289,3 @@ export default function TenantRepairModal({ isOpen, onClose, client, onSuccess }
     </Modal>
   );
 }
-

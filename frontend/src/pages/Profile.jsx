@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { API } from '../api/services';
+import { FormField, PhoneInput } from '../components/ui/forms';
 
 const INIT_PROFILE = { displayName: '', firstName: '', lastName: '', email: '', phone: '' };
 
@@ -110,7 +111,6 @@ export default function Profile() {
   };
 
   const inputClass = "w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 shadow-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all";
-  const labelClass = "block text-sm font-medium text-slate-700 mb-1.5";
   const alertSuccessClass = "bg-emerald-50 text-emerald-700 p-4 rounded-lg text-sm mb-6 flex items-center gap-2 border border-emerald-100";
   const alertErrorClass = "bg-rose-50 text-rose-700 p-4 rounded-lg text-sm mb-6 flex items-center gap-2 border border-rose-100";
 
@@ -163,38 +163,60 @@ export default function Profile() {
           {profileMsg && <div className={alertSuccessClass}><i className="fas fa-check-circle"></i> {profileMsg}</div>}
           {profileError && <div className={alertErrorClass}><i className="fas fa-exclamation-circle"></i> {profileError}</div>}
 
-          <form onSubmit={handleProfileSubmit} className="space-y-5">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-              <div>
-                <label className={labelClass}>Prénom</label>
-                <input className={inputClass} value={profile.firstName} onChange={e => setProfile({ ...profile, firstName: e.target.value })} />
-              </div>
-              <div>
-                <label className={labelClass}>Nom</label>
-                <input className={inputClass} value={profile.lastName} onChange={e => setProfile({ ...profile, lastName: e.target.value })} />
-              </div>
+          <form onSubmit={handleProfileSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <FormField label="Prénom" id="prof_firstName">
+                <input
+                  id="prof_firstName"
+                  className={inputClass}
+                  value={profile.firstName}
+                  onChange={e => setProfile({ ...profile, firstName: e.target.value })}
+                />
+              </FormField>
+              <FormField label="Nom de famille" id="prof_lastName">
+                <input
+                  id="prof_lastName"
+                  className={inputClass}
+                  value={profile.lastName}
+                  onChange={e => setProfile({ ...profile, lastName: e.target.value })}
+                />
+              </FormField>
             </div>
 
-            <div>
-              <label className={labelClass}>Nom d'affichage</label>
-              <input className={inputClass} value={profile.displayName} onChange={e => setProfile({ ...profile, displayName: e.target.value })} />
-            </div>
+            <FormField label="Nom d'affichage" id="prof_displayName" hint="Nom affiché dans l'interface et sur les reçus">
+              <input
+                id="prof_displayName"
+                className={inputClass}
+                value={profile.displayName}
+                onChange={e => setProfile({ ...profile, displayName: e.target.value })}
+              />
+            </FormField>
 
-            <div>
-              <label className={labelClass}>Email</label>
-              <input type="email" className={inputClass} value={profile.email} onChange={e => setProfile({ ...profile, email: e.target.value })} />
-              <p className="text-xs text-slate-400 mt-2 flex items-center gap-1.5">
-                <i className="fas fa-info-circle"></i> Sans serveur SMTP configuré, l'email n'est pas vérifié.
-              </p>
-            </div>
+            <FormField label="Adresse Email" id="prof_email" hint="Email professionnel de connexion">
+              <input
+                id="prof_email"
+                type="email"
+                className={inputClass}
+                value={profile.email}
+                onChange={e => setProfile({ ...profile, email: e.target.value })}
+              />
+            </FormField>
 
-            <div>
-              <label className={labelClass}>Téléphone</label>
-              <input type="tel" className={inputClass} value={profile.phone} onChange={e => setProfile({ ...profile, phone: e.target.value })} />
-            </div>
+            <FormField label="Téléphone portable" id="prof_phone" hint="Format ivoirien (10 chiffres)">
+              <PhoneInput
+                id="prof_phone"
+                value={profile.phone}
+                onChange={(e, clean) => setProfile({ ...profile, phone: clean ?? e?.target?.value })}
+                placeholder="07 09 88 14 42"
+              />
+            </FormField>
 
-            <div className="pt-4">
-              <button type="submit" className="w-full bg-primary text-white font-medium py-3 px-4 rounded-xl hover:bg-primary-dark transition-all flex justify-center items-center gap-2 shadow-sm" disabled={profileSaving}>
+            <div className="pt-2">
+              <button
+                type="submit"
+                className="w-full bg-primary text-white font-bold py-3 px-4 rounded-xl hover:bg-primary-dark transition-all flex justify-center items-center gap-2 shadow-sm disabled:opacity-50 cursor-pointer"
+                disabled={profileSaving}
+              >
                 {profileSaving ? <><i className="fas fa-spinner fa-spin"></i> Enregistrement...</> : <><i className="fas fa-save"></i> Enregistrer le profil</>}
               </button>
             </div>
@@ -213,24 +235,70 @@ export default function Profile() {
           {pwMsg && <div className={alertSuccessClass}><i className="fas fa-check-circle"></i> {pwMsg}</div>}
           {pwError && <div className={alertErrorClass}><i className="fas fa-exclamation-circle"></i> {pwError}</div>}
 
-          <form onSubmit={handlePasswordSubmit} className="space-y-5">
-            <div>
-              <label className={labelClass}>Mot de passe actuel</label>
-              <input type="password" required className={inputClass} value={pwForm.currentPassword} onChange={e => setPwForm({ ...pwForm, currentPassword: e.target.value })} />
-            </div>
+          <form onSubmit={handlePasswordSubmit} className="space-y-4">
+            <FormField label="Mot de passe actuel" required id="currentPassword">
+              <input
+                id="currentPassword"
+                type="password"
+                required
+                className={inputClass}
+                value={pwForm.currentPassword}
+                onChange={e => setPwForm({ ...pwForm, currentPassword: e.target.value })}
+              />
+            </FormField>
             
-            <div>
-              <label className={labelClass}>Nouveau mot de passe</label>
-              <input type="password" required minLength={8} placeholder="Au moins 8 caractères" className={inputClass} value={pwForm.newPassword} onChange={e => setPwForm({ ...pwForm, newPassword: e.target.value })} />
-            </div>
+            <FormField
+              label="Nouveau mot de passe"
+              required
+              id="newPassword"
+              hint="Au moins 8 caractères recommandés"
+            >
+              <input
+                id="newPassword"
+                type="password"
+                required
+                minLength={8}
+                placeholder="Au moins 8 caractères"
+                className={inputClass}
+                value={pwForm.newPassword}
+                onChange={e => setPwForm({ ...pwForm, newPassword: e.target.value })}
+              />
+            </FormField>
 
-            <div>
-              <label className={labelClass}>Confirmer le mot de passe</label>
-              <input type="password" required className={inputClass} value={pwForm.confirmPassword} onChange={e => setPwForm({ ...pwForm, confirmPassword: e.target.value })} />
-            </div>
+            <FormField
+              label="Confirmer le nouveau mot de passe"
+              required
+              id="confirmPassword"
+              hint={
+                pwForm.confirmPassword ? (
+                  pwForm.newPassword === pwForm.confirmPassword ? (
+                    <span className="text-emerald-600 font-bold flex items-center gap-1">
+                      <i className="fas fa-check-circle"></i> Les mots de passe correspondent
+                    </span>
+                  ) : (
+                    <span className="text-rose-600 font-bold flex items-center gap-1">
+                      <i className="fas fa-times-circle"></i> Les mots de passe diffèrent
+                    </span>
+                  )
+                ) : null
+              }
+            >
+              <input
+                id="confirmPassword"
+                type="password"
+                required
+                className={inputClass}
+                value={pwForm.confirmPassword}
+                onChange={e => setPwForm({ ...pwForm, confirmPassword: e.target.value })}
+              />
+            </FormField>
 
-            <div className="pt-4">
-              <button type="submit" className="w-full bg-white text-slate-700 border border-slate-300 font-medium py-3 px-4 rounded-xl hover:bg-slate-50 transition-all flex justify-center items-center gap-2 shadow-sm" disabled={pwSaving}>
+            <div className="pt-2">
+              <button
+                type="submit"
+                className="w-full bg-white text-slate-700 border border-slate-300 font-bold py-3 px-4 rounded-xl hover:bg-slate-50 transition-all flex justify-center items-center gap-2 shadow-sm disabled:opacity-50 cursor-pointer"
+                disabled={pwSaving}
+              >
                 {pwSaving ? <><i className="fas fa-spinner fa-spin"></i> Modification...</> : <><i className="fas fa-key"></i> Changer le mot de passe</>}
               </button>
             </div>
