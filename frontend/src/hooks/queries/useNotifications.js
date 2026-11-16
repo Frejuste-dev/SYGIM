@@ -51,3 +51,44 @@ export const useMarkAllNotificationsRead = () => {
     },
   });
 };
+
+export const useOverdueAlerts = (filters = {}, options = {}) => {
+  return useQuery({
+    queryKey: ['alerts', 'overdue-payments', filters],
+    queryFn: async () => {
+      try {
+        const res = await API.Alerts.getOverduePayments(filters);
+        const alerts = res?.data || [];
+        const stats = res?.stats || {
+          totalAlerts: alerts.length,
+          totalAmount: alerts.reduce((sum, a) => sum + (Number(a.amount_owed) || 0), 0),
+          bySeverity: {
+            critique: alerts.filter(a => a.severity === 'critique').length,
+            haute: alerts.filter(a => a.severity === 'haute').length,
+            normale: alerts.filter(a => a.severity === 'normale').length,
+            basse: alerts.filter(a => a.severity === 'basse').length,
+          }
+        };
+        return { alerts, stats, count: alerts.length };
+      } catch (err) {
+        if (err?.status === 401 || err?.response?.status === 401) {
+          return { alerts: [], stats: {}, count: 0 };
+        }
+        throw err;
+      }
+    },
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+    ...options,
+  });
+};
+
+export const useAcknowledgeAlert = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (clientId) => API.Alerts.acknowledge(clientId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['alerts', 'overdue-payments'] });
+    },
+  });
+};

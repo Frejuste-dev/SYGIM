@@ -3,7 +3,7 @@ import { useNavigate, NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { API } from '../api/services';
 import { useConfirm } from '../components/ConfirmContext';
-import { useNotifications } from '../hooks/queries/useNotifications';
+import { useNotifications, useOverdueAlerts } from '../hooks/queries/useNotifications';
 
 export default function Admin() {
   const { user, logout } = useAuth();
@@ -11,6 +11,9 @@ export default function Admin() {
   const { confirm } = useConfirm();
   const { data: notifData = {} } = useNotifications();
   const unreadCount = notifData.unreadCount || 0;
+  const { data: alertsData = {} } = useOverdueAlerts();
+  const overdueAlerts = alertsData.alerts || [];
+  const overdueCount = alertsData.count ?? overdueAlerts.length;
 
   const handleLogout = async () => {
     await logout();
@@ -27,6 +30,7 @@ export default function Admin() {
   const isAdmin = user?.role === 'admin' || user?.role === 'super_admin' || user?.isSuperAdmin;
   const userRole = user?.role?.toLowerCase() || '';
   const isManager = userRole === 'manager' || userRole === 'collector_manager';
+  const totalNotifications = isManager ? unreadCount : (unreadCount + overdueCount);
 
   const dashboardPath = userRole === 'collector' || userRole === 'collecteur' 
     ? '/admin/collector' 
@@ -69,7 +73,7 @@ export default function Admin() {
       items: [
         { name: 'Rapports', path: '/admin/reports', icon: 'fas fa-file-alt', roles: ['admin', 'super_admin', 'director', 'accounting', 'gestionnaire', 'manager', 'collector_manager'] },
         { name: 'Journal d\'activité', path: '/admin/activity', icon: 'fas fa-history', roles: ['admin', 'super_admin', 'director', 'accounting'] },
-        { name: 'Notifications', path: '/admin/notifications', icon: 'fas fa-bell', roles: ['admin', 'super_admin', 'director', 'accounting'], badge: unreadCount },
+        { name: 'Notifications', path: '/admin/notifications', icon: 'fas fa-bell', roles: ['admin', 'super_admin', 'director', 'accounting'], badge: totalNotifications },
       ]
     },
     {
@@ -92,14 +96,6 @@ export default function Admin() {
     setIsNotificationsOpen(false);
     navigate(path);
   };
-
-  const [overdueAlerts, setOverdueAlerts] = useState([]);
-
-  useEffect(() => {
-    API.Alerts.getOverduePayments()
-      .then(res => { if (res?.success) setOverdueAlerts(res.data); })
-      .catch(() => {});
-  }, []);
 
   return (
     <div className="flex h-screen w-full bg-slate-50 font-sans text-slate-900 overflow-hidden">
@@ -189,7 +185,7 @@ export default function Admin() {
             
             <div className="relative">
               <button 
-                className="text-slate-500 hover:text-slate-900 text-lg relative focus:outline-none mr-2"
+                className="text-slate-500 hover:text-slate-900 text-lg relative focus:outline-none mr-2 p-1 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
                 onClick={() => {
                   if (isManager) {
                     navigate('/admin/notifications');
@@ -197,48 +193,105 @@ export default function Admin() {
                     setIsNotificationsOpen(!isNotificationsOpen);
                   }
                 }}
-                title="Notifications"
+                title="Alertes & Notifications"
               >
                 <i className="fas fa-bell"></i>
-                {(isManager ? unreadCount : overdueAlerts.length) > 0 && (
-                  <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-danger text-[10px] font-bold text-white ring-2 ring-white">
-                    {isManager ? unreadCount : overdueAlerts.length}
+                {totalNotifications > 0 && (
+                  <span className="absolute -top-1 -right-1 flex h-4 min-w-4 px-1 items-center justify-center rounded-full bg-rose-600 text-[10px] font-bold text-white ring-2 ring-white animate-pulse">
+                    {totalNotifications}
                   </span>
                 )}
               </button>
 
               {isNotificationsOpen && (
-                <div className="absolute right-0 mt-3 w-80 bg-white rounded-xl shadow-lg border border-slate-200 z-50 overflow-hidden">
-                  <div className="px-4 py-3 border-b border-slate-100 bg-slate-50">
-                    <h3 className="text-sm font-bold text-slate-800">Notifications</h3>
+                <div className="absolute right-0 mt-3 w-88 bg-white rounded-xl shadow-xl border border-slate-200 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
+                  <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/80 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-bold text-slate-800">Alertes & Notifications</span>
+                      {totalNotifications > 0 && (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-700">
+                          {totalNotifications}
+                        </span>
+                      )}
+                    </div>
+                    <button 
+                      type="button"
+                      onClick={() => handleNotificationClick('/admin/notifications')}
+                      className="text-xs font-semibold text-primary hover:underline cursor-pointer"
+                    >
+                      Ouvrir le centre
+                    </button>
                   </div>
-                  <div className="max-h-[320px] overflow-y-auto divide-y divide-slate-100">
-                    {overdueAlerts.length > 0 ? overdueAlerts.map(alert => {
-                      const clientName = (alert.first_name || alert.last_name) 
-                        ? `${alert.first_name || ''} ${alert.last_name || ''}`.trim()
-                        : alert.client_name || alert.clientName || alert.tenant_name || 'Client inconnu';
-                      const propertyName = alert.property_name || alert.propertyName || alert.property || 'Propriété';
-                      const alertTarget = userRole === 'collector' || userRole === 'collecteur' ? '/admin/collector' : '/admin/transactions';
-                      return (
-                      <div key={alert.id || Math.random()} 
-                           onClick={() => handleNotificationClick(alertTarget)}
-                           className="px-4 py-3 hover:bg-slate-50 cursor-pointer transition-colors">
-                        <p className="text-sm text-slate-800 font-medium">Loyer en retard</p>
-                        <p className="text-xs text-slate-500 mt-1">{clientName} - {propertyName}</p>
+
+                  <div className="max-h-[340px] overflow-y-auto divide-y divide-slate-100">
+                    {overdueAlerts.length > 0 ? (
+                      overdueAlerts.slice(0, 6).map((alert) => {
+                        const clientName = (alert.first_name || alert.last_name) 
+                          ? `${alert.first_name || ''} ${alert.last_name || ''}`.trim()
+                          : alert.client_name || alert.clientName || alert.tenant_name || 'Client';
+                        const propertyName = alert.property_name || alert.propertyName || alert.property || 'Bien';
+                        const amountOwed = alert.amount_owed || alert.rent_due || 0;
+                        const isCritique = alert.severity === 'critique';
+
+                        return (
+                          <div 
+                            key={alert.id || Math.random()} 
+                            onClick={() => handleNotificationClick('/admin/notifications')}
+                            className="px-4 py-3 hover:bg-slate-50 cursor-pointer transition-colors flex items-start gap-3"
+                          >
+                            <span className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-xs ${
+                              isCritique ? 'bg-rose-100 text-rose-600' : 'bg-amber-100 text-amber-700'
+                            }`}>
+                              <i className="fas fa-exclamation-triangle"></i>
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center justify-between gap-1">
+                                <p className="text-xs text-slate-800 font-bold truncate">{clientName}</p>
+                                <span className="text-[11px] font-bold text-rose-600 shrink-0">
+                                  {Number(amountOwed).toLocaleString('fr-FR')} XOF
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-slate-500 truncate mt-0.5">{propertyName}</p>
+                              <div className="flex items-center gap-2 mt-1">
+                                <span className={`text-[9px] uppercase font-bold px-1.5 py-0.2 rounded ${
+                                  isCritique ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-amber-50 text-amber-700 border border-amber-200'
+                                }`}>
+                                  {alert.severity || 'Impayé'}
+                                </span>
+                                <span className="text-[10px] text-slate-400">En retard de loyer</span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <div className="px-4 py-8 text-center text-slate-400 text-xs">
+                        <i className="fas fa-bell-slash text-2xl mb-1 text-slate-300 block"></i>
+                        Aucune alerte urgente pour le moment.
                       </div>
-                      );
-                    }) : (
-                      <div className="px-4 py-6 text-center text-slate-500 text-sm">
-                        Aucune notification pour le moment.
+                    )}
+                    {overdueAlerts.length > 6 && (
+                      <div className="p-2 text-center text-[11px] font-semibold text-slate-500 bg-slate-50/50">
+                        + {overdueAlerts.length - 6} autre(s) dossier(s) d'impayé en attente
                       </div>
                     )}
                   </div>
-                  <div className="p-2 bg-slate-50 border-t border-slate-100">
+
+                  <div className="p-2.5 bg-slate-50 border-t border-slate-100 flex flex-col gap-1.5">
                     <button 
-                      onClick={() => handleNotificationClick(userRole === 'collector' || userRole === 'collecteur' ? '/admin/collector' : '/admin/transactions')} 
-                      className="w-full py-2 text-sm font-medium text-primary hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                      type="button"
+                      onClick={() => handleNotificationClick('/admin/notifications')} 
+                      className="w-full py-2 px-3 text-xs font-bold text-white bg-primary hover:bg-primary/90 rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-2 shadow-xs"
                     >
-                      Voir toutes les alertes
+                      <i className="fas fa-layer-group text-[10px]"></i>
+                      <span>Accéder au Centre de Notifications ({totalNotifications})</span>
+                    </button>
+                    <button 
+                      type="button"
+                      onClick={() => handleNotificationClick('/admin/reports?tab=overdue')} 
+                      className="w-full py-1.5 px-3 text-[11px] font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer text-center"
+                    >
+                      Voir le plan de relance & recouvrement →
                     </button>
                   </div>
                 </div>
