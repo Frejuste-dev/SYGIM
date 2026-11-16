@@ -30,6 +30,26 @@ class TransactionRepository extends BaseRepository {
       sql += ' AND t.date <= ?';
       params.push(filters.dateTo);
     }
+    if (filters.period) {
+      switch (filters.period) {
+        case 'today':
+          sql += ' AND DATE(COALESCE(t.date, t.created_at)) = CURRENT_DATE()';
+          break;
+        case 'week':
+          sql += ' AND YEARWEEK(COALESCE(t.date, t.created_at), 1) = YEARWEEK(CURRENT_DATE(), 1)';
+          break;
+        case 'month':
+          sql += ' AND YEAR(COALESCE(t.date, t.created_at)) = YEAR(CURRENT_DATE()) AND MONTH(COALESCE(t.date, t.created_at)) = MONTH(CURRENT_DATE())';
+          break;
+        case 'year':
+          sql += ' AND YEAR(COALESCE(t.date, t.created_at)) = YEAR(CURRENT_DATE())';
+          break;
+        case 'all':
+        case 'global':
+          // Pas de filtre de date
+          break;
+      }
+    }
     if (filters.search) {
       sql += ' AND (t.client_name LIKE ? OR t.reference LIKE ? OR t.description LIKE ? OR col.first_name LIKE ? OR col.last_name LIKE ?)';
       const s = `%${filters.search}%`;

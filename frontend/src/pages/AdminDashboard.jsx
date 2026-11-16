@@ -33,6 +33,14 @@ const SEARCH_PLACEHOLDERS = {
   owners: 'Rechercher un propriétaire...',
 };
 
+const PERIOD_LABELS = {
+  today: "Aujourd'hui",
+  week: 'Cette semaine',
+  month: 'Ce mois-ci',
+  year: 'Cette année',
+  all: 'Global (Historique)',
+};
+
 const normalizeSearchValue = (value) => String(value ?? '')
   .normalize('NFD')
   .replace(/[\u0300-\u036f]/g, '')
@@ -48,13 +56,14 @@ export default function AdminDashboard() {
   const { showToast } = useToast();
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedPeriod, setSelectedPeriod] = useState('month');
   const debouncedSearch = useDebounce(searchQuery, 350);
 
   const { data: clientsData = {}, isLoading: clientsLoading } = useClients({ search: debouncedSearch, limit: 20 });
   const clients = Array.isArray(clientsData) ? clientsData : (clientsData?.data || []);
   const { data: propertiesData = {}, isLoading: propsLoading } = useProperties({ search: debouncedSearch, limit: 20 });
   const properties = Array.isArray(propertiesData) ? propertiesData : (propertiesData?.data || []);
-  const { data: transactionsData = {}, isLoading: txLoading } = useTransactions({ search: debouncedSearch, limit: 20 });
+  const { data: transactionsData = {}, isLoading: txLoading } = useTransactions({ search: debouncedSearch, limit: 10, period: selectedPeriod });
   const transactions = Array.isArray(transactionsData) ? transactionsData : (transactionsData?.data || []);
   const { data: ownersData = {} } = useOwners({ search: debouncedSearch, limit: 20 });
   const owners = Array.isArray(ownersData) ? ownersData : (ownersData?.data || []);
@@ -73,8 +82,8 @@ export default function AdminDashboard() {
   const [newClient, setNewClient] = useState({ ...CLIENT_INIT });
   const [newProperty, setNewProperty] = useState({ ...PROPERTY_INIT });
 
-  // --- KPIs serveur (calculés SQL, pas de reduce() frontend) ---
-  const { data: kpis = {}, isLoading: kpisLoading } = useDashboardKpis();
+  // --- KPIs serveur (calculés SQL selon la période sélectionnée) ---
+  const { data: kpis = {}, isLoading: kpisLoading } = useDashboardKpis({ period: selectedPeriod });
   const totalRevenue         = kpis.totalRevenue         ?? 0;
   const totalDue             = kpis.totalDue             ?? 0;
   const pendingPaymentsCount = kpis.pendingPaymentsCount ?? 0;
@@ -176,24 +185,24 @@ export default function AdminDashboard() {
           <h1 className="text-2xl font-bold text-slate-900">Bienvenue sur SYGIM</h1>
           <p className="text-slate-500 text-sm mt-0.5">Vue d'ensemble de votre patrimoine immobilier.</p>
         </div>
-        <div className="flex items-center gap-3">
-          <label className="text-sm text-slate-500 font-semibold"><i className="fas fa-filter mr-1"></i>Période :</label>
-          <select className="bg-white border border-slate-200 text-slate-700 text-sm font-medium rounded-lg focus:ring-primary/20 focus:border-primary block p-2 transition-all shadow-sm">
-            <option>Ce mois-ci</option>
-            <option>Aujourd'hui</option>
-            <option>Cette semaine</option>
-            <option>Cette année</option>
-            <option>Global</option>
+        <div className="flex items-center gap-2.5">
+          <label htmlFor="admin-period-select" className="text-sm text-slate-500 font-semibold flex items-center">
+            <i className="fas fa-filter mr-1.5 text-primary"></i>Période :
+          </label>
+          <select
+            id="admin-period-select"
+            value={selectedPeriod}
+            onChange={(e) => setSelectedPeriod(e.target.value)}
+            className="bg-white border border-slate-200 text-slate-700 text-sm font-medium rounded-lg focus:ring-primary/20 focus:border-primary block p-2 transition-all shadow-xs cursor-pointer"
+          >
+            <option value="month">Ce mois-ci</option>
+            <option value="today">Aujourd'hui</option>
+            <option value="week">Cette semaine</option>
+            <option value="year">Cette année</option>
+            <option value="all">Global</option>
           </select>
         </div>
       </div>
-
-      {error && (
-        <div className="bg-rose-50 text-rose-700 p-4 rounded-lg flex items-center gap-3">
-          <i className="fas fa-exclamation-circle"></i>
-          <span>Impossible de synchroniser les données. Les derniers chiffres disponibles restent affichés.</span>
-        </div>
-      )}
 
       {isFirstVisit ? (
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-12 text-center flex flex-col items-center justify-center">
@@ -218,7 +227,7 @@ export default function AdminDashboard() {
               </div>
               <div className={`text-xs mt-4 flex items-center gap-1.5 ${totalRevenue > 0 ? 'text-emerald-600' : 'text-slate-500'}`}>
                 <i className={`fas ${totalRevenue > 0 ? 'fa-arrow-trend-up' : 'fa-minus'}`}></i>
-                Loyers perçus
+                Loyers perçus ({PERIOD_LABELS[selectedPeriod] || 'Ce mois-ci'})
               </div>
             </div>
             

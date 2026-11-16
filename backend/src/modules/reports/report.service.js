@@ -24,12 +24,13 @@ class ReportService {
   /**
    * KPIs scalaires du Dashboard (TTL: 15s)
    */
-  async getKpis() {
-    const cacheKey = 'report:kpis:global';
+  async getKpis(filters = {}) {
+    const periodKey = filters.period || (filters.startDate ? `${filters.startDate}_${filters.endDate}` : 'month');
+    const cacheKey = `report:kpis:${periodKey}`;
     const cached = await cacheService.get(cacheKey);
     if (cached) return cached;
 
-    const data = await reportRepository.getKpis();
+    const data = await reportRepository.getKpis(filters);
     await cacheService.set(cacheKey, data, 15);
     return data;
   }

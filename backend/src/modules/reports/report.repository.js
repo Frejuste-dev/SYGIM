@@ -709,9 +709,39 @@ class ReportRepository {
   }
 
   /**
-   * KPIs scalaires pour le Dashboard
+   * KPIs scalaires pour le Dashboard avec filtrage temporel
    */
-  async getKpis() {
+  async getKpis({ period = 'month', startDate, endDate } = {}) {
+    let txDateClause = '';
+    const txParams = [];
+
+    if (startDate && endDate) {
+      txDateClause = 'AND DATE(COALESCE(t.date, t.created_at)) BETWEEN ? AND ?';
+      txParams.push(startDate, endDate);
+    } else {
+      switch (period) {
+        case 'today':
+          txDateClause = 'AND DATE(COALESCE(t.date, t.created_at)) = CURRENT_DATE()';
+          break;
+        case 'week':
+          txDateClause = 'AND YEARWEEK(COALESCE(t.date, t.created_at), 1) = YEARWEEK(CURRENT_DATE(), 1)';
+          break;
+        case 'month':
+          txDateClause = 'AND YEAR(COALESCE(t.date, t.created_at)) = YEAR(CURRENT_DATE()) AND MONTH(COALESCE(t.date, t.created_at)) = MONTH(CURRENT_DATE())';
+          break;
+        case 'year':
+          txDateClause = 'AND YEAR(COALESCE(t.date, t.created_at)) = YEAR(CURRENT_DATE())';
+          break;
+        case 'all':
+        case 'global':
+          txDateClause = '';
+          break;
+        default:
+          txDateClause = 'AND YEAR(COALESCE(t.date, t.created_at)) = YEAR(CURRENT_DATE()) AND MONTH(COALESCE(t.date, t.created_at)) = MONTH(CURRENT_DATE())';
+          break;
+      }
+    }
+
     const [[clientStats]] = await db.query(`
       SELECT
         COALESCE(SUM(amount_due), 0) AS totalDue,
@@ -721,12 +751,15 @@ class ReportRepository {
     `);
 
     const [[transactionStats]] = await db.query(`
-      SELECT COALESCE(SUM(amount), 0) AS totalRevenue
-      FROM transactions
-      WHERE status IN ('paid', 'processed', 'completed', 'partiel', 'partial')
-        AND YEAR(COALESCE(date, created_at)) = YEAR(CURRENT_DATE())
-        AND MONTH(COALESCE(date, created_at)) = MONTH(CURRENT_DATE())
-    `);
+      SELECT 
+        COALESCE(SUM(CASE WHEN status IN ('paid', 'processed', 'completed', 'partiel', 'partial') THEN amount ELSE 0 END), 0) AS totalRevenue,
+        COUNT(CASE WHEN status IN ('pending', 'late', 'overdue') THEN 1 END) AS pendingTxCount
+      FROM transactions t
+      WHERE amount > 0
+        AND COALESCE(payment_type, 'payment') NOT IN ('assignment', 'departure')
+        AND COALESCE(method, '') NOT IN ('assignment', 'departure', '')
+        ${txDateClause}
+    `, txParams);
 
     const [[propertyStats]] = await db.query(`
       SELECT
@@ -738,7 +771,9 @@ class ReportRepository {
     const totalRevenue = Number(transactionStats.totalRevenue) || 0;
     const totalDue = Number(clientStats.totalDue) || 0;
     const totalClients = Number(clientStats.totalClients) || 0;
-    const pendingPaymentsCount = Number(clientStats.pendingPaymentsCount) || 0;
+    const pendingPaymentsCount = Number(transactionStats.pendingTxCount) > 0 
+      ? Number(transactionStats.pendingTxCount) 
+      : Number(clientStats.pendingPaymentsCount) || 0;
     const totalProperties = Number(propertyStats.totalProperties) || 0;
     const occupiedCount = Number(propertyStats.occupiedCount) || 0;
 
@@ -746,6 +781,7 @@ class ReportRepository {
     const collectionRate = Math.min(rawRate, 100);
 
     return {
+      period,
       totalRevenue,
       totalDue,
       totalClients,

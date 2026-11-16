@@ -17,10 +17,10 @@ import { API } from '../../api/services';
  *   occupancyRate:        number,   // %
  * }
  */
-export const useDashboardKpis = () => {
+export const useDashboardKpis = (params = {}) => {
   return useQuery({
-    queryKey: ['dashboard', 'kpis'],
-    queryFn: () => API.Reports.getKpis().then(res => res.data?.data ?? res.data ?? {}),
-    staleTime: 60_000, // 60s — les KPIs n'ont pas besoin d'être frais à la milliseconde
+    queryKey: ['dashboard', 'kpis', params],
+    queryFn: () => API.Reports.getKpis(params).then(res => res.data?.data ?? res.data ?? {}),
+    staleTime: 30_000,
   });
 };

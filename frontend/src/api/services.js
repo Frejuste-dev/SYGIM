@@ -288,8 +288,8 @@ export const API = {
         getDashboard: (filters = {}) => 
             httpClient.get('/reports/dashboard', { params: filters }),
 
-        getKpis: () =>
-            httpClient.get('/reports/kpis'),
+        getKpis: (params = {}) =>
+            httpClient.get('/reports/kpis', { params }),
         
         getRevenue: (dateRange) => 
             httpClient.get('/reports/revenue', { params: dateRange }),

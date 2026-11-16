@@ -11,7 +11,7 @@ const ApiResponse = require('../../utils/responses/ApiResponse');
 class ReportController {
   async getKpis(req, res, next) {
     try {
-      const data = await reportService.getKpis();
+      const data = await reportService.getKpis(req.query);
       res.status(200).json(ApiResponse.success(data));
     } catch (error) {
       next(error);

@@ -9,9 +9,9 @@ class TransactionController extends BaseController {
 
   async getAll(req, res, next) {
     try {
-      const { status, method, clientId, dateFrom, dateTo, search, page, limit } = req.query;
+      const { status, method, clientId, dateFrom, dateTo, period, search, page, limit } = req.query;
       const result = await this.service.getTransactions(
-        { status, method, clientId, dateFrom, dateTo, search, page, limit },
+        { status, method, clientId, dateFrom, dateTo, period, search, page, limit },
         req.user
       );
       const { data, pagination } = result;
