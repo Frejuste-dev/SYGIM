@@ -8,7 +8,9 @@
 export const CONFIG = {
     // ── API Configuration ──────────────────────────────────────
     API: {
-        BASE: typeof window !== 'undefined' ? window.location.origin + '/api' : 'http://localhost:5000/api',
+        BASE: import.meta.env?.VITE_API_URL
+            ? (import.meta.env.VITE_API_URL.endsWith('/api') ? import.meta.env.VITE_API_URL : `${import.meta.env.VITE_API_URL}/api`)
+            : (typeof window !== 'undefined' ? window.location.origin + '/api' : 'http://localhost:5000/api'),
         TIMEOUT: 30000, // 30 secondes
         RETRY_ATTEMPTS: 1, // Pas de retry sur les erreurs 401/403 — evite les boucles
         RETRY_DELAY: 1000
