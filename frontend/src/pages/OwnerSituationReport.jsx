@@ -165,7 +165,7 @@ export default function OwnerSituationReport({ embedded = false }) {
                 <span className="text-xs text-slate-400">Cabinet Me DOUHO MAXIME</span>
               </div>
               <h1 className="text-lg sm:text-xl font-bold text-slate-900">
-                Situation Mensuelle du Propriétaire
+                Situation Propriétaire
               </h1>
             </div>
           </div>

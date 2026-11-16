@@ -28,7 +28,7 @@ import OwnerSituationReport from './OwnerSituationReport';
 
 const REPORT_TABS = [
   { key: 'overview', label: "Vue d'ensemble", icon: 'fa-chart-pie' },
-  { key: 'owner_situation', label: 'Situation Propriétaire (Cabinet Me DOUHO)', icon: 'fa-file-contract', badgeColor: 'bg-sky-100 text-sky-800 border border-sky-200' },
+  { key: 'owner_situation', label: 'Situation Propriétaire', icon: 'fa-file-contract', badgeColor: 'bg-sky-100 text-sky-800 border border-sky-200' },
   { key: 'owner_statements', label: 'Décompte Bailleurs & Locataires', icon: 'fa-file-invoice-dollar', badgeColor: 'bg-primary/10 text-primary border border-primary/20' },
   { key: 'prefinancing', label: 'Rapport de Préfinancement', icon: 'fa-bolt', badgeColor: 'bg-amber-100 text-amber-800' },
   { key: 'collectors', label: 'Performance Récolteurs', icon: 'fa-users' },
@@ -37,7 +37,7 @@ const REPORT_TABS = [
 ];
 
 const MANAGER_REPORT_TABS = [
-  { key: 'owner_situation', label: 'Situation Propriétaire (Cabinet Me DOUHO)', icon: 'fa-file-contract', badgeColor: 'bg-sky-100 text-sky-800 border border-sky-200' },
+  { key: 'owner_situation', label: 'Situation Propriétaire', icon: 'fa-file-contract', badgeColor: 'bg-sky-100 text-sky-800 border border-sky-200' },
   { key: 'owner_statements', label: 'Décompte Bailleurs & Locataires', icon: 'fa-file-invoice-dollar', badgeColor: 'bg-primary/10 text-primary border border-primary/20' },
   { key: 'collectors', label: 'Tournées & Collecteurs', icon: 'fa-users' },
   { key: 'overdue', label: 'Impayés & Plan de Relance', icon: 'fa-exclamation-triangle', badgeColor: 'bg-rose-100 text-rose-800' },
