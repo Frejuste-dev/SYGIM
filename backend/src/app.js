@@ -57,15 +57,35 @@ app.use(helmet({
   frameguard: { action: 'deny' }
 }));
 
-// CORS configurable selon l'environnement
-const allowedOrigins = process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',') : [process.env.FRONTEND_URL || 'http://localhost:5173'];
-app.use(cors({
-  origin: allowedOrigins,
+// CORS configurable selon l'environnement avec support natif de Cloudflare
+const allowedOrigins = process.env.CORS_ORIGINS 
+  ? process.env.CORS_ORIGINS.split(',').map(s => s.trim()) 
+  : [process.env.FRONTEND_URL || 'http://localhost:5173'];
+
+const corsOptions = {
+  origin: (origin, callback) => {
+    // Requêtes serveur-à-serveur, mobile ou sans en-tête origin (ex: healthcheck, curl)
+    if (!origin) return callback(null, true);
+    // Autoriser explicitement les origines configurées dans .env
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    // Autoriser automatiquement les domaines Cloudflare et le développement local
+    if (
+      origin.endsWith('.workers.dev') ||
+      origin.endsWith('.pages.dev') ||
+      origin.endsWith('.trycloudflare.com') ||
+      origin.includes('localhost') ||
+      origin.includes('127.0.0.1')
+    ) {
+      return callback(null, true);
+    }
+    return callback(new Error(`Origine CORS non autorisée : ${origin}`));
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
   credentials: true,
   maxAge: 3600
-}));
+};
+app.use(cors(corsOptions));
 
 // Compression des réponses
 app.use(compression({ level: 6 }));
