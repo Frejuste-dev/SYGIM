@@ -39,9 +39,9 @@ export default function Admin() {
     { name: 'Tableau de bord', path: '/admin/manager', icon: 'fas fa-chart-pie' },
     { name: 'Biens immobiliers', path: '/admin/properties', icon: 'fas fa-building' },
     { name: 'Propriétaires', path: '/admin/owners', icon: 'fas fa-user-tie' },
-    { name: 'Situation Propriétaire', path: '/admin/owner-situation', icon: 'fas fa-file-contract' },
     { name: 'Locataires', path: '/admin/clients', icon: 'fas fa-users' },
     { name: 'Attributions', path: '/admin/property-assignments', icon: 'fas fa-handshake' },
+    { name: 'Rapports', path: '/admin/reports', icon: 'fas fa-file-alt' },
     { name: 'Journal d\'activité', path: '/admin/activity', icon: 'fas fa-history' },
     { name: 'Notifications', path: '/admin/notifications', icon: 'fas fa-bell', badge: unreadCount },
   ];
@@ -61,14 +61,13 @@ export default function Admin() {
         { name: 'Attributions', path: '/admin/property-assignments', icon: 'fas fa-handshake', roles: ['admin', 'super_admin', 'director'] },
         { name: 'Locataires', path: '/admin/clients', icon: 'fas fa-user-friends', roles: ['admin', 'super_admin', 'gestionnaire', 'director', 'accounting'] },
         { name: 'Propriétaires', path: '/admin/owners', icon: 'fas fa-user-tie', roles: ['admin', 'super_admin', 'gestionnaire', 'director', 'accounting'] },
-        { name: 'Situation Propriétaire', path: '/admin/owner-situation', icon: 'fas fa-file-contract', roles: ['admin', 'super_admin', 'gestionnaire', 'director', 'accounting'] },
         { name: 'Transactions', path: '/admin/transactions', icon: 'fas fa-exchange-alt', roles: ['admin', 'super_admin', 'gestionnaire', 'director', 'accounting'] },
       ]
     },
     {
       title: 'ANALYSE',
       items: [
-        { name: 'Rapports', path: '/admin/reports', icon: 'fas fa-file-alt', roles: ['admin', 'super_admin', 'director', 'accounting', 'gestionnaire'] },
+        { name: 'Rapports', path: '/admin/reports', icon: 'fas fa-file-alt', roles: ['admin', 'super_admin', 'director', 'accounting', 'gestionnaire', 'manager', 'collector_manager'] },
         { name: 'Journal d\'activité', path: '/admin/activity', icon: 'fas fa-history', roles: ['admin', 'super_admin', 'director', 'accounting'] },
         { name: 'Notifications', path: '/admin/notifications', icon: 'fas fa-bell', roles: ['admin', 'super_admin', 'director', 'accounting'], badge: unreadCount },
       ]

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useQueryClient } from '@tanstack/react-query';
 import { API } from '../api/services';
@@ -23,9 +24,11 @@ import ReportPrefinancingTab from '../components/reports/ReportPrefinancingTab';
 import ReportCollectorsTab from '../components/reports/ReportCollectorsTab';
 import ReportPropertiesTab from '../components/reports/ReportPropertiesTab';
 import ReportOverdueTab from '../components/reports/ReportOverdueTab';
+import OwnerSituationReport from './OwnerSituationReport';
 
 const REPORT_TABS = [
   { key: 'overview', label: "Vue d'ensemble", icon: 'fa-chart-pie' },
+  { key: 'owner_situation', label: 'Situation Propriétaire (Cabinet Me DOUHO)', icon: 'fa-file-contract', badgeColor: 'bg-sky-100 text-sky-800 border border-sky-200' },
   { key: 'owner_statements', label: 'Décompte Bailleurs & Locataires', icon: 'fa-file-invoice-dollar', badgeColor: 'bg-primary/10 text-primary border border-primary/20' },
   { key: 'prefinancing', label: 'Rapport de Préfinancement', icon: 'fa-bolt', badgeColor: 'bg-amber-100 text-amber-800' },
   { key: 'collectors', label: 'Performance Récolteurs', icon: 'fa-users' },
@@ -34,6 +37,7 @@ const REPORT_TABS = [
 ];
 
 const MANAGER_REPORT_TABS = [
+  { key: 'owner_situation', label: 'Situation Propriétaire (Cabinet Me DOUHO)', icon: 'fa-file-contract', badgeColor: 'bg-sky-100 text-sky-800 border border-sky-200' },
   { key: 'owner_statements', label: 'Décompte Bailleurs & Locataires', icon: 'fa-file-invoice-dollar', badgeColor: 'bg-primary/10 text-primary border border-primary/20' },
   { key: 'collectors', label: 'Tournées & Collecteurs', icon: 'fa-users' },
   { key: 'overdue', label: 'Impayés & Plan de Relance', icon: 'fa-exclamation-triangle', badgeColor: 'bg-rose-100 text-rose-800' },
@@ -46,7 +50,24 @@ export default function Reports() {
   const { showToast } = useToast();
   const queryClient = useQueryClient();
 
-  const [activeTab, setActiveTab] = useState(isManager ? 'owner_statements' : 'overview');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlTab = searchParams.get('tab');
+  const [activeTab, setActiveTab] = useState(
+    urlTab || (isManager ? 'owner_situation' : 'overview')
+  );
+
+  useEffect(() => {
+    if (urlTab && urlTab !== activeTab) {
+      setActiveTab(urlTab);
+    }
+  }, [urlTab]);
+
+  const handleTabChange = (key) => {
+    setActiveTab(key);
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set('tab', key);
+    setSearchParams(nextParams, { replace: true });
+  };
 
   // Filtres de période synchronisés
   const [selectedMonth, setSelectedMonth] = useState('2026-11');
@@ -546,6 +567,10 @@ export default function Reports() {
 
   // Export rapide contextuel selon l'onglet actif
   const handleGlobalExport = (format = 'pdf') => {
+    if (activeTab === 'owner_situation') {
+      window.print();
+      return;
+    }
     if (activeTab === 'owner_statements') {
       return format === 'excel'
         ? handleExportOwnerStatementsExcel()
@@ -631,104 +656,108 @@ export default function Reports() {
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5">
-          <button
-            type="button"
-            onClick={() => handleGlobalExport('excel')}
-            className="inline-flex items-center gap-2 px-3.5 py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-sm font-semibold hover:bg-emerald-100 transition-colors cursor-pointer"
-          >
-            <i className="fas fa-file-excel"></i> Exporter Excel
-          </button>
-          <button
-            type="button"
-            onClick={() => handleGlobalExport('pdf')}
-            className="inline-flex items-center gap-2 px-3.5 py-2 bg-rose-50 text-rose-700 border border-rose-200 rounded-xl text-sm font-semibold hover:bg-rose-100 transition-colors cursor-pointer"
-          >
-            <i className="fas fa-file-pdf"></i> Exporter PDF
-          </button>
-        </div>
+        {activeTab !== 'owner_situation' && (
+          <div className="flex flex-wrap items-center gap-2.5">
+            <button
+              type="button"
+              onClick={() => handleGlobalExport('excel')}
+              className="inline-flex items-center gap-2 px-3.5 py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-sm font-semibold hover:bg-emerald-100 transition-colors cursor-pointer"
+            >
+              <i className="fas fa-file-excel"></i> Exporter Excel
+            </button>
+            <button
+              type="button"
+              onClick={() => handleGlobalExport('pdf')}
+              className="inline-flex items-center gap-2 px-3.5 py-2 bg-rose-50 text-rose-700 border border-rose-200 rounded-xl text-sm font-semibold hover:bg-rose-100 transition-colors cursor-pointer"
+            >
+              <i className="fas fa-file-pdf"></i> Exporter PDF
+            </button>
+          </div>
+        )}
       </div>
 
       {/* 2. BARRE DE FILTRES DE PÉRIODE */}
-      <div className="bg-white px-5 py-3.5 rounded-2xl border border-slate-200 shadow-2xs flex flex-wrap items-center justify-between gap-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <span className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-            <i className="fas fa-calendar-alt text-primary"></i> Période d'analyse :
-          </span>
-          <div className="flex items-center gap-2">
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => handleStartDateChange(e.target.value)}
-              className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-primary focus:bg-white"
-            />
-            <span className="text-xs text-slate-400 font-medium">au</span>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => handleEndDateChange(e.target.value)}
-              className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-primary focus:bg-white"
-            />
-          </div>
+      {activeTab !== 'owner_situation' && (
+        <div className="bg-white px-5 py-3.5 rounded-2xl border border-slate-200 shadow-2xs flex flex-wrap items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+              <i className="fas fa-calendar-alt text-primary"></i> Période d'analyse :
+            </span>
+            <div className="flex items-center gap-2">
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => handleStartDateChange(e.target.value)}
+                className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-primary focus:bg-white"
+              />
+              <span className="text-xs text-slate-400 font-medium">au</span>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => handleEndDateChange(e.target.value)}
+                className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-primary focus:bg-white"
+              />
+            </div>
 
-          {/* Raccourcis de période rapides synchronisés */}
-          <div className="flex flex-wrap items-center gap-1.5 pl-2 border-l border-slate-200">
-            <button
-              type="button"
-              onClick={() => applyPeriodPreset('current_month')}
-              className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition-colors cursor-pointer ${
-                selectedMonth === '2026-11' && startDate === '2026-11-01' && endDate === '2026-11-30'
-                  ? 'bg-primary text-white shadow-xs'
-                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-              }`}
-            >
-              Ce mois (Nov)
-            </button>
-            <button
-              type="button"
-              onClick={() => applyPeriodPreset('prev_month')}
-              className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition-colors cursor-pointer ${
-                selectedMonth === '2026-10' && startDate === '2026-10-01' && endDate === '2026-10-31'
-                  ? 'bg-primary text-white shadow-xs'
-                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-              }`}
-            >
-              Mois préc. (Oct)
-            </button>
-            <button
-              type="button"
-              onClick={() => applyPeriodPreset('q4_2026')}
-              className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition-colors cursor-pointer ${
-                startDate === '2026-10-01' && endDate === '2026-12-31'
-                  ? 'bg-primary text-white shadow-xs'
-                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-              }`}
-            >
-              T4 2026
-            </button>
-            {(startDate || endDate) && (
+            {/* Raccourcis de période rapides synchronisés */}
+            <div className="flex flex-wrap items-center gap-1.5 pl-2 border-l border-slate-200">
               <button
                 type="button"
-                onClick={() => applyPeriodPreset('all')}
-                className="px-2 py-1 text-[11px] font-semibold text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
-                title="Supprimer les filtres de date"
+                onClick={() => applyPeriodPreset('current_month')}
+                className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition-colors cursor-pointer ${
+                  selectedMonth === '2026-11' && startDate === '2026-11-01' && endDate === '2026-11-30'
+                    ? 'bg-primary text-white shadow-xs'
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                }`}
               >
-                Réinitialiser
+                Ce mois (Nov)
               </button>
-            )}
+              <button
+                type="button"
+                onClick={() => applyPeriodPreset('prev_month')}
+                className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition-colors cursor-pointer ${
+                  selectedMonth === '2026-10' && startDate === '2026-10-01' && endDate === '2026-10-31'
+                    ? 'bg-primary text-white shadow-xs'
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                }`}
+              >
+                Mois préc. (Oct)
+              </button>
+              <button
+                type="button"
+                onClick={() => applyPeriodPreset('q4_2026')}
+                className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition-colors cursor-pointer ${
+                  startDate === '2026-10-01' && endDate === '2026-12-31'
+                    ? 'bg-primary text-white shadow-xs'
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                }`}
+              >
+                T4 2026
+              </button>
+              {(startDate || endDate) && (
+                <button
+                  type="button"
+                  onClick={() => applyPeriodPreset('all')}
+                  className="px-2 py-1 text-[11px] font-semibold text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                  title="Supprimer les filtres de date"
+                >
+                  Réinitialiser
+                </button>
+              )}
+            </div>
           </div>
-        </div>
 
-        <button
-          type="button"
-          onClick={handleRefreshAll}
-          disabled={loading || loadingStatements}
-          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition-colors disabled:opacity-50 cursor-pointer"
-        >
-          <i className={`fas fa-sync-alt ${loading || loadingStatements ? 'fa-spin' : ''}`}></i>
-          {loading || loadingStatements ? 'Actualisation...' : 'Actualiser'}
-        </button>
-      </div>
+          <button
+            type="button"
+            onClick={handleRefreshAll}
+            disabled={loading || loadingStatements}
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition-colors disabled:opacity-50 cursor-pointer"
+          >
+            <i className={`fas fa-sync-alt ${loading || loadingStatements ? 'fa-spin' : ''}`}></i>
+            {loading || loadingStatements ? 'Actualisation...' : 'Actualiser'}
+          </button>
+        </div>
+      )}
 
       {/* 3. NAVIGATION PAR ONGLETS */}
       <div className="flex flex-wrap gap-2 bg-slate-100/80 p-1.5 rounded-2xl border border-slate-200/80">
@@ -752,7 +781,7 @@ export default function Reports() {
                   ? 'bg-primary text-white shadow-xs'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-white/70'
               }`}
-              onClick={() => setActiveTab(tab.key)}
+              onClick={() => handleTabChange(tab.key)}
             >
               <i className={`fas ${tab.icon}`}></i>
               <span>{tab.label}</span>
@@ -771,6 +800,13 @@ export default function Reports() {
       </div>
 
       {/* 4. CONTENU DES ONGLETS MODULAIRES */}
+      {/* Onglet Situation Propriétaire Officielle (Cabinet Me DOUHO MAXIME) */}
+      {activeTab === 'owner_situation' && (
+        <div className="mt-2">
+          <OwnerSituationReport embedded={true} />
+        </div>
+      )}
+
       {!isManager && activeTab === 'overview' && (
         <ReportOverviewTab
           dashboard={dashboard}

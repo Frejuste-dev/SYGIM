@@ -19,7 +19,7 @@ const MONTH_NAMES = [
   { value: 12, label: 'Décembre' }
 ];
 
-export default function OwnerSituationReport() {
+export default function OwnerSituationReport({ embedded = false }) {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -42,6 +42,13 @@ export default function OwnerSituationReport() {
   const [commissionRate, setCommissionRate] = useState(urlRate);
   const [customZone, setCustomZone] = useState('');
   const [customObservations, setCustomObservations] = useState({});
+
+  // Met à jour le propriétaire si le paramètre d'URL change
+  useEffect(() => {
+    if (urlOwnerId && urlOwnerId !== selectedOwnerId) {
+      setSelectedOwnerId(urlOwnerId);
+    }
+  }, [urlOwnerId]);
 
   // Sélectionne le premier propriétaire par défaut si aucun n'est spécifié
   useEffect(() => {
@@ -135,19 +142,21 @@ export default function OwnerSituationReport() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 py-6 px-3 sm:px-6 print:p-0 print:bg-white text-slate-900 font-sans">
+    <div className={embedded ? "w-full py-2 print:p-0 text-slate-900 font-sans" : "min-h-screen bg-slate-100 py-6 px-3 sm:px-6 print:p-0 print:bg-white text-slate-900 font-sans"}>
       {/* 1. BARRE DE CONTRÔLE SUPÉRIEURE (MASQUÉE À L'IMPRESSION) */}
       <div className="max-w-[960px] mx-auto mb-6 bg-white border border-slate-200/90 rounded-2xl shadow-sm p-4 sm:p-5 print:hidden">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-100">
           <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => navigate('/admin/owners')}
-              className="w-9 h-9 rounded-xl border border-slate-200 bg-slate-50 text-slate-600 hover:text-slate-900 hover:bg-slate-100 flex items-center justify-center transition-colors"
-              title="Retour aux propriétaires"
-            >
-              <i className="fas fa-arrow-left text-sm"></i>
-            </button>
+            {!embedded && (
+              <button
+                type="button"
+                onClick={() => navigate('/admin/owners')}
+                className="w-9 h-9 rounded-xl border border-slate-200 bg-slate-50 text-slate-600 hover:text-slate-900 hover:bg-slate-100 flex items-center justify-center transition-colors"
+                title="Retour aux propriétaires"
+              >
+                <i className="fas fa-arrow-left text-sm"></i>
+              </button>
+            )}
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-xs font-bold uppercase tracking-wider text-sky-700 bg-sky-50 px-2 py-0.5 rounded-md border border-sky-100">

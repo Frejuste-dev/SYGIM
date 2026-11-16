@@ -654,7 +654,7 @@ export default function Owners() {
                         <div className="flex items-center justify-end gap-1.5">
                           <button
                             type="button"
-                            onClick={() => navigate(`/admin/owner-situation?ownerId=${o.id}`)}
+                            onClick={() => navigate(`/admin/reports?tab=owner_situation&ownerId=${o.id}`)}
                             className="h-8 px-2.5 bg-sky-50 text-sky-700 border border-sky-200 hover:bg-sky-100 rounded-lg text-xs font-bold transition-colors inline-flex items-center gap-1.5 shadow-2xs"
                             title="Générer la Situation Propriétaire officielle (Cabinet Me DOUHO MAXIME)"
                           >
