@@ -11,7 +11,7 @@ class ReportRepository {
   /**
    * Synthèse complète pour la page Rapports & Analyses (Vue d'ensemble)
    */
-  async getTransactionSummary({ startDate, endDate, ownerId, collectorId } = {}) {
+  async getTransactionSummary({ startDate, endDate, ownerId, collectorId, period = 'month' } = {}) {
     const dateFilterTx = [];
     const txParams = [];
 
@@ -185,7 +185,8 @@ class ReportRepository {
     );
 
     // 7. Évolution des recettes (Croissance des revenus pour graphique)
-    const formatKey = period === 'today' ? '%H:00' : (period === 'year' || period === 'all' ? '%Y-%m' : '%Y-%m-%d');
+    const effectivePeriod = period || (startDate && endDate ? 'month' : 'month');
+    const formatKey = effectivePeriod === 'today' ? '%H:00' : (effectivePeriod === 'year' || effectivePeriod === 'all' ? '%Y-%m' : '%Y-%m-%d');
     const [trendRows] = await db.query(
       `SELECT
          DATE_FORMAT(COALESCE(t.date, t.created_at), '${formatKey}') AS dateKey,
@@ -205,7 +206,7 @@ class ReportRepository {
       txParams
     );
 
-    const revenueTrends = this._buildContinuousTrends(period, trendRows);
+    const revenueTrends = this._buildContinuousTrends(effectivePeriod, trendRows, startDate);
 
     const totalProperties = Number(propRow?.totalProperties || 0);
     const occupiedCount = Number(propRow?.occupiedCount || 0);
@@ -254,7 +255,7 @@ class ReportRepository {
   /**
    * Génère une série temporelle continue avec zéros pour les périodes sans transaction
    */
-  _buildContinuousTrends(period, rawRows = []) {
+  _buildContinuousTrends(period = 'month', rawRows = [], referenceDateStr = null) {
     const map = new Map();
     for (const r of rawRows) {
       map.set(r.dateKey, {
@@ -265,8 +266,18 @@ class ReportRepository {
 
     const result = [];
     const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth(); // 0..11
+    let year = now.getFullYear();
+    let month = now.getMonth(); // 0..11
+
+    if (referenceDateStr && referenceDateStr.length >= 7) {
+      const parts = referenceDateStr.split('-');
+      const y = parseInt(parts[0], 10);
+      const m = parseInt(parts[1], 10);
+      if (!isNaN(y) && !isNaN(m) && m >= 1 && m <= 12) {
+        year = y;
+        month = m - 1;
+      }
+    }
 
     if (period === 'month') {
       const daysInMonth = new Date(year, month + 1, 0).getDate();
