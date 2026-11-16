@@ -187,40 +187,48 @@ export default function ReportTaxDeclarationTab() {
         </div>
 
         <div className="overflow-x-auto">
-          {isLoading ? (
-            <TableSkeleton rows={12} cols={5} />
-          ) : (
-            <table className="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-[11px]">
-                  <th className="py-3 px-4">Mois d'imposition</th>
-                  <th className="py-3 px-4 text-right text-sky-800 bg-sky-50/50">Loyers Encaissés (Brut)</th>
-                  <th className="py-3 px-4 text-right text-amber-800 bg-amber-50/50">Commissions Déductibles</th>
-                  <th className="py-3 px-4 text-right text-orange-800 bg-orange-50/50">Travaux Déductibles</th>
-                  <th className="py-3 px-4 text-right font-black text-emerald-800 bg-emerald-50/50">Revenu Net Mensuel</th>
+          <table className="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-[11px]">
+                <th className="py-3.5 px-4">Mois d'imposition</th>
+                <th className="py-3.5 px-4 text-right text-sky-800 bg-sky-50/40">Loyers Encaissés (Brut)</th>
+                <th className="py-3.5 px-4 text-right text-amber-800 bg-amber-50/40">Commissions Déductibles</th>
+                <th className="py-3.5 px-4 text-right text-orange-800 bg-orange-50/40">Travaux Déductibles</th>
+                <th className="py-3.5 px-4 text-right font-black text-emerald-800 bg-emerald-50/40">Revenu Net Mensuel</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {isLoading ? (
+                <TableSkeleton rows={12} columns={5} />
+              ) : monthsBreakdown.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="p-8 text-center text-slate-400">
+                    Aucune donnée fiscale disponible pour cette année.
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {monthsBreakdown.map((m) => (
+              ) : (
+                monthsBreakdown.map((m) => (
                   <tr key={m.monthNumber} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="py-2.5 px-4 font-bold text-slate-900">
+                    <td className="py-3 px-4 font-bold text-slate-900">
                       {m.monthName} {selectedYear}
                     </td>
-                    <td className="py-2.5 px-4 text-right font-semibold text-slate-800 tabular-nums">
+                    <td className="py-3 px-4 text-right font-semibold text-slate-800 tabular-nums">
                       {formatXOF(m.grossRent, { compact: false })}
                     </td>
-                    <td className="py-2.5 px-4 text-right font-medium text-amber-700 tabular-nums">
+                    <td className="py-3 px-4 text-right font-medium text-amber-700 tabular-nums">
                       {m.deductibleCommission > 0 ? `- ${formatXOF(m.deductibleCommission, { compact: false })}` : '0 XOF'}
                     </td>
-                    <td className="py-2.5 px-4 text-right font-medium text-orange-700 tabular-nums">
+                    <td className="py-3 px-4 text-right font-medium text-orange-700 tabular-nums">
                       {m.deductibleRepairs > 0 ? `- ${formatXOF(m.deductibleRepairs, { compact: false })}` : '0 XOF'}
                     </td>
-                    <td className="py-2.5 px-4 text-right font-bold text-emerald-800 tabular-nums bg-emerald-50/10">
+                    <td className="py-3 px-4 text-right font-bold text-emerald-800 tabular-nums bg-emerald-50/10">
                       {formatXOF(m.netIncome, { compact: false })}
                     </td>
                   </tr>
-                ))}
-              </tbody>
+                ))
+              )}
+            </tbody>
+            {!isLoading && monthsBreakdown.length > 0 && (
               <tfoot>
                 <tr className="bg-slate-100 font-black text-slate-900 border-t-2 border-slate-300">
                   <td className="py-3.5 px-4 uppercase tracking-wider text-xs">
@@ -240,8 +248,8 @@ export default function ReportTaxDeclarationTab() {
                   </td>
                 </tr>
               </tfoot>
-            </table>
-          )}
+            )}
+          </table>
         </div>
       </div>
 

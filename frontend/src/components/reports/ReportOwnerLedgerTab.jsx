@@ -194,37 +194,39 @@ export default function ReportOwnerLedgerTab() {
         </div>
 
         <div className="overflow-x-auto">
-          {isLoading ? (
-            <TableSkeleton rows={6} cols={8} />
-          ) : entries.length === 0 ? (
-            <div className="p-12 text-center text-slate-500">
-              <i className="fas fa-file-invoice text-3xl text-slate-300 mb-2"></i>
-              <p className="text-sm font-semibold text-slate-700">Aucune écriture comptable sur cette période.</p>
-            </div>
-          ) : (
-            <table className="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-[11px]">
-                  <th className="py-3 px-3 w-28">Date</th>
-                  <th className="py-3 px-3 w-28">Réf.</th>
-                  <th className="py-3 px-3 w-24">Catégorie</th>
-                  <th className="py-3 px-4">Libellé de l'Opération</th>
-                  <th className="py-3 px-4">Bien Rattaché</th>
-                  <th className="py-3 px-3 text-right text-emerald-800 bg-emerald-50/50">Crédit (+)</th>
-                  <th className="py-3 px-3 text-right text-rose-800 bg-rose-50/50">Débit (-)</th>
-                  <th className="py-3 px-4 text-right font-black text-slate-900 bg-slate-100/60">Solde Progressif</th>
+          <table className="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-[11px]">
+                <th className="py-3.5 px-3 w-28">Date</th>
+                <th className="py-3.5 px-3 w-28">Réf.</th>
+                <th className="py-3.5 px-3 w-24">Catégorie</th>
+                <th className="py-3.5 px-4">Libellé de l'Opération</th>
+                <th className="py-3.5 px-4">Bien Rattaché</th>
+                <th className="py-3.5 px-4 text-right text-emerald-800 bg-emerald-50/40">Crédit (+)</th>
+                <th className="py-3.5 px-4 text-right text-rose-800 bg-rose-50/40">Débit (-)</th>
+                <th className="py-3.5 px-4 text-right font-black text-slate-900 bg-slate-100/60">Solde Progressif</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {isLoading ? (
+                <TableSkeleton rows={6} columns={8} />
+              ) : entries.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="p-12 text-center text-slate-500">
+                    <i className="fas fa-file-invoice text-3xl text-slate-300 mb-2"></i>
+                    <p className="text-sm font-semibold text-slate-700">Aucune écriture comptable sur cette période.</p>
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {entries.map((e) => (
+              ) : (
+                entries.map((e) => (
                   <tr key={e.id + e.reference} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="py-3 px-3 text-slate-600 whitespace-nowrap font-medium">
+                    <td className="py-3.5 px-3 text-slate-600 whitespace-nowrap font-medium">
                       {formatDate(e.date)}
                     </td>
-                    <td className="py-3 px-3 font-mono font-bold text-slate-700">
+                    <td className="py-3.5 px-3 font-mono font-bold text-slate-700">
                       {e.reference}
                     </td>
-                    <td className="py-3 px-3">
+                    <td className="py-3.5 px-3">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold border ${
                         e.category === 'LOYER'
                           ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
@@ -237,28 +239,28 @@ export default function ReportOwnerLedgerTab() {
                         {e.category}
                       </span>
                     </td>
-                    <td className="py-3 px-4 text-slate-900 font-medium">
+                    <td className="py-3.5 px-4 text-slate-900 font-medium">
                       {e.label}
                     </td>
-                    <td className="py-3 px-4 text-slate-600">
+                    <td className="py-3.5 px-4 text-slate-600">
                       {e.propertyName}
                     </td>
-                    <td className={`py-3 px-3 text-right tabular-nums ${e.credit > 0 ? 'font-bold text-emerald-700 bg-emerald-50/20' : 'text-slate-300'}`}>
+                    <td className={`py-3.5 px-4 text-right tabular-nums ${e.credit > 0 ? 'font-bold text-emerald-700 bg-emerald-50/20' : 'text-slate-300'}`}>
                       {e.credit > 0 ? `+ ${formatXOF(e.credit, { compact: false })}` : '—'}
                     </td>
-                    <td className={`py-3 px-3 text-right tabular-nums ${e.debit > 0 ? 'font-bold text-rose-700 bg-rose-50/20' : 'text-slate-300'}`}>
+                    <td className={`py-3.5 px-4 text-right tabular-nums ${e.debit > 0 ? 'font-bold text-rose-700 bg-rose-50/20' : 'text-slate-300'}`}>
                       {e.debit > 0 ? `- ${formatXOF(e.debit, { compact: false })}` : '—'}
                     </td>
-                    <td className={`py-3 px-4 text-right font-black tabular-nums bg-slate-50/30 ${
+                    <td className={`py-3.5 px-4 text-right font-black tabular-nums bg-slate-50/30 ${
                       e.runningBalance >= 0 ? 'text-slate-900' : 'text-rose-700'
                     }`}>
                       {formatXOF(e.runningBalance, { compact: false })}
                     </td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

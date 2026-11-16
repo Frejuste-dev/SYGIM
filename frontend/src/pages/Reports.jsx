@@ -44,8 +44,8 @@ const REPORT_DOMAINS = [
     tabs: [
       { key: 'owner_situation', label: 'Situation Propriétaire', icon: 'fa-file-contract', badgeColor: 'bg-sky-100 text-sky-800 border border-sky-200' },
       { key: 'owner_statements', label: 'Décompte Bailleurs & Locataires', icon: 'fa-file-invoice-dollar', badgeColor: 'bg-primary/10 text-primary border border-primary/20' },
-      { key: 'owner_ledger', label: '1.3. Relevé Compte Propriétaire', icon: 'fa-book-open', badgeColor: 'bg-indigo-100 text-indigo-800' },
-      { key: 'tax_declaration', label: '1.2. Aide Déclaration Fiscale 2026', icon: 'fa-calculator', badgeColor: 'bg-emerald-100 text-emerald-800' },
+      { key: 'owner_ledger', label: 'Relevé Compte Propriétaire', icon: 'fa-book-open', badgeColor: 'bg-indigo-100 text-indigo-800' },
+      { key: 'tax_declaration', label: 'Déclaration Fiscale 2026', icon: 'fa-calculator', badgeColor: 'bg-emerald-100 text-emerald-800' },
     ]
   },
   {
@@ -55,8 +55,8 @@ const REPORT_DOMAINS = [
     description: 'Impayés, balance âgée des créances et inventaire des cautions',
     tabs: [
       { key: 'overdue', label: 'Impayés & Plan de Relance', icon: 'fa-exclamation-triangle', badgeColor: 'bg-rose-100 text-rose-800' },
-      { key: 'aged_receivables', label: '2.1. Balance Âgée Locataires', icon: 'fa-history', badgeColor: 'bg-amber-100 text-amber-800' },
-      { key: 'deposits', label: '2.3. Dépôts de Garantie (Cautions)', icon: 'fa-shield-halved', badgeColor: 'bg-teal-100 text-teal-800' },
+      { key: 'aged_receivables', label: 'Balance Âgée des Créances', icon: 'fa-history', badgeColor: 'bg-amber-100 text-amber-800' },
+      { key: 'deposits', label: 'Dépôts de Garantie (Cautions)', icon: 'fa-shield-halved', badgeColor: 'bg-teal-100 text-teal-800' },
     ]
   },
   {
@@ -66,7 +66,7 @@ const REPORT_DOMAINS = [
     description: 'Avances de trésorerie sur loyers et solvabilité du compte mandat',
     tabs: [
       { key: 'prefinancing', label: 'Rapport de Préfinancement', icon: 'fa-bolt', badgeColor: 'bg-amber-100 text-amber-800' },
-      { key: 'mandate_bfr', label: '3.3. Analyse BFR Compte Mandat', icon: 'fa-scale-balanced', badgeColor: 'bg-violet-100 text-violet-800' },
+      { key: 'mandate_bfr', label: 'Analyse BFR Compte Mandat', icon: 'fa-scale-balanced', badgeColor: 'bg-violet-100 text-violet-800' },
     ]
   },
   {
@@ -76,7 +76,7 @@ const REPORT_DOMAINS = [
     description: 'Occupation du parc, vacance locative et manque à gagner financier',
     tabs: [
       { key: 'properties', label: 'Biens & Occupation', icon: 'fa-building' },
-      { key: 'vacancy_loss', label: '4.1. Vacance & Manque à Gagner', icon: 'fa-door-open', badgeColor: 'bg-orange-100 text-orange-800' },
+      { key: 'vacancy_loss', label: 'Vacance & Manque à Gagner', icon: 'fa-door-open', badgeColor: 'bg-orange-100 text-orange-800' },
     ]
   },
   {
@@ -834,7 +834,7 @@ export default function Reports() {
       {/* 3. NAVIGATION PAR DOMAINES MÉTIERS & RAPPORTS */}
       <div className="space-y-3">
         {/* Niveau 1 : Les 5 Domaines Métiers */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 p-1.5 bg-slate-100 rounded-2xl border border-slate-200">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2.5 p-1.5 bg-slate-100/90 rounded-2xl border border-slate-200">
           {REPORT_DOMAINS.map((domain, index) => {
             const isDomainActive = domain.id === activeDomainId;
             return (
@@ -842,22 +842,28 @@ export default function Reports() {
                 key={domain.id}
                 type="button"
                 onClick={() => handleDomainChange(domain.id)}
-                className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all text-left cursor-pointer ${
+                className={`flex items-center gap-3 px-3.5 py-3 rounded-xl transition-all text-left cursor-pointer ${
                   isDomainActive
-                    ? 'bg-white text-primary shadow-xs border border-primary/20 ring-2 ring-primary/10'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                    ? 'bg-white text-slate-900 shadow-xs border border-primary/30 ring-2 ring-primary/10'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/70 border border-transparent'
                 }`}
               >
-                <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 text-xs ${
-                  isDomainActive ? 'bg-primary text-white shadow-xs' : 'bg-slate-200 text-slate-700'
+                <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 text-sm transition-colors ${
+                  isDomainActive
+                    ? 'bg-primary text-white shadow-xs'
+                    : 'bg-slate-200/80 text-slate-600'
                 }`}>
                   <i className={`fas ${domain.icon}`}></i>
                 </div>
-                <div className="min-w-0 flex-1 truncate">
-                  <div className="text-[10px] uppercase tracking-wider text-slate-400 font-bold leading-tight">
+                <div className="min-w-0 flex-1">
+                  <div className={`text-[10px] uppercase tracking-wider font-bold leading-none ${
+                    isDomainActive ? 'text-primary' : 'text-slate-400'
+                  }`}>
                     Domaine {index + 1}
                   </div>
-                  <div className="truncate font-semibold">{domain.label}</div>
+                  <div className="truncate text-xs font-bold mt-1 text-slate-800">
+                    {domain.label}
+                  </div>
                 </div>
               </button>
             );
@@ -866,7 +872,7 @@ export default function Reports() {
 
         {/* Niveau 2 : Rapports et Sous-onglets du Domaine Sélectionné */}
         {currentDomain && (
-          <div className="flex flex-wrap items-center gap-2 bg-slate-50 p-2 rounded-2xl border border-slate-200/80">
+          <div className="flex flex-wrap items-center gap-2 bg-white p-2.5 rounded-2xl border border-slate-200 shadow-2xs">
             <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 px-2 flex items-center gap-1.5 shrink-0">
               <i className="fas fa-layer-group text-primary"></i> Rapports :
             </span>
@@ -888,16 +894,16 @@ export default function Reports() {
                   className={`flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-xl transition-all whitespace-nowrap cursor-pointer ${
                     isActive
                       ? 'bg-primary text-white shadow-xs font-bold'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-white bg-white/70 border border-slate-200/60'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50 bg-white border border-slate-200'
                   }`}
                   onClick={() => handleTabChange(tab.key)}
                 >
-                  <i className={`fas ${tab.icon}`}></i>
+                  <i className={`fas ${tab.icon} ${isActive ? 'text-white' : 'text-slate-400'}`}></i>
                   <span>{tab.label}</span>
                   {badgeCount > 0 && (
                     <span
                       className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
-                        isActive ? 'bg-white/20 text-white' : (tab.badgeColor || 'bg-slate-200 text-slate-700')
+                        isActive ? 'bg-white/20 text-white' : (tab.badgeColor || 'bg-slate-100 text-slate-700')
                       }`}
                     >
                       {badgeCount}

@@ -141,79 +141,83 @@ export default function ReportDepositsTab() {
       {/* 3. TABLEAU INVENTAIRE DES CAUTIONS */}
       <div className="bg-white border border-slate-200 rounded-2xl shadow-2xs overflow-hidden">
         <div className="overflow-x-auto">
-          {isLoading ? (
-            <TableSkeleton rows={6} cols={9} />
-          ) : items.length === 0 ? (
-            <div className="p-12 text-center text-slate-500">
-              <i className="fas fa-shield-alt text-3xl text-slate-300 mb-2"></i>
-              <p className="text-sm font-semibold text-slate-700">Aucun dépôt de garantie répertorié.</p>
-            </div>
-          ) : (
-            <table className="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-[11px]">
-                  <th className="py-3 px-3 w-10 text-center">N°</th>
-                  <th className="py-3 px-4">Locataire &amp; Contact</th>
-                  <th className="py-3 px-4">Bien &amp; Zone</th>
-                  <th className="py-3 px-3">Statut Bail</th>
-                  <th className="py-3 px-3 text-right">Loyer Mensuel</th>
-                  <th className="py-3 px-3 text-right text-sky-800 bg-sky-50/50">Caution Détenue</th>
-                  <th className="py-3 px-3 text-right text-rose-800 bg-rose-50/50">Arriérés Dûs</th>
-                  <th className="py-3 px-3 text-right text-amber-800 bg-amber-50/50">Retenu s/ Dette</th>
-                  <th className="py-3 px-4 text-right font-black text-slate-900 bg-emerald-50/50">Net Restituable</th>
+          <table className="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-[11px]">
+                <th className="py-3.5 px-3 w-12 text-center">N°</th>
+                <th className="py-3.5 px-4">Locataire &amp; Contact</th>
+                <th className="py-3.5 px-4">Bien &amp; Zone</th>
+                <th className="py-3.5 px-3">Statut Bail</th>
+                <th className="py-3.5 px-4 text-right">Loyer Mensuel</th>
+                <th className="py-3.5 px-4 text-right text-sky-800 bg-sky-50/40">Caution Détenue</th>
+                <th className="py-3.5 px-4 text-right text-rose-800 bg-rose-50/40">Arriérés Dûs</th>
+                <th className="py-3.5 px-4 text-right text-amber-800 bg-amber-50/40">Retenu s/ Dette</th>
+                <th className="py-3.5 px-4 text-right font-black text-slate-900 bg-emerald-50/40">Net Restituable</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {isLoading ? (
+                <TableSkeleton rows={6} columns={9} />
+              ) : items.length === 0 ? (
+                <tr>
+                  <td colSpan={9} className="p-12 text-center text-slate-500">
+                    <i className="fas fa-shield-alt text-3xl text-slate-300 mb-2"></i>
+                    <p className="text-sm font-semibold text-slate-700">Aucun dépôt de garantie répertorié.</p>
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {items.map((it, idx) => (
+              ) : (
+                items.map((it, idx) => (
                   <tr key={it.clientId} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="py-3 px-3 text-center text-slate-400 font-semibold tabular-nums">
+                    <td className="py-3.5 px-3 text-center text-slate-400 font-semibold tabular-nums">
                       {String(idx + 1).padStart(2, '0')}
                     </td>
-                    <td className="py-3 px-4">
+                    <td className="py-3.5 px-4">
                       <div className="font-bold text-slate-900">{it.clientName}</div>
                       <div className="text-[11px] text-slate-500">{it.clientPhone}</div>
                     </td>
-                    <td className="py-3 px-4">
+                    <td className="py-3.5 px-4">
                       <div className="font-semibold text-slate-800">{it.propertyName}</div>
                       <div className="text-[11px] text-slate-500 font-mono">{it.propertyReference} &bull; {it.propertyZone}</div>
                     </td>
-                    <td className="py-3 px-3">
+                    <td className="py-3.5 px-3">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${
                         it.isDeparted ? 'bg-amber-50 text-amber-800 border-amber-200' : 'bg-emerald-50 text-emerald-800 border-emerald-200'
                       }`}>
                         {it.clientStatus}
                       </span>
                     </td>
-                    <td className="py-3 px-3 text-right font-semibold text-slate-700 tabular-nums">
+                    <td className="py-3.5 px-4 text-right font-semibold text-slate-700 tabular-nums">
                       {formatXOF(it.monthlyRent, { compact: false })}
                     </td>
-                    <td className="py-3 px-3 text-right font-bold text-sky-800 tabular-nums bg-sky-50/20">
+                    <td className="py-3.5 px-4 text-right font-bold text-sky-800 tabular-nums bg-sky-50/20">
                       {formatXOF(it.deposit, { compact: false })}
                     </td>
-                    <td className={`py-3 px-3 text-right tabular-nums ${it.arrears > 0 ? 'font-bold text-rose-700 bg-rose-50/20' : 'text-slate-300'}`}>
+                    <td className={`py-3.5 px-4 text-right tabular-nums ${it.arrears > 0 ? 'font-bold text-rose-700 bg-rose-50/20' : 'text-slate-300'}`}>
                       {it.arrears > 0 ? formatXOF(it.arrears, { compact: false }) : '0 XOF'}
                     </td>
-                    <td className={`py-3 px-3 text-right tabular-nums ${it.retainedForArrears > 0 ? 'font-bold text-amber-700 bg-amber-50/20' : 'text-slate-300'}`}>
+                    <td className={`py-3.5 px-4 text-right tabular-nums ${it.retainedForArrears > 0 ? 'font-bold text-amber-700 bg-amber-50/20' : 'text-slate-300'}`}>
                       {it.retainedForArrears > 0 ? formatXOF(it.retainedForArrears, { compact: false }) : '—'}
                     </td>
-                    <td className="py-3 px-4 text-right font-black text-emerald-800 tabular-nums bg-emerald-50/20">
+                    <td className="py-3.5 px-4 text-right font-black text-emerald-800 tabular-nums bg-emerald-50/20">
                       {formatXOF(it.netRefundableAfterArrears, { compact: false })}
                     </td>
                   </tr>
-                ))}
-              </tbody>
+                ))
+              )}
+            </tbody>
+            {!isLoading && items.length > 0 && (
               <tfoot>
                 <tr className="bg-slate-100 font-black text-slate-900 border-t-2 border-slate-300">
                   <td colSpan={5} className="py-3.5 px-4 text-right uppercase tracking-wider text-xs">
                     TOTAL DES CAUTIONS :
                   </td>
-                  <td className="py-3.5 px-3 text-right text-sky-800 tabular-nums">
+                  <td className="py-3.5 px-4 text-right text-sky-800 tabular-nums">
                     {formatXOF(summary.totalDepositsHeld || 0, { compact: false })}
                   </td>
-                  <td className="py-3.5 px-3 text-right text-rose-800 tabular-nums">
+                  <td className="py-3.5 px-4 text-right text-rose-800 tabular-nums">
                     —
                   </td>
-                  <td className="py-3.5 px-3 text-right text-amber-800 tabular-nums">
+                  <td className="py-3.5 px-4 text-right text-amber-800 tabular-nums">
                     {formatXOF(summary.totalRetainedForArrears || 0, { compact: false })}
                   </td>
                   <td className="py-3.5 px-4 text-right text-emerald-800 text-sm tabular-nums">
@@ -221,8 +225,8 @@ export default function ReportDepositsTab() {
                   </td>
                 </tr>
               </tfoot>
-            </table>
-          )}
+            )}
+          </table>
         </div>
       </div>
     </div>

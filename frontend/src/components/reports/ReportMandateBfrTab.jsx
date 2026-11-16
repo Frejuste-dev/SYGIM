@@ -72,7 +72,24 @@ export default function ReportMandateBfrTab() {
       </div>
 
       {isLoading ? (
-        <TableSkeleton rows={4} cols={2} />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs space-y-4 animate-pulse">
+            <div className="h-6 bg-slate-200 rounded w-1/2"></div>
+            <div className="space-y-3">
+              <div className="h-14 bg-slate-100 rounded-xl"></div>
+              <div className="h-14 bg-slate-100 rounded-xl"></div>
+              <div className="h-14 bg-slate-100 rounded-xl"></div>
+            </div>
+          </div>
+          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs space-y-4 animate-pulse">
+            <div className="h-6 bg-slate-200 rounded w-1/2"></div>
+            <div className="space-y-3">
+              <div className="h-14 bg-slate-100 rounded-xl"></div>
+              <div className="h-14 bg-slate-100 rounded-xl"></div>
+              <div className="h-14 bg-slate-100 rounded-xl"></div>
+            </div>
+          </div>
+        </div>
       ) : (
         <>
           {/* 2. CONFRONTATION EMPLOIS (BESOINS) VS RESSOURCES */}

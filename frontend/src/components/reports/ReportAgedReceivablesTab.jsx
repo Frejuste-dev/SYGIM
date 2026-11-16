@@ -153,70 +153,74 @@ export default function ReportAgedReceivablesTab() {
       {/* 3. TABLEAU MATRICIEL BALANCE ÂGÉE */}
       <div className="bg-white border border-slate-200 rounded-2xl shadow-2xs overflow-hidden">
         <div className="overflow-x-auto">
-          {isLoading ? (
-            <TableSkeleton rows={6} cols={10} />
-          ) : clients.length === 0 ? (
-            <div className="p-12 text-center text-slate-500">
-              <i className="fas fa-check-circle text-3xl text-emerald-500 mb-2"></i>
-              <p className="text-sm font-semibold text-slate-700">Aucun arriéré locatif constaté.</p>
-              <p className="text-xs text-slate-400 mt-1">Tous les locataires sont à jour de leurs loyers.</p>
-            </div>
-          ) : (
-            <table className="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-[11px]">
-                  <th className="py-3 px-3 w-10 text-center">N°</th>
-                  <th className="py-3 px-4">Locataire &amp; Contact</th>
-                  <th className="py-3 px-4">Bien &amp; Zone</th>
-                  <th className="py-3 px-4">Propriétaire</th>
-                  <th className="py-3 px-3 text-right">Loyer Mensuel</th>
-                  <th className="py-3 px-3 text-right text-emerald-800 bg-emerald-50/50">0 - 30 Jours</th>
-                  <th className="py-3 px-3 text-right text-amber-800 bg-amber-50/50">31 - 60 Jours</th>
-                  <th className="py-3 px-3 text-right text-orange-800 bg-orange-50/50">61 - 90 Jours</th>
-                  <th className="py-3 px-3 text-right text-rose-800 bg-rose-50/50">&gt; 90 Jours</th>
-                  <th className="py-3 px-4 text-right font-black text-slate-900">Total Arriéré</th>
+          <table className="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-[11px]">
+                <th className="py-3.5 px-3 w-12 text-center">N°</th>
+                <th className="py-3.5 px-4">Locataire &amp; Contact</th>
+                <th className="py-3.5 px-4">Bien &amp; Zone</th>
+                <th className="py-3.5 px-4">Propriétaire</th>
+                <th className="py-3.5 px-3 text-right">Loyer Mensuel</th>
+                <th className="py-3.5 px-3 text-right text-emerald-800 bg-emerald-50/40">0 - 30 Jours</th>
+                <th className="py-3.5 px-3 text-right text-amber-800 bg-amber-50/40">31 - 60 Jours</th>
+                <th className="py-3.5 px-3 text-right text-orange-800 bg-orange-50/40">61 - 90 Jours</th>
+                <th className="py-3.5 px-3 text-right text-rose-800 bg-rose-50/40">&gt; 90 Jours</th>
+                <th className="py-3.5 px-4 text-right font-black text-slate-900">Total Arriéré</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {isLoading ? (
+                <TableSkeleton rows={6} columns={10} />
+              ) : clients.length === 0 ? (
+                <tr>
+                  <td colSpan={10} className="p-12 text-center text-slate-500">
+                    <i className="fas fa-check-circle text-3xl text-emerald-500 mb-2"></i>
+                    <p className="text-sm font-semibold text-slate-700">Aucun arriéré locatif constaté.</p>
+                    <p className="text-xs text-slate-400 mt-1">Tous les locataires sont à jour de leurs loyers.</p>
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {clients.map((c, idx) => (
+              ) : (
+                clients.map((c, idx) => (
                   <tr key={c.clientId} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="py-3 px-3 text-center text-slate-400 font-semibold tabular-nums">
+                    <td className="py-3.5 px-3 text-center text-slate-400 font-semibold tabular-nums">
                       {String(idx + 1).padStart(2, '0')}
                     </td>
-                    <td className="py-3 px-4">
+                    <td className="py-3.5 px-4">
                       <div className="font-bold text-slate-900">{c.clientName}</div>
                       <div className="text-[11px] text-slate-500 flex items-center gap-2 mt-0.5">
                         <span><i className="fas fa-phone-alt text-[10px] text-slate-400 mr-1"></i>{c.phone}</span>
                       </div>
                     </td>
-                    <td className="py-3 px-4">
+                    <td className="py-3.5 px-4">
                       <div className="font-semibold text-slate-800">{c.propertyName}</div>
                       <div className="text-[11px] text-slate-500 font-mono">{c.propertyReference} &bull; {c.propertyZone}</div>
                     </td>
-                    <td className="py-3 px-4 text-slate-700 font-medium">
+                    <td className="py-3.5 px-4 text-slate-700 font-medium">
                       {c.ownerName}
                     </td>
-                    <td className="py-3 px-3 text-right font-semibold text-slate-700 tabular-nums">
+                    <td className="py-3.5 px-3 text-right font-semibold text-slate-700 tabular-nums">
                       {formatXOF(c.monthlyRent, { compact: false })}
                     </td>
-                    <td className={`py-3 px-3 text-right tabular-nums ${c.bucket_0_30 > 0 ? 'font-bold text-emerald-700 bg-emerald-50/30' : 'text-slate-300'}`}>
+                    <td className={`py-3.5 px-3 text-right tabular-nums ${c.bucket_0_30 > 0 ? 'font-bold text-emerald-700 bg-emerald-50/30' : 'text-slate-300'}`}>
                       {c.bucket_0_30 > 0 ? formatXOF(c.bucket_0_30, { compact: false }) : '—'}
                     </td>
-                    <td className={`py-3 px-3 text-right tabular-nums ${c.bucket_31_60 > 0 ? 'font-bold text-amber-700 bg-amber-50/30' : 'text-slate-300'}`}>
+                    <td className={`py-3.5 px-3 text-right tabular-nums ${c.bucket_31_60 > 0 ? 'font-bold text-amber-700 bg-amber-50/30' : 'text-slate-300'}`}>
                       {c.bucket_31_60 > 0 ? formatXOF(c.bucket_31_60, { compact: false }) : '—'}
                     </td>
-                    <td className={`py-3 px-3 text-right tabular-nums ${c.bucket_61_90 > 0 ? 'font-bold text-orange-700 bg-orange-50/30' : 'text-slate-300'}`}>
+                    <td className={`py-3.5 px-3 text-right tabular-nums ${c.bucket_61_90 > 0 ? 'font-bold text-orange-700 bg-orange-50/30' : 'text-slate-300'}`}>
                       {c.bucket_61_90 > 0 ? formatXOF(c.bucket_61_90, { compact: false }) : '—'}
                     </td>
-                    <td className={`py-3 px-3 text-right tabular-nums ${c.bucket_over_90 > 0 ? 'font-black text-rose-700 bg-rose-50/40' : 'text-slate-300'}`}>
+                    <td className={`py-3.5 px-3 text-right tabular-nums ${c.bucket_over_90 > 0 ? 'font-black text-rose-700 bg-rose-50/40' : 'text-slate-300'}`}>
                       {c.bucket_over_90 > 0 ? formatXOF(c.bucket_over_90, { compact: false }) : '—'}
                     </td>
-                    <td className="py-3 px-4 text-right font-black text-slate-900 tabular-nums">
+                    <td className="py-3.5 px-4 text-right font-black text-slate-900 tabular-nums">
                       {formatXOF(c.totalDue, { compact: false })}
                     </td>
                   </tr>
-                ))}
-              </tbody>
+                ))
+              )}
+            </tbody>
+            {!isLoading && clients.length > 0 && (
               <tfoot>
                 <tr className="bg-slate-100 font-black text-slate-900 border-t-2 border-slate-300">
                   <td colSpan={5} className="py-3.5 px-4 text-right uppercase tracking-wider text-xs">
@@ -239,8 +243,8 @@ export default function ReportAgedReceivablesTab() {
                   </td>
                 </tr>
               </tfoot>
-            </table>
-          )}
+            )}
+          </table>
         </div>
       </div>
     </div>
