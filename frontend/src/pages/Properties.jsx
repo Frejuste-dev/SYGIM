@@ -11,6 +11,7 @@ import TableSkeleton from '../components/ui/TableSkeleton';
 import { FormField, MoneyInput, FormSection } from '../components/ui/forms';
 import { formatXOF, formatStatus } from '../utils/formatters';
 import { exportToExcel, exportToPDF } from '../utils/exportUtils';
+import ImportPortfolioModal from '../components/import/ImportPortfolioModal';
 
 const TYPE_ICONS = { appartement: 'fa-building', maison: 'fa-home', terrain: 'fa-map', commercial: 'fa-store' };
 
@@ -27,6 +28,7 @@ export default function Properties() {
   const urlSearch = searchParams.get('search') || '';
   const [searchTerm, setSearchTerm] = useState(urlSearch);
   const debouncedSearch = useDebounce(searchTerm, 350);
+  const [showImportModal, setShowImportModal] = useState(false);
 
   const typeFilter = searchParams.get('type') || '';
   const statusFilter = searchParams.get('status') || '';
@@ -300,6 +302,16 @@ export default function Properties() {
               <span className="hidden sm:inline">PDF</span>
             </button>
           </div>
+
+          <button
+            type="button"
+            onClick={() => setShowImportModal(true)}
+            className="h-9 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-all shadow-2xs inline-flex items-center gap-1.5 whitespace-nowrap cursor-pointer"
+            title="Importer des biens, propriétaires et locataires depuis Excel / CSV"
+          >
+            <i className="fas fa-file-import text-xs"></i>
+            <span className="hidden sm:inline">Importer Excel / CSV</span>
+          </button>
 
           <button
             type="button"
@@ -901,6 +913,11 @@ export default function Properties() {
           </form>
         </Modal>
       )}
+
+      <ImportPortfolioModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+      />
     </div>
   );
 }

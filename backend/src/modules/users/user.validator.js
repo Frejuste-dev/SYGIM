@@ -16,7 +16,7 @@ const userValidator = [
   body('username')
     .notEmpty().withMessage('Le nom d\'utilisateur est requis')
     .isString().withMessage('Le nom d\'utilisateur doit être une chaîne')
-    .matches(/^[a-zA-Z0-9_]+$/).withMessage('Le nom d\'utilisateur ne doit contenir que des lettres, chiffres et underscores')
+    .matches(/^[a-zA-Z0-9_.-]+$/).withMessage('Le nom d\'utilisateur ne doit contenir que des lettres, chiffres, points, tirets et underscores')
     .trim(),
   
   body('role')
@@ -36,7 +36,17 @@ const updateUserValidator = [
   body('username')
     .optional()
     .isString().withMessage('Le nom d\'utilisateur doit être une chaîne')
-    .matches(/^[a-zA-Z0-9_]+$/).withMessage('Le nom d\'utilisateur ne doit contenir que des lettres, chiffres et underscores')
+    .matches(/^[a-zA-Z0-9_.-]+$/).withMessage('Le nom d\'utilisateur ne doit contenir que des lettres, chiffres, points, tirets et underscores')
+    .trim(),
+
+  body('email')
+    .optional({ checkFalsy: true })
+    .isEmail().withMessage('Adresse email invalide')
+    .normalizeEmail(),
+
+  body('phone')
+    .optional({ checkFalsy: true })
+    .isString().withMessage('Le téléphone doit être une chaîne')
     .trim(),
   
   body('role')
@@ -52,7 +62,22 @@ const updateUserValidator = [
   handleValidationErrors
 ];
 
+const resetPasswordValidator = [
+  body('autoGenerate')
+    .optional()
+    .isBoolean().withMessage('autoGenerate doit être un booléen'),
+
+  body('password')
+    .optional({ checkFalsy: true })
+    .isLength({ min: 8 }).withMessage('Le mot de passe doit faire au moins 8 caractères')
+    .matches(/[A-Za-z]/).withMessage('Le mot de passe doit contenir au moins une lettre')
+    .matches(/[0-9]/).withMessage('Le mot de passe doit contenir au moins un chiffre'),
+
+  handleValidationErrors
+];
+
 module.exports = {
   userValidator,
-  updateUserValidator
+  updateUserValidator,
+  resetPasswordValidator
 };

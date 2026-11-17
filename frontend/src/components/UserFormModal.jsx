@@ -26,6 +26,12 @@ const ROLE_DESCRIPTIONS = {
     icon: 'fa-calculator',
     color: 'text-emerald-600 bg-emerald-50 border-emerald-200'
   },
+  manager: {
+    title: 'Manager',
+    desc: 'Gestion opérationnelle du portefeuille : attributions biens/locataires, importations massives, suivi des impayés et situations propriétaires.',
+    icon: 'fa-user-tie',
+    color: 'text-amber-600 bg-amber-50 border-amber-200'
+  },
   collector_manager: {
     title: 'Manager des Récolteurs',
     desc: 'Pilotage opérationnel des tournées de collecte, suivi des impayés, analyse du taux d\'effort et génération des situations propriétaires.',
@@ -58,7 +64,8 @@ function calculatePasswordStrength(pass) {
   }
 }
 
-export default function UserFormModal({ isOpen, onClose, onSubmit }) {
+export default function UserFormModal({ isOpen, onClose, onSubmit, initialUser = null }) {
+  const isEditing = Boolean(initialUser && initialUser.id);
   const [form, setForm] = useState({ ...EMPTY_FORM });
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -68,28 +75,47 @@ export default function UserFormModal({ isOpen, onClose, onSubmit }) {
 
   useEffect(() => {
     if (!isOpen) return;
-    setForm({ ...EMPTY_FORM });
+    if (initialUser && initialUser.id) {
+      setForm({
+        username: initialUser.username || '',
+        password: '',
+        firstName: initialUser.firstName || initialUser.first_name || '',
+        lastName: initialUser.lastName || initialUser.last_name || '',
+        phone: initialUser.phone || '',
+        email: initialUser.email || '',
+        role: initialUser.role || 'collector',
+        active: initialUser.active === 1 || initialUser.active === true
+      });
+    } else {
+      setForm({ ...EMPTY_FORM });
+    }
     setError('');
     setShowPassword(false);
     setSubmitting(false);
-  }, [isOpen]);
+  }, [isOpen, initialUser]);
 
   const pwStrength = calculatePasswordStrength(form.password);
   const activeRoleInfo = ROLE_DESCRIPTIONS[form.role] || ROLE_DESCRIPTIONS.collector;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.username.trim() || !form.password || !form.role) {
-      setError('L\'identifiant, le mot de passe et le rôle sont obligatoires.');
+    if (!form.username.trim() || !form.role) {
+      setError('L\'identifiant et le rôle sont obligatoires.');
       return;
     }
-    if (form.password.length < 8) {
-      setError('Le mot de passe doit comporter au moins 8 caractères (règle SEC-07).');
-      return;
-    }
-    if (!/[A-Za-z]/.test(form.password) || !/[0-9]/.test(form.password)) {
-      setError('Le mot de passe doit contenir au moins une lettre et un chiffre (règle SEC-07).');
-      return;
+    if (!isEditing) {
+      if (!form.password) {
+        setError('Le mot de passe est obligatoire lors de la création.');
+        return;
+      }
+      if (form.password.length < 8) {
+        setError('Le mot de passe doit comporter au moins 8 caractères (règle SEC-07).');
+        return;
+      }
+      if (!/[A-Za-z]/.test(form.password) || !/[0-9]/.test(form.password)) {
+        setError('Le mot de passe doit contenir au moins une lettre et un chiffre (règle SEC-07).');
+        return;
+      }
     }
     if (form.phone) {
       const cleanDigits = String(form.phone).replace(/\D/g, '');
@@ -106,10 +132,14 @@ export default function UserFormModal({ isOpen, onClose, onSubmit }) {
     setError('');
     setSubmitting(true);
     try {
-      await onSubmit(form);
+      const payload = { ...form };
+      if (isEditing) {
+        delete payload.password;
+      }
+      await onSubmit(payload);
       onClose();
     } catch (err) {
-      setError(err.message || 'Erreur lors de la création de l\'utilisateur.');
+      setError(err.message || (isEditing ? 'Erreur lors de la modification de l\'utilisateur.' : 'Erreur lors de la création de l\'utilisateur.'));
     } finally {
       setSubmitting(false);
     }
@@ -128,11 +158,15 @@ export default function UserFormModal({ isOpen, onClose, onSubmit }) {
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-              <i className="fas fa-user-plus text-primary text-base"></i>
+              <i className={`fas ${isEditing ? 'fa-user-edit' : 'fa-user-plus'} text-primary text-base`}></i>
             </div>
             <div>
-              <h2 className="text-lg font-bold text-slate-900 leading-tight">Nouvel utilisateur</h2>
-              <p className="text-xs text-slate-500">Création de compte collaborateur et attribution des droits</p>
+              <h2 className="text-lg font-bold text-slate-900 leading-tight">
+                {isEditing ? `Modifier ${initialUser.username}` : 'Nouvel utilisateur'}
+              </h2>
+              <p className="text-xs text-slate-500">
+                {isEditing ? 'Mise à jour de la fiche collaborateur, du rôle et du statut' : 'Création de compte collaborateur et attribution des droits'}
+              </p>
             </div>
           </div>
           <button
@@ -174,46 +208,75 @@ export default function UserFormModal({ isOpen, onClose, onSubmit }) {
                   />
                 </FormField>
 
-                <FormField
-                  label="Mot de passe"
-                  required
-                  id="password"
-                  hint={
-                    form.password ? (
-                      <span className="flex items-center gap-1.5 font-semibold">
-                        Robustesse : <span className={pwStrength.text}>{pwStrength.label}</span>
-                      </span>
-                    ) : 'Minimum 8 caractères (lettres et chiffres requis)'
-                  }
-                >
-                  <div className="relative">
-                    <input
-                      id="password"
-                      type={showPassword ? 'text' : 'password'}
-                      required
-                      value={form.password}
-                      onChange={(e) => setForm({ ...form, password: e.target.value })}
-                      placeholder="••••••••"
-                      className="w-full px-4 py-2.5 pr-10 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 shadow-2xs focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
-                      title={showPassword ? 'Masquer' : 'Afficher'}
-                    >
-                      <i className={`fas ${showPassword ? 'fa-eye-slash' : 'fa-eye'} text-xs`}></i>
-                    </button>
-                  </div>
-                  {/* Jauge de mot de passe */}
-                  {form.password && (
-                    <div className="grid grid-cols-3 gap-1.5 mt-2">
-                      <div className={`h-1.5 rounded-full transition-all ${pwStrength.score >= 1 ? pwStrength.color : 'bg-slate-200'}`}></div>
-                      <div className={`h-1.5 rounded-full transition-all ${pwStrength.score >= 2 ? pwStrength.color : 'bg-slate-200'}`}></div>
-                      <div className={`h-1.5 rounded-full transition-all ${pwStrength.score >= 3 ? pwStrength.color : 'bg-slate-200'}`}></div>
+                {!isEditing ? (
+                  <FormField
+                    label="Mot de passe"
+                    required
+                    id="password"
+                    hint={
+                      form.password ? (
+                        <span className="flex items-center gap-1.5 font-semibold">
+                          Robustesse : <span className={pwStrength.text}>{pwStrength.label}</span>
+                        </span>
+                      ) : 'Minimum 8 caractères (lettres et chiffres requis)'
+                    }
+                  >
+                    <div className="relative">
+                      <input
+                        id="password"
+                        type={showPassword ? 'text' : 'password'}
+                        required
+                        value={form.password}
+                        onChange={(e) => setForm({ ...form, password: e.target.value })}
+                        placeholder="••••••••"
+                        className="w-full px-4 py-2.5 pr-10 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 shadow-2xs focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                        title={showPassword ? 'Masquer' : 'Afficher'}
+                      >
+                        <i className={`fas ${showPassword ? 'fa-eye-slash' : 'fa-eye'} text-xs`}></i>
+                      </button>
                     </div>
-                  )}
-                </FormField>
+                    {/* Jauge de mot de passe */}
+                    {form.password && (
+                      <div className="grid grid-cols-3 gap-1.5 mt-2">
+                        <div className={`h-1.5 rounded-full transition-all ${pwStrength.score >= 1 ? pwStrength.color : 'bg-slate-200'}`}></div>
+                        <div className={`h-1.5 rounded-full transition-all ${pwStrength.score >= 2 ? pwStrength.color : 'bg-slate-200'}`}></div>
+                        <div className={`h-1.5 rounded-full transition-all ${pwStrength.score >= 3 ? pwStrength.color : 'bg-slate-200'}`}></div>
+                      </div>
+                    )}
+                  </FormField>
+                ) : (
+                  <FormField label="Statut du compte" id="activeStatus" hint="Un compte inactif ne peut plus se connecter">
+                    <div className="flex items-center gap-3 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => setForm({ ...form, active: true })}
+                        className={`flex-1 py-2.5 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                          form.active
+                            ? 'bg-emerald-50 border-emerald-500 text-emerald-700 shadow-2xs'
+                            : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
+                        }`}
+                      >
+                        <i className="fas fa-check-circle"></i> Actif
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setForm({ ...form, active: false })}
+                        className={`flex-1 py-2.5 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                          !form.active
+                            ? 'bg-rose-50 border-rose-500 text-rose-700 shadow-2xs'
+                            : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
+                        }`}
+                      >
+                        <i className="fas fa-ban"></i> Inactif
+                      </button>
+                    </div>
+                  </FormField>
+                )}
               </div>
             </FormSection>
 
@@ -285,6 +348,7 @@ export default function UserFormModal({ isOpen, onClose, onSubmit }) {
                   <option value="admin">Administrateur (Accès total)</option>
                   <option value="director">Directeur Général (Audit & Décision)</option>
                   <option value="accounting">Comptable (Encaissements, Reversements & Grand Livre)</option>
+                  <option value="manager">Manager (Gestion Opérationnelle & Importations)</option>
                   <option value="collector_manager">Manager des Récolteurs (Tournées & Impayés)</option>
                   <option value="collector">Récolteur (Collecte Terrain & Reçus)</option>
                 </select>
@@ -320,8 +384,8 @@ export default function UserFormModal({ isOpen, onClose, onSubmit }) {
               className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-bold text-white bg-primary rounded-xl hover:bg-primary-dark transition-colors shadow-sm shadow-primary/20 disabled:opacity-60 cursor-pointer"
             >
               {submitting
-                ? <><i className="fas fa-spinner fa-spin text-xs"></i> Création en cours...</>
-                : <><i className="fas fa-user-plus text-xs"></i> Créer l'utilisateur</>
+                ? <><i className="fas fa-spinner fa-spin text-xs"></i> {isEditing ? 'Enregistrement...' : 'Création en cours...'}</>
+                : <><i className={`fas ${isEditing ? 'fa-save' : 'fa-user-plus'} text-xs`}></i> {isEditing ? 'Enregistrer les modifications' : 'Créer l\'utilisateur'}</>
               }
             </button>
           </div>

@@ -14,6 +14,7 @@ import TableSkeleton from '../components/ui/TableSkeleton';
 import { FormField, PhoneInput, FormSection } from '../components/ui/forms';
 import { formatXOF } from '../utils/formatters';
 import { exportToExcel, exportToPDF } from '../utils/exportUtils';
+import ImportPortfolioModal from '../components/import/ImportPortfolioModal';
 
 const PAYMENT_METHOD_LABELS = {
   bank_transfer: 'Virement bancaire',
@@ -159,6 +160,7 @@ export default function Owners() {
   }, []);
 
   const [showModal, setShowModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
   const [editingOwner, setEditingOwner] = useState(null);
   const [formError, setFormError] = useState('');
 
@@ -417,6 +419,15 @@ export default function Owners() {
           >
             <i className="fas fa-hand-holding-dollar"></i>
             <span>Reversements</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowImportModal(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-all shadow-2xs whitespace-nowrap cursor-pointer"
+            title="Importer des propriétaires, biens et locataires depuis Excel / CSV"
+          >
+            <i className="fas fa-file-import"></i>
+            <span className="hidden sm:inline">Importer Excel / CSV</span>
           </button>
           <button
             type="button"
@@ -1054,6 +1065,11 @@ export default function Owners() {
           }}
         />
       )}
+
+      <ImportPortfolioModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+      />
     </div>
   );
 }

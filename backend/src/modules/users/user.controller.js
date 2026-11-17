@@ -26,6 +26,16 @@ class UserController extends BaseController {
       next(error);
     }
   }
+
+  async resetPassword(req, res, next) {
+    try {
+      const { id } = req.params;
+      const result = await this.service.resetPassword(id, req.body, req.user);
+      res.status(200).json(ApiResponse.success(result, 'Mot de passe réinitialisé avec succès'));
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 module.exports = new UserController();

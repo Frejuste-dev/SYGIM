@@ -41,6 +41,20 @@ class UserRepository extends BaseRepository {
   }
 
   /**
+   * Révoque tous les refresh tokens actifs d'un utilisateur
+   */
+  async revokeUserRefreshTokens(userId) {
+    try {
+      await db.execute(
+        'UPDATE refresh_tokens SET revokedAt = NOW() WHERE userId = ? AND revokedAt IS NULL',
+        [userId]
+      );
+    } catch (_) {
+      // Si la table refresh_tokens n'existe pas ou erreur mineure, ne pas bloquer
+    }
+  }
+
+  /**
    * Suppression logique (Soft Delete)
    */
   async softDelete(userId) {
