@@ -12,6 +12,7 @@ import { useToast } from '../components/ToastContext';
 import { useConfirm } from '../components/ConfirmContext';
 import Modal from '../components/Modal';
 import { formatXOF, formatDate } from '../utils/formatters';
+import { FormField, MoneyInput, PhoneInput, FormSection } from '../components/ui/forms';
 
 const TYPE_ICONS = {
   appartement: 'fa-building',
@@ -113,13 +114,14 @@ export default function PropertyAssignments() {
     setAssigningProperty(property);
     setAssignMode('existing');
     setSelectedClientId('');
+    const propRent = property.rent ? parseFloat(property.rent) : 0;
     setNewTenantForm({
       firstName: '',
       lastName: '',
       phone: '',
       email: '',
-      rent: property.rent ? parseFloat(property.rent) : '',
-      deposit: '',
+      rent: propRent || '',
+      deposit: propRent ? propRent * 2 : '',
       startDate: new Date().toISOString().slice(0, 10),
       notes: '',
     });
@@ -829,10 +831,7 @@ export default function PropertyAssignments() {
             ) : (
               <div className="space-y-3">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label htmlFor="lastName" className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
-                      Nom de famille <span className="text-rose-500">*</span>
-                    </label>
+                  <FormField label="Nom de famille" id="lastName" required>
                     <input
                       id="lastName"
                       type="text"
@@ -842,11 +841,8 @@ export default function PropertyAssignments() {
                       onChange={(e) => setNewTenantForm({ ...newTenantForm, lastName: e.target.value })}
                       className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-sm font-medium text-slate-900 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
                     />
-                  </div>
-                  <div>
-                    <label htmlFor="firstName" className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
-                      Prénom(s)
-                    </label>
+                  </FormField>
+                  <FormField label="Prénom(s)" id="firstName" optional>
                     <input
                       id="firstName"
                       type="text"
@@ -855,28 +851,19 @@ export default function PropertyAssignments() {
                       onChange={(e) => setNewTenantForm({ ...newTenantForm, firstName: e.target.value })}
                       className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-sm font-medium text-slate-900 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
                     />
-                  </div>
+                  </FormField>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label htmlFor="phone" className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
-                      Téléphone <span className="text-rose-500">*</span>
-                    </label>
-                    <input
+                  <FormField label="Téléphone" id="phone" required hint="Format CI (10 chiffres)">
+                    <PhoneInput
                       id="phone"
-                      type="tel"
                       required
-                      placeholder="Ex : +225 07 00 11 22 33"
                       value={newTenantForm.phone}
-                      onChange={(e) => setNewTenantForm({ ...newTenantForm, phone: e.target.value })}
-                      className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-sm font-medium text-slate-900 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+                      onChange={(cleanVal) => setNewTenantForm({ ...newTenantForm, phone: cleanVal })}
                     />
-                  </div>
-                  <div>
-                    <label htmlFor="email" className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
-                      Email
-                    </label>
+                  </FormField>
+                  <FormField label="Email" id="email" optional>
                     <input
                       id="email"
                       type="email"
@@ -885,7 +872,7 @@ export default function PropertyAssignments() {
                       onChange={(e) => setNewTenantForm({ ...newTenantForm, email: e.target.value })}
                       className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-sm font-medium text-slate-900 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
                     />
-                  </div>
+                  </FormField>
                 </div>
               </div>
             )}
@@ -894,52 +881,49 @@ export default function PropertyAssignments() {
             <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
               <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
                 <i className="fas fa-file-contract text-primary"></i>
-                Conditions du bail
+                Conditions financières du bail
               </h4>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <label htmlFor="assignRent" className="block text-xs font-semibold text-slate-700 mb-1">
-                    Loyer mensuel (FCFA)
-                  </label>
-                  <input
+                <FormField label="Loyer mensuel" id="assignRent" required>
+                  <MoneyInput
                     id="assignRent"
-                    type="number"
+                    required
                     value={newTenantForm.rent}
-                    onChange={(e) => setNewTenantForm({ ...newTenantForm, rent: e.target.value })}
-                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-sm font-bold text-emerald-700 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+                    onChange={(val) => {
+                      const numRent = Number(val) || 0;
+                      setNewTenantForm({
+                        ...newTenantForm,
+                        rent: val,
+                        deposit: newTenantForm.deposit ? newTenantForm.deposit : (numRent ? numRent * 2 : '')
+                      });
+                    }}
                   />
-                </div>
-                <div>
-                  <label htmlFor="deposit" className="block text-xs font-semibold text-slate-700 mb-1">
-                    Caution (FCFA)
-                  </label>
-                  <input
+                </FormField>
+                <FormField label="Caution de garantie" id="deposit" required>
+                  <MoneyInput
                     id="deposit"
-                    type="number"
-                    placeholder="0"
+                    required
                     value={newTenantForm.deposit}
-                    onChange={(e) => setNewTenantForm({ ...newTenantForm, deposit: e.target.value })}
-                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-sm font-medium text-slate-900 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+                    onChange={(val) => setNewTenantForm({ ...newTenantForm, deposit: val })}
+                    presets={[
+                      { label: '2 mois', value: (Number(newTenantForm.rent) || 0) * 2 },
+                      { label: '1 mois', value: Number(newTenantForm.rent) || 0 }
+                    ]}
                   />
-                </div>
-                <div>
-                  <label htmlFor="startDate" className="block text-xs font-semibold text-slate-700 mb-1">
-                    Date de prise d'effet
-                  </label>
+                </FormField>
+                <FormField label="Date d'effet" id="startDate" required>
                   <input
                     id="startDate"
                     type="date"
+                    required
                     value={newTenantForm.startDate}
                     onChange={(e) => setNewTenantForm({ ...newTenantForm, startDate: e.target.value })}
                     className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-sm font-medium text-slate-900 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
                   />
-                </div>
+                </FormField>
               </div>
 
-              <div>
-                <label htmlFor="notes" className="block text-xs font-semibold text-slate-700 mb-1">
-                  Notes ou observations (optionnel)
-                </label>
+              <FormField label="Notes ou observations" id="notes" optional>
                 <input
                   id="notes"
                   type="text"
@@ -948,7 +932,7 @@ export default function PropertyAssignments() {
                   onChange={(e) => setNewTenantForm({ ...newTenantForm, notes: e.target.value })}
                   className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
                 />
-              </div>
+              </FormField>
             </div>
 
             <div className="flex items-center justify-end gap-3 pt-2">

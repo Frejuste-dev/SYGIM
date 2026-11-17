@@ -52,7 +52,10 @@ export default function PhoneInput({
   hasError = false,
   className = '',
   inputClassName = '',
-  autoFocus = false
+  autoFocus = false,
+  'aria-invalid': ariaInvalid,
+  'aria-describedby': ariaDescribedBy,
+  ...rest
 }) {
   const [displayValue, setDisplayValue] = useState(() => formatIvorianPhone(value));
 
@@ -106,10 +109,13 @@ export default function PhoneInput({
           autoFocus={autoFocus}
           disabled={disabled}
           readOnly={readOnly}
+          aria-invalid={ariaInvalid || (hasError ? 'true' : undefined)}
+          aria-describedby={ariaDescribedBy}
           placeholder={placeholder}
           value={displayValue}
           onChange={handleChange}
           onBlur={onBlur}
+          {...rest}
           className={`w-full bg-white border rounded-xl py-2.5 pl-24 pr-10 text-sm font-semibold tabular-nums text-slate-900 placeholder-slate-400 focus:outline-none transition-all ${
             hasError
               ? 'border-rose-400 focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 text-rose-900 bg-rose-50/20'

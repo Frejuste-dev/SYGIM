@@ -463,9 +463,24 @@ export default function Clients() {
           maxWidth="680px"
         >
           {formError && (
-            <div className="bg-rose-50 border border-rose-200 text-rose-700 p-3.5 rounded-xl text-sm mb-5 flex items-center gap-2 font-medium">
-              <i className="fas fa-exclamation-circle shrink-0"></i>
-              <span>{formError}</span>
+            <div className={`p-4 rounded-xl text-sm font-medium mb-5 flex items-start gap-3 animate-fade-in-up ${
+              formError.toLowerCase().includes('doublon') || formError.toLowerCase().includes('existe') || formError.toLowerCase().includes('conflit')
+                ? 'bg-amber-50 border border-amber-300 text-amber-900'
+                : 'bg-rose-50 border border-rose-200 text-rose-700'
+            }`}>
+              <i className={`fas ${
+                formError.toLowerCase().includes('doublon') || formError.toLowerCase().includes('existe')
+                  ? 'fa-exclamation-triangle text-amber-600 mt-0.5'
+                  : 'fa-exclamation-circle text-rose-600 mt-0.5'
+              } shrink-0`}></i>
+              <div className="flex-1">
+                <span className="font-bold block">
+                  {formError.toLowerCase().includes('doublon') || formError.toLowerCase().includes('existe')
+                    ? 'Doublon détecté'
+                    : 'Erreur de validation'}
+                </span>
+                <span className="text-xs">{formError}</span>
+              </div>
             </div>
           )}
           <form onSubmit={handleSubmit} className="space-y-5">

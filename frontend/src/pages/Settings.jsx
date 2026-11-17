@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { CONFIG } from '../api/config';
+import { FormField } from '../components/ui/forms';
 
 const DEFAULT_SETTINGS = {
   theme: document.body.classList.contains('dark-mode') ? 'dark' : 'light',
@@ -116,29 +117,29 @@ export default function Settings() {
           
           <div className="p-6 space-y-6 flex-1">
             {/* Langue */}
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Langue de l'interface</label>
+            <FormField label="Langue de l'interface" id="setting_language">
               <select 
+                id="setting_language"
                 value={settings.language} 
                 onChange={(e) => updateSetting('language', e.target.value)}
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-900 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-900 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer"
               >
-                <option value="fr">Français (France)</option>
+                <option value="fr">Français (France / Côte d'Ivoire)</option>
                 <option value="en">English (US)</option>
               </select>
-            </div>
+            </FormField>
 
             {/* Éléments par page */}
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Éléments par page (Tableaux)</label>
+            <FormField label="Éléments par page (Tableaux)" id="setting_itemsPerPage" hint="Nombre de lignes chargées par défaut">
               <select 
+                id="setting_itemsPerPage"
                 value={settings.itemsPerPage} 
                 onChange={(e) => updateSetting('itemsPerPage', parseInt(e.target.value))}
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-900 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-900 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer"
               >
-                {[10, 25, 50, 100].map(n => <option key={n} value={n}>{n} éléments</option>)}
+                {[10, 25, 50, 100].map(n => <option key={n} value={n}>{n} éléments par page</option>)}
               </select>
-            </div>
+            </FormField>
 
             <hr className="border-slate-100" />
 
