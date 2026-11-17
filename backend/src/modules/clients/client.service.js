@@ -17,7 +17,8 @@ class ClientService extends BaseService {
     if (!user || !user.role) {
       return;
     }
-    if (['admin', 'director', 'accounting', 'manager', 'collector_manager', 'gestionnaire'].includes(user.role)) {
+    // Seuls les rôles globaux d'administration et direction ont un accès agence sans restriction d'équipe
+    if (['admin', 'super_admin', 'director', 'accounting', 'gestionnaire'].includes(user.role)) {
       return;
     }
 
@@ -35,13 +36,13 @@ class ClientService extends BaseService {
       }
     }
 
-    // Vérification Collecteur
-    if (user.role === 'collector' || user.role === 'collector_manager') {
+    // Vérification Collecteur et Manager d'équipe (isolation cloisonnée)
+    if (user.role === 'collector' || user.role === 'collector_manager' || user.role === 'manager') {
       if (!client.collector_id) {
         if (user.role === 'collector') {
           throw AppError.forbidden('Accès refusé. Ce client n\'a pas de collecteur assigné.');
         }
-        return; // manager a le droit de voir s'il n'y a pas de collecteur
+        return; // manager a le droit de voir s'il n'y a pas encore de collecteur assigné
       }
 
       const CollectorRepository = require('../collectors/collector.repository');
@@ -51,7 +52,7 @@ class ClientService extends BaseService {
         if (!collector || client.collector_id !== collector.id) {
           throw AppError.forbidden('Accès refusé. Ce client ne vous est pas assigné.');
         }
-      } else if (user.role === 'collector_manager') {
+      } else if (user.role === 'collector_manager' || user.role === 'manager') {
         const assignedCollector = await CollectorRepository.findById(client.collector_id);
         if (!assignedCollector || (assignedCollector.manager_id !== user.id && assignedCollector.user_id !== user.id)) {
           throw AppError.forbidden('Accès refusé. Ce client est géré par un autre groupe.');

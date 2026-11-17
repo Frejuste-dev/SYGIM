@@ -266,7 +266,7 @@ class OwnerRepository extends BaseRepository {
 
   async isAccessibleByUser(ownerId, user) {
     if (!user || !user.role) return false;
-    if (['admin', 'director', 'accounting', 'collector_manager', 'gestionnaire'].includes(user.role)) return true;
+    if (['admin', 'super_admin', 'director', 'accounting', 'gestionnaire'].includes(user.role)) return true;
 
     if (user.role === 'owner') {
       const [rows] = await pool.query('SELECT id FROM owners WHERE id = ? AND user_id = ?', [ownerId, user.id]);
@@ -280,6 +280,17 @@ class OwnerRepository extends BaseRepository {
          JOIN collectors c ON c.id = p.collector_id
          WHERE p.owner_id = ? AND c.user_id = ?`,
         [ownerId, user.id]
+      );
+      return rows.length > 0;
+    }
+
+    if (user.role === 'collector_manager' || user.role === 'manager') {
+      const [rows] = await pool.query(
+        `SELECT p.id 
+         FROM properties p
+         JOIN collectors c ON c.id = p.collector_id
+         WHERE p.owner_id = ? AND (c.manager_id = ? OR c.user_id = ?)`,
+        [ownerId, user.id, user.id]
       );
       return rows.length > 0;
     }

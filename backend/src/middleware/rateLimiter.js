@@ -10,8 +10,8 @@ const isDev = process.env.NODE_ENV !== 'production';
 
 /**
  * Limiteur général pour toute l'API.
- * En développement : 500 req/15min (React StrictMode double les appels)
- * En production : 200 req/15min
+ * En développement : 10000 req/15min
+ * En production : 1000 req/15min
  */
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -52,4 +52,26 @@ const authLimiter = rateLimit({
   }
 });
 
-module.exports = { apiLimiter, authLimiter };
+/**
+ * Limiteur pour les exports lourds (PDF / Excel / CSV)
+ * Évite le déni de service (DoS) par saturation CPU / mémoire
+ * En dev : 200 exports / 15 min
+ * En prod : 30 exports / 15 min
+ */
+const exportLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: isDev ? 200 : 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res) => {
+    res.status(429).json(
+      ApiResponse.error(
+        'Trop de demandes d\'exportation de rapports. Veuillez patienter avant de relancer un export.',
+        429,
+        'TOO_MANY_EXPORT_REQUESTS'
+      )
+    );
+  }
+});
+
+module.exports = { apiLimiter, authLimiter, exportLimiter };
