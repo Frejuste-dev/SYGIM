@@ -48,6 +48,8 @@ blob-report/
 # Build outputs & Bundles
 dist/
 dist-ssr/
+cloudflared.exe
+*.exe
 build/
 
 # IDE & OS
