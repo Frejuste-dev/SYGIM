@@ -434,52 +434,75 @@ export default function PropertyAssignments() {
           title={
             modalProperties.length > 1
               ? `Attribuer ${modalProperties.length} biens à un collecteur`
-              : `Attribuer "${modalProperties[0].name}" à un collecteur`
+              : `Attribuer un bien à un collecteur`
           }
-          subtitle="Sélectionnez l'agent de recouvrement responsable de la collecte sur ce(s) bien(s)"
+          subtitle="Affectation de la tournée de recouvrement sur le terrain"
           icon="fa-motorcycle"
-          maxWidth="max-w-lg"
+          maxWidth="max-w-xl"
         >
-          <form onSubmit={handleConfirmAssign} className="space-y-4">
-            {/* Résumé des biens */}
-            <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl max-h-32 overflow-y-auto space-y-1.5">
-              {modalProperties.map((mp) => (
-                <div key={mp.id} className="flex items-center justify-between text-xs">
-                  <span className="font-bold text-slate-800 truncate">{mp.name}</span>
-                  <span className="font-mono text-[11px] text-slate-500 shrink-0 ml-2">
-                    {mp.reference_code || `BIEN-${mp.id}`}
-                  </span>
-                </div>
-              ))}
+          <form onSubmit={handleConfirmAssign} className="space-y-5">
+            {/* Résumé visuel du/des bien(s) */}
+            <div className="bg-slate-50 border border-slate-200/90 rounded-2xl p-3.5 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                  <i className="fas fa-building text-primary"></i>
+                  {modalProperties.length > 1 ? 'Biens sélectionnés' : 'Bien concerné'}
+                </span>
+                <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-primary/10 text-primary">
+                  {modalProperties.length} bien{modalProperties.length > 1 ? 's' : ''}
+                </span>
+              </div>
+              <div className="max-h-28 overflow-y-auto custom-scrollbar space-y-1.5 pr-1">
+                {modalProperties.map((mp) => (
+                  <div key={mp.id} className="flex items-center justify-between bg-white px-3 py-2 rounded-xl border border-slate-200/70 text-xs">
+                    <div className="min-w-0">
+                      <div className="font-bold text-slate-900 truncate">{mp.name}</div>
+                      <div className="text-[11px] text-slate-500 truncate">
+                        {mp.zone || mp.address || 'Zone non renseignée'} &bull; {formatXOF(mp.rent || 0)}
+                      </div>
+                    </div>
+                    <span className="font-mono text-[11px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md shrink-0 ml-2">
+                      {mp.reference_code || `BIEN-${mp.id}`}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
 
-            {/* Recherche de collecteur */}
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
-                Rechercher un collecteur
-              </label>
-              <div className="relative mb-2.5">
-                <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
-                <input
-                  type="text"
-                  placeholder="Nom ou téléphone du collecteur..."
-                  value={collectorSearch}
-                  onChange={(e) => setCollectorSearch(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:bg-white focus:border-primary"
-                />
+            {/* Sélection visuelle du collecteur */}
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                  Choisir l'agent collecteur <span className="text-rose-500">*</span>
+                </label>
+                <span className="text-[11px] text-slate-400">
+                  {collectorsList.length} collecteur{collectorsList.length > 1 ? 's' : ''} disponible{collectorsList.length > 1 ? 's' : ''}
+                </span>
               </div>
 
-              <label htmlFor="collectorSelect" className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
-                Collecteur <span className="text-rose-500">*</span>
-              </label>
-              <select
-                id="collectorSelect"
-                required
-                value={selectedCollectorId}
-                onChange={(e) => setSelectedCollectorId(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-semibold text-slate-900 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 cursor-pointer"
-              >
-                <option value="">-- Choisir un collecteur --</option>
+              {/* Barre de recherche */}
+              <div className="relative">
+                <i className="fas fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                <input
+                  type="text"
+                  placeholder="Rechercher par nom ou téléphone..."
+                  value={collectorSearch}
+                  onChange={(e) => setCollectorSearch(e.target.value)}
+                  className="w-full pl-9 pr-8 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+                />
+                {collectorSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setCollectorSearch('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                  >
+                    <i className="fas fa-times text-xs"></i>
+                  </button>
+                )}
+              </div>
+
+              {/* Liste de cartes collecteurs */}
+              <div className="max-h-56 overflow-y-auto custom-scrollbar space-y-2 pr-1">
                 {collectorsList
                   .filter((c) => {
                     if (!collectorSearch.trim()) return true;
@@ -488,33 +511,65 @@ export default function PropertyAssignments() {
                     return full.includes(q);
                   })
                   .map((c) => {
-                    const label = c.name || `${c.first_name || ''} ${c.last_name || ''}`.trim();
+                    const label = c.name || `${c.first_name || ''} ${c.last_name || ''}`.trim() || `Collecteur #${c.id}`;
+                    const initials = label.split(/\s+/).slice(0, 2).map((w) => w[0] || '').join('').toUpperCase() || 'C';
+                    const isChecked = String(selectedCollectorId) === String(c.id);
                     return (
-                      <option key={c.id} value={c.id}>
-                        {label} {c.phone ? `(${c.phone})` : ''} — {c.assignedPropsCount || 0} bien(s)
-                      </option>
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => setSelectedCollectorId(String(c.id))}
+                        className={`w-full text-left p-3 rounded-xl border transition-all flex items-center justify-between gap-3 cursor-pointer ${
+                          isChecked
+                            ? 'border-primary bg-primary/5 ring-2 ring-primary/20 shadow-2xs'
+                            : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/70'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
+                            isChecked ? 'bg-primary text-white' : 'bg-indigo-50 text-indigo-600'
+                          }`}>
+                            {initials}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="text-sm font-bold text-slate-900 truncate">{label}</div>
+                            <div className="text-[11px] text-slate-500 flex items-center gap-2">
+                              <span><i className="fas fa-phone text-[9px] mr-1"></i>{c.phone || 'Sans téléphone'}</span>
+                              <span>&bull;</span>
+                              <span className="font-semibold text-slate-600">{c.assignedPropsCount || 0} bien(s) suivi(s)</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 transition-colors ${
+                          isChecked
+                            ? 'bg-primary border-primary text-white'
+                            : 'border-slate-300 bg-white'
+                        }`}>
+                          {isChecked && <i className="fas fa-check text-[10px]"></i>}
+                        </div>
+                      </button>
                     );
                   })}
-              </select>
+              </div>
             </div>
 
-            <div className="flex items-center justify-end gap-3 pt-2 border-t border-slate-100">
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
               <button
                 type="button"
                 onClick={() => setModalProperties([])}
                 disabled={submitting}
-                className="px-4 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-300 rounded-xl hover:bg-slate-50 cursor-pointer"
+                className="px-4 py-2.5 text-xs font-semibold text-slate-700 bg-white border border-slate-300 rounded-xl hover:bg-slate-50 cursor-pointer"
               >
                 Annuler
               </button>
               <button
                 type="submit"
-                disabled={submitting}
-                className="px-5 py-2 text-xs font-bold text-white bg-primary hover:bg-primary-dark rounded-xl shadow-sm transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-60"
+                disabled={submitting || !selectedCollectorId}
+                className="px-5 py-2.5 text-xs font-bold text-white bg-primary hover:bg-primary-dark rounded-xl shadow-sm transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
               >
                 {submitting
-                  ? <><i className="fas fa-spinner fa-spin"></i> Attribution...</>
-                  : <><i className="fas fa-check-circle"></i> Confirmer l'attribution</>
+                  ? <><i className="fas fa-spinner fa-spin"></i> Attribution en cours...</>
+                  : <><i className="fas fa-check-circle"></i> Confirmer l'attribution ({modalProperties.length})</>
                 }
               </button>
             </div>

@@ -118,84 +118,147 @@ export default function AssignPropertyModal({ isOpen, onClose, property, clients
       title="Attribuer un logement vacant"
       maxWidth="max-w-xl"
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-5">
         {/* Résumé du logement à attribuer */}
-        <div className="bg-emerald-50/80 rounded-2xl border border-emerald-200/90 p-3.5 space-y-1.5">
-          <div className="flex items-center justify-between">
-            <span className="font-bold text-slate-900 text-sm">{property.name}</span>
-            <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded-full border border-emerald-200">
-              Vacant / Disponible
-            </span>
+        <div className="bg-gradient-to-r from-emerald-50 to-teal-50/60 rounded-2xl border border-emerald-200/90 p-4 flex items-start justify-between gap-3">
+          <div className="flex items-start gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
+              <i className="fas fa-building text-sm"></i>
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-bold text-slate-900 text-sm truncate">{property.name}</span>
+                {property.reference_code && (
+                  <span className="font-mono text-[11px] font-semibold bg-white/80 text-slate-600 px-2 py-0.5 rounded-md border border-emerald-200">
+                    {property.reference_code}
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-600 flex items-center gap-1.5 mt-1 truncate">
+                <i className="fas fa-location-dot text-emerald-600"></i>
+                <span>{property.zone || property.address || 'Adresse non renseignée'}</span>
+                <span>&bull;</span>
+                <span className="font-bold text-slate-900">Réf. {formatXOF(property.rent || 0)}/mois</span>
+              </p>
+            </div>
           </div>
-          <p className="text-xs text-slate-600 flex items-center gap-1.5">
-            <i className="fas fa-location-dot text-slate-400"></i>
-            {property.address || 'Sans adresse'} &bull; Loyer de référence : <span className="font-bold text-slate-800">{formatXOF(property.rent || 0)}</span>
-          </p>
+          <span className="text-[11px] font-bold text-emerald-700 bg-white px-2.5 py-1 rounded-full border border-emerald-200 shrink-0 shadow-2xs">
+            Vacant
+          </span>
         </div>
 
         {/* Sélection Mode d'attribution */}
-        <div className="flex rounded-xl border border-slate-200 overflow-hidden p-1 bg-slate-100">
+        <div className="grid grid-cols-2 rounded-xl border border-slate-200 p-1 bg-slate-100 gap-1">
           <button
             type="button"
             onClick={() => setMode('existing')}
-            className={`flex-1 py-2 text-xs font-bold rounded-lg transition cursor-pointer ${
+            className={`py-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2 cursor-pointer ${
               mode === 'existing'
                 ? 'bg-white text-primary shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            <i className="fas fa-user-check mr-1.5"></i> Locataire existant
+            <i className="fas fa-user-check"></i>
+            <span>Locataire existant</span>
           </button>
           <button
             type="button"
             onClick={() => setMode('new')}
-            className={`flex-1 py-2 text-xs font-bold rounded-lg transition cursor-pointer ${
+            className={`py-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2 cursor-pointer ${
               mode === 'new'
                 ? 'bg-white text-primary shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            <i className="fas fa-user-plus mr-1.5"></i> Nouveau locataire sur place
+            <i className="fas fa-user-plus"></i>
+            <span>Nouveau locataire</span>
           </button>
         </div>
 
         {/* Formulaire selon mode */}
         {mode === 'existing' ? (
-          <div className="space-y-3">
+          <div className="space-y-2.5">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                Choisir le locataire <span className="text-rose-500">*</span>
+              </label>
+              <span className="text-[11px] text-slate-400">
+                {clients.length} locataire{clients.length > 1 ? 's' : ''} enregistré{clients.length > 1 ? 's' : ''}
+              </span>
+            </div>
+
             <div className="relative">
               <i className="fas fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
               <input
                 type="text"
-                placeholder="Rechercher un locataire par nom ou téléphone..."
+                placeholder="Rechercher par nom, prénom ou téléphone..."
                 value={tenantSearch}
                 onChange={(e) => setTenantSearch(e.target.value)}
-                className="w-full pl-9 pr-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20"
+                className="w-full pl-9 pr-8 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
               />
+              {tenantSearch && (
+                <button
+                  type="button"
+                  onClick={() => setTenantSearch('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                >
+                  <i className="fas fa-times text-xs"></i>
+                </button>
+              )}
             </div>
-            <FormField label="Sélectionner le locataire" required hint="Recherchez un locataire déjà inscrit dans SYGIM">
-              <select
-                required
-                value={selectedClientId}
-                onChange={(e) => setSelectedClientId(e.target.value)}
-                className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-semibold text-slate-900 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 cursor-pointer"
-              >
-                <option value="">-- Choisir un locataire --</option>
-                {clients
-                  .filter((c) => {
-                    if (!tenantSearch.trim()) return true;
-                    const q = tenantSearch.toLowerCase();
-                    const fullName = `${c.last_name || c.lastName || ''} ${c.first_name || c.firstName || ''}`.toLowerCase();
-                    const phone = (c.phone || '').toLowerCase();
-                    return fullName.includes(q) || phone.includes(q);
-                  })
-                  .map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.last_name || c.lastName} {c.first_name || c.firstName} ({c.phone || 'Sans tel'})
-                      {c.property_name ? ` - Actuellement : ${c.property_name}` : ' - Sans bien'}
-                    </option>
-                  ))}
-              </select>
-            </FormField>
+
+            <div className="max-h-48 overflow-y-auto custom-scrollbar space-y-2 pr-1">
+              {clients
+                .filter((c) => {
+                  if (!tenantSearch.trim()) return true;
+                  const q = tenantSearch.toLowerCase();
+                  const fullName = `${c.last_name || c.lastName || ''} ${c.first_name || c.firstName || ''}`.toLowerCase();
+                  const phone = (c.phone || '').toLowerCase();
+                  return fullName.includes(q) || phone.includes(q);
+                })
+                .map((c) => {
+                  const fullName = `${c.last_name || c.lastName || ''} ${c.first_name || c.firstName || ''}`.trim() || 'Locataire';
+                  const initials = fullName.split(/\s+/).slice(0, 2).map((w) => w[0] || '').join('').toUpperCase() || 'L';
+                  const isChecked = String(selectedClientId) === String(c.id);
+                  return (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => setSelectedClientId(String(c.id))}
+                      className={`w-full text-left p-2.5 rounded-xl border transition-all flex items-center justify-between gap-3 cursor-pointer ${
+                        isChecked
+                          ? 'border-primary bg-primary/5 ring-2 ring-primary/20 shadow-2xs'
+                          : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/70'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
+                          isChecked ? 'bg-primary text-white' : 'bg-slate-100 text-slate-600'
+                        }`}>
+                          {initials}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-xs font-bold text-slate-900 truncate">{fullName}</div>
+                          <div className="text-[11px] text-slate-500 flex items-center gap-2 truncate">
+                            <span>{c.phone || 'Sans tél.'}</span>
+                            <span>&bull;</span>
+                            {c.property_name ? (
+                              <span className="text-amber-700 font-medium truncate">Actuellement : {c.property_name}</span>
+                            ) : (
+                              <span className="text-emerald-700 font-semibold">Disponible (sans bien)</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <div className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 transition-colors ${
+                        isChecked ? 'bg-primary border-primary text-white' : 'border-slate-300 bg-white'
+                      }`}>
+                        {isChecked && <i className="fas fa-check text-[10px]"></i>}
+                      </div>
+                    </button>
+                  );
+                })}
+            </div>
           </div>
         ) : (
           <FormSection
@@ -289,6 +352,16 @@ export default function AssignPropertyModal({ isOpen, onClose, property, clients
               />
             </FormField>
           </div>
+
+          <div className="mt-3 p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs">
+            <span className="text-slate-600 font-medium">
+              <i className="fas fa-calculator text-primary mr-1.5"></i>
+              Total à prévoir à l'entrée (1er loyer + caution) :
+            </span>
+            <span className="text-sm font-extrabold text-slate-900 tabular-nums">
+              {formatXOF(numericRent + numericDeposit)}
+            </span>
+          </div>
         </FormSection>
 
         <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-200">
@@ -302,7 +375,7 @@ export default function AssignPropertyModal({ isOpen, onClose, property, clients
           </button>
           <button
             type="submit"
-            disabled={isSubmitting || !numericRent}
+            disabled={isSubmitting || !numericRent || (mode === 'existing' && !selectedClientId)}
             className="px-5 py-2.5 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-sm transition disabled:opacity-50 flex items-center gap-2 cursor-pointer"
           >
             {isSubmitting ? (
