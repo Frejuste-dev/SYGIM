@@ -1,9 +1,9 @@
 import React, { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   ResponsiveContainer,
-  AreaChart,
-  Area,
+  BarChart,
+  Bar,
+  LabelList,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -67,20 +67,14 @@ function CustomChartTooltip({ active, payload, label }) {
   const dataPoint = payload[0]?.payload || {};
 
   return (
-    <div className="bg-white border border-slate-200 rounded-xl p-3 shadow-lg text-xs space-y-1.5 min-w-[200px]">
+    <div className="bg-white border border-slate-200 rounded-xl p-3 shadow-lg text-xs space-y-1 min-w-[180px]">
       <div className="font-bold text-slate-800 pb-1 border-b border-slate-100">
         {dataPoint.fullLabel || label}
       </div>
-      <div className="flex items-center justify-between">
-        <span className="text-slate-600">Biens enregistrés N :</span>
+      <div className="flex items-center justify-between gap-3 pt-0.5">
+        <span className="text-slate-600">Biens enregistrés :</span>
         <span className="font-bold text-sky-600 tabular-nums">
           {dataPoint.count || 0} bien{(dataPoint.count || 0) > 1 ? 's' : ''}
-        </span>
-      </div>
-      <div className="flex items-center justify-between text-slate-400">
-        <span>Période N-1 :</span>
-        <span className="tabular-nums font-medium">
-          {dataPoint.prevCount || 0} bien{(dataPoint.prevCount || 0) > 1 ? 's' : ''}
         </span>
       </div>
     </div>
@@ -88,12 +82,12 @@ function CustomChartTooltip({ active, payload, label }) {
 }
 
 export default function Manager() {
-  const navigate = useNavigate();
   const defaultDates = useMemo(() => getDefaultDates(), []);
 
   const [granularity, setGranularity] = useState('month');
   const [startDate, setStartDate] = useState(defaultDates.start);
   const [endDate, setEndDate] = useState(defaultDates.end);
+  const [chartView, setChartView] = useState('month'); // 'month' | 'year'
 
   const queryParams = useMemo(() => {
     return { granularity, startDate, endDate };
@@ -113,8 +107,13 @@ export default function Manager() {
     assignedProperties = {},
     collectionRate = {},
     registeredOwners = {},
-    registrationsTimeSeries = [],
+    propertiesByMonth = [],
+    propertiesByYear = [],
+    chartYear,
   } = dashboard;
+
+  const histogramData = chartView === 'year' ? propertiesByYear : propertiesByMonth;
+  const histogramTotal = histogramData.reduce((acc, p) => acc + (p.count || 0), 0);
 
   return (
     <div className="space-y-6 w-full max-w-full overflow-x-hidden box-border">
@@ -337,37 +336,57 @@ export default function Manager() {
         </div>
       </div>
 
-      {/* 3. UN SEUL GRAPHIQUE EN DESSOUS : ÉVOLUTION DES ENREGISTREMENTS */}
+      {/* 3. HISTOGRAMME : NOMBRE DE BIENS ENREGISTRÉS PAR MOIS OU PAR ANNÉE */}
       <div className="bg-white border border-slate-200/80 rounded-xl shadow-xs p-5">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
           <div>
             <h3 className="text-sm font-semibold text-slate-800 border-b border-dashed border-slate-300 pb-0.5 inline-block">
-              Évolution des enregistrements de biens
+              Nombre de biens enregistrés {chartView === 'year' ? 'par année' : `par mois (${chartYear || new Date().getFullYear()})`}
             </h3>
             <p className="text-xs text-slate-500 mt-0.5">
-              Rythme d'intégration des nouveaux biens immobiliers sur la période sélectionnée.
+              Répartition des nouveaux biens immobiliers intégrés dans le portefeuille.
             </p>
           </div>
-          <span className="text-xs font-semibold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-lg">
-            {registrationsTimeSeries.reduce((acc, p) => acc + (p.count || 0), 0)} biens ajoutés
-          </span>
+          <div className="flex items-center gap-3 self-start sm:self-auto">
+            <div className="inline-flex items-center p-1 bg-slate-100 rounded-lg border border-slate-200/70">
+              <button
+                type="button"
+                onClick={() => setChartView('month')}
+                className={`px-3 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                  chartView === 'month'
+                    ? 'bg-white text-slate-900 shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Par mois
+              </button>
+              <button
+                type="button"
+                onClick={() => setChartView('year')}
+                className={`px-3 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                  chartView === 'year'
+                    ? 'bg-white text-slate-900 shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Par année
+              </button>
+            </div>
+            <span className="text-xs font-semibold text-slate-600 bg-slate-100 px-2.5 py-1.5 rounded-lg tabular-nums">
+              {histogramTotal} bien{histogramTotal > 1 ? 's' : ''}
+            </span>
+          </div>
         </div>
 
         <div className="mt-4 w-full h-72 sm:h-80">
-          {registrationsTimeSeries.length === 0 ? (
+          {histogramData.length === 0 ? (
             <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 text-xs gap-2">
-              <i className="fas fa-chart-area text-2xl"></i>
+              <i className="fas fa-chart-column text-2xl"></i>
               <span>Aucun enregistrement sur cette plage</span>
             </div>
           ) : (
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={registrationsTimeSeries} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="gradProps" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#0284c7" stopOpacity={0.25} />
-                    <stop offset="95%" stopColor="#0284c7" stopOpacity={0.0} />
-                  </linearGradient>
-                </defs>
+              <BarChart data={histogramData} margin={{ top: 24, right: 12, left: -10, bottom: 4 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                 <XAxis
                   dataKey="label"
@@ -383,52 +402,25 @@ export default function Manager() {
                   axisLine={false}
                   allowDecimals={false}
                 />
-                <Tooltip content={<CustomChartTooltip />} />
-                <Area
-                  type="monotone"
+                <Tooltip content={<CustomChartTooltip />} cursor={{ fill: '#f8fafc' }} />
+                <Bar
                   dataKey="count"
                   name="Biens enregistrés"
-                  stroke="#0284c7"
-                  strokeWidth={2.5}
-                  fill="url(#gradProps)"
-                  dot={{ r: 4, fill: '#0284c7', strokeWidth: 1.5, stroke: '#ffffff' }}
-                />
-              </AreaChart>
+                  fill="#0284c7"
+                  radius={[6, 6, 0, 0]}
+                  maxBarSize={48}
+                >
+                  <LabelList
+                    dataKey="count"
+                    position="top"
+                    fill="#334155"
+                    fontSize={11}
+                    fontWeight={700}
+                  />
+                </Bar>
+              </BarChart>
             </ResponsiveContainer>
           )}
-        </div>
-      </div>
-
-      {/* 4. ACTIONS RAPIDES DU MANAGER */}
-      <div className="bg-slate-50/70 border border-slate-200/80 rounded-xl p-4 flex flex-wrap items-center justify-between gap-3">
-        <div className="text-xs text-slate-600">
-          <strong className="text-slate-800 font-semibold">Accès rapides :</strong> Créez de nouveaux dossiers ou attribuez les biens en attente.
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <button
-            type="button"
-            onClick={() => navigate('/admin/properties')}
-            className="px-3.5 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-semibold shadow-2xs transition-colors flex items-center gap-2"
-          >
-            <i className="fas fa-building text-sky-600"></i>
-            <span>Gérer les Biens</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate('/admin/owners')}
-            className="px-3.5 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-semibold shadow-2xs transition-colors flex items-center gap-2"
-          >
-            <i className="fas fa-user-tie text-amber-600"></i>
-            <span>Gérer les Bailleurs</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate('/admin/property-assignments')}
-            className="px-3.5 py-2 bg-primary hover:bg-primary-dark text-white rounded-lg text-xs font-semibold shadow-xs transition-colors flex items-center gap-2"
-          >
-            <i className="fas fa-handshake"></i>
-            <span>Attribution des Biens</span>
-          </button>
         </div>
       </div>
     </div>

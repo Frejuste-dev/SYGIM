@@ -60,6 +60,27 @@ export default function ReportTaxDeclarationTab() {
 
   return (
     <div className="space-y-6">
+      {/* EN-TÊTE OFFICIEL VISIBLE UNIQUEMENT À L'IMPRESSION A4 */}
+      <div className="hidden print:block border-b-2 border-slate-800 pb-4 mb-4">
+        <div className="flex items-start justify-between">
+          <div>
+            <div className="text-xs font-bold uppercase tracking-widest text-slate-500">SYGIM &bull; Gestion Immobilière</div>
+            <h1 className="text-xl font-black text-slate-900 mt-1 uppercase">
+              Déclaration Annuelle des Revenus Fonciers &bull; {selectedYear}
+            </h1>
+            <p className="text-xs text-slate-600 mt-1">
+              Bailleur : <span className="font-bold text-slate-900">{owner.name || 'Propriétaire'}</span>
+              {owner.phone ? ` — Tél : ${owner.phone}` : ''}
+              {owner.email ? ` — ${owner.email}` : ''}
+            </p>
+          </div>
+          <div className="text-right text-xs text-slate-500">
+            <div>Exercice fiscal : <span className="font-bold text-slate-900">{selectedYear}</span></div>
+            <div>Édité le {new Date().toLocaleDateString('fr-FR')}</div>
+          </div>
+        </div>
+      </div>
+
       {/* 1. CONTRÔLES SUPÉRIEURS (MASQUÉS À L'IMPRESSION) */}
       <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs print:hidden space-y-4">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -133,7 +154,7 @@ export default function ReportTaxDeclarationTab() {
       </div>
 
       {/* 2. RECAPITULATIF FISCAL LIGNES 211, 221, 224, 250 */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 print:grid-cols-4 break-inside-avoid">
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs hover:shadow-sm transition-all">
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
@@ -204,7 +225,7 @@ export default function ReportTaxDeclarationTab() {
       </div>
 
       {/* 3. TABLEAU MENSUEL DES 12 MOIS DE L'ANNÉE */}
-      <div className="bg-white border border-slate-200 rounded-2xl shadow-2xs overflow-hidden">
+      <div className="bg-white border border-slate-200 rounded-2xl shadow-2xs overflow-hidden break-inside-avoid">
         <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between">
           <div className="font-bold text-slate-900 text-sm flex items-center gap-2">
             <i className="fas fa-calendar-alt text-primary"></i>
@@ -284,7 +305,7 @@ export default function ReportTaxDeclarationTab() {
 
       {/* 4. VENTILATION PAR BIEN IMMOBILIER */}
       {propertiesBreakdown.length > 0 && (
-        <div className="bg-white border border-slate-200 rounded-2xl shadow-2xs overflow-hidden">
+        <div className="bg-white border border-slate-200 rounded-2xl shadow-2xs overflow-hidden break-inside-avoid">
           <div className="p-4 sm:p-5 border-b border-slate-100 font-bold text-slate-900 text-sm">
             Répartition Patrimoniale par Bien Immobilier &bull; {selectedYear}
           </div>

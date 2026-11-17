@@ -33,6 +33,7 @@ export default function PropertyAssignments() {
   const [assigningProperty, setAssigningProperty] = useState(null);
   const [assignMode, setAssignMode] = useState('existing'); // 'existing' | 'new'
   const [selectedClientId, setSelectedClientId] = useState('');
+  const [tenantSearch, setTenantSearch] = useState('');
   const [newTenantForm, setNewTenantForm] = useState({
     firstName: '',
     lastName: '',
@@ -114,6 +115,7 @@ export default function PropertyAssignments() {
     setAssigningProperty(property);
     setAssignMode('existing');
     setSelectedClientId('');
+    setTenantSearch('');
     const propRent = property.rent ? parseFloat(property.rent) : 0;
     setNewTenantForm({
       firstName: '',
@@ -809,6 +811,20 @@ export default function PropertyAssignments() {
             {assignMode === 'existing' ? (
               <div className="space-y-3">
                 <div>
+                  <label htmlFor="tenantSearch" className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+                    Rechercher un locataire (Nom ou Téléphone)
+                  </label>
+                  <div className="relative mb-2.5">
+                    <i className="fas fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                    <input
+                      id="tenantSearch"
+                      type="text"
+                      placeholder="Tapez un nom ou un numéro (ex: Kouadio, 07 09...)"
+                      value={tenantSearch}
+                      onChange={(e) => setTenantSearch(e.target.value)}
+                      className="w-full pl-9 pr-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+                    />
+                  </div>
                   <label htmlFor="clientId" className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
                     Sélectionner le locataire <span className="text-rose-500">*</span>
                   </label>
@@ -820,11 +836,19 @@ export default function PropertyAssignments() {
                     className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-medium text-slate-900 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer"
                   >
                     <option value="">-- Choisir un locataire --</option>
-                    {availableClients.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.last_name} {c.first_name} {c.phone ? `(${c.phone})` : ''} {c.property_name ? `— Actuellement : ${c.property_name}` : ''}
-                      </option>
-                    ))}
+                    {availableClients
+                      .filter((c) => {
+                        if (!tenantSearch.trim()) return true;
+                        const q = tenantSearch.toLowerCase();
+                        const fullName = `${c.last_name || ''} ${c.first_name || ''}`.toLowerCase();
+                        const phone = (c.phone || '').toLowerCase();
+                        return fullName.includes(q) || phone.includes(q);
+                      })
+                      .map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.last_name} {c.first_name} {c.phone ? `(${c.phone})` : ''} {c.property_name ? `— Actuellement : ${c.property_name}` : ''}
+                        </option>
+                      ))}
                   </select>
                 </div>
               </div>

@@ -34,13 +34,8 @@ async function verifyOwnerAccess(ownerId, user) {
     throw AppError.forbidden('Accès refusé. Les collecteurs ne sont pas autorisés à consulter ces rapports financiers.');
   }
 
-  // Rôle Manager / Gestionnaire : vérifier le périmètre de son équipe
-  if (['manager', 'collector_manager', 'gestionnaire'].includes(user.role)) {
-    const hasAccess = await OwnerRepository.isAccessibleByUser(oId, user);
-    if (!hasAccess) {
-      throw AppError.forbidden('Accès refusé. Ce propriétaire n\'est pas géré par votre équipe.');
-    }
-  }
+  // Les rôles admin, super_admin, director, accounting, manager, collector_manager, gestionnaire
+  // ont accès à l'ensemble du portefeuille propriétaires.
 }
 
 class ReportController {

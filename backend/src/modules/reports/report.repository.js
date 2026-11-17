@@ -2291,6 +2291,40 @@ class ReportRepository {
       })
     );
 
+    // 4. Agrégats histogramme : Par mois (année sélectionnée) et Par année
+    const targetYear = start.getUTCFullYear();
+    const MONTH_NAMES_SHORT = ['Janv', 'Févr', 'Mars', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sept', 'Oct', 'Nov', 'Déc'];
+    const MONTH_NAMES_FULL = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+
+    const [[monthlyRaw], [yearlyRaw]] = await Promise.all([
+      pool.query(
+        'SELECT MONTH(created_at) AS m, COUNT(*) AS count FROM properties WHERE YEAR(created_at) = ? GROUP BY MONTH(created_at)',
+        [targetYear]
+      ),
+      pool.query(
+        'SELECT YEAR(created_at) AS y, COUNT(*) AS count FROM properties WHERE created_at IS NOT NULL GROUP BY YEAR(created_at) ORDER BY y ASC'
+      ),
+    ]);
+
+    const monthlyMap = new Map(monthlyRaw.map((r) => [Number(r.m), Number(r.count || 0)]));
+    const propertiesByMonth = MONTH_NAMES_SHORT.map((label, idx) => ({
+      label,
+      fullLabel: `${MONTH_NAMES_FULL[idx]} ${targetYear}`,
+      count: monthlyMap.get(idx + 1) || 0,
+    }));
+
+    const yearlyMap = new Map(yearlyRaw.map((r) => [Number(r.y), Number(r.count || 0)]));
+    const minYear = Math.min(targetYear - 2, ...(yearlyMap.size ? Array.from(yearlyMap.keys()) : [targetYear - 2]));
+    const maxYear = Math.max(targetYear, ...(yearlyMap.size ? Array.from(yearlyMap.keys()) : [targetYear]));
+    const propertiesByYear = [];
+    for (let y = minYear; y <= maxYear; y++) {
+      propertiesByYear.push({
+        label: String(y),
+        fullLabel: `Année ${y}`,
+        count: yearlyMap.get(y) || 0,
+      });
+    }
+
     return {
       period: {
         granularity,
@@ -2330,6 +2364,9 @@ class ReportRepository {
         total: totalOwners,
       },
       registrationsTimeSeries,
+      propertiesByMonth,
+      propertiesByYear,
+      chartYear: targetYear,
     };
   }
 

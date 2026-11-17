@@ -717,7 +717,7 @@ export default function Reports() {
   return (
     <div className="space-y-6 min-w-0 overflow-x-hidden">
       {/* 1. EN-TÊTE ET ACTIONS GLOBALES */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-xs print:hidden">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2.5">
             <i className="fas fa-chart-line text-primary"></i>
@@ -750,7 +750,7 @@ export default function Reports() {
 
       {/* 2. BARRE DE FILTRES DE PÉRIODE */}
       {isGenericPeriodTab && (
-        <div className="bg-white px-5 py-3.5 rounded-2xl border border-slate-200 shadow-2xs flex flex-wrap items-center justify-between gap-4">
+        <div className="bg-white px-5 py-3.5 rounded-2xl border border-slate-200 shadow-2xs flex flex-wrap items-center justify-between gap-4 print:hidden">
           <div className="flex flex-wrap items-center gap-3">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
               <i className="fas fa-calendar-alt text-primary"></i> Période d'analyse :
@@ -832,7 +832,7 @@ export default function Reports() {
       )}
 
       {/* 3. NAVIGATION PAR DOMAINES MÉTIERS & RAPPORTS */}
-      <div className="space-y-3">
+      <div className="space-y-3 print:hidden">
         {/* Niveau 1 : Les 5 Domaines Métiers */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2.5 p-1.5 bg-slate-100/90 rounded-2xl border border-slate-200">
           {REPORT_DOMAINS.map((domain, index) => {

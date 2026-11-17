@@ -11,6 +11,7 @@ export default function AssignPropertyModal({ isOpen, onClose, property, clients
   const [mode, setMode] = useState('existing'); // 'existing' | 'new'
 
   const [selectedClientId, setSelectedClientId] = useState('');
+  const [tenantSearch, setTenantSearch] = useState('');
   const [rent, setRent] = useState(0);
   const [deposit, setDeposit] = useState(0);
   const [startDate, setStartDate] = useState(new Date().toISOString().slice(0, 10));
@@ -31,6 +32,7 @@ export default function AssignPropertyModal({ isOpen, onClose, property, clients
       setDeposit(property.deposit ? Number(property.deposit) : initialRent * 2);
       setStartDate(new Date().toISOString().slice(0, 10));
       setSelectedClientId('');
+      setTenantSearch('');
     }
   }, [isOpen, property]);
 
@@ -159,22 +161,42 @@ export default function AssignPropertyModal({ isOpen, onClose, property, clients
 
         {/* Formulaire selon mode */}
         {mode === 'existing' ? (
-          <FormField label="Sélectionner le locataire" required hint="Recherchez un locataire déjà inscrit dans SYGIM">
-            <select
-              required
-              value={selectedClientId}
-              onChange={(e) => setSelectedClientId(e.target.value)}
-              className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-semibold text-slate-900 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 cursor-pointer"
-            >
-              <option value="">-- Choisir un locataire --</option>
-              {clients.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.last_name || c.lastName} {c.first_name || c.firstName} ({c.phone || 'Sans tel'})
-                  {c.property_name ? ` - Actuellement : ${c.property_name}` : ' - Sans bien'}
-                </option>
-              ))}
-            </select>
-          </FormField>
+          <div className="space-y-3">
+            <div className="relative">
+              <i className="fas fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+              <input
+                type="text"
+                placeholder="Rechercher un locataire par nom ou téléphone..."
+                value={tenantSearch}
+                onChange={(e) => setTenantSearch(e.target.value)}
+                className="w-full pl-9 pr-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20"
+              />
+            </div>
+            <FormField label="Sélectionner le locataire" required hint="Recherchez un locataire déjà inscrit dans SYGIM">
+              <select
+                required
+                value={selectedClientId}
+                onChange={(e) => setSelectedClientId(e.target.value)}
+                className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-semibold text-slate-900 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 cursor-pointer"
+              >
+                <option value="">-- Choisir un locataire --</option>
+                {clients
+                  .filter((c) => {
+                    if (!tenantSearch.trim()) return true;
+                    const q = tenantSearch.toLowerCase();
+                    const fullName = `${c.last_name || c.lastName || ''} ${c.first_name || c.firstName || ''}`.toLowerCase();
+                    const phone = (c.phone || '').toLowerCase();
+                    return fullName.includes(q) || phone.includes(q);
+                  })
+                  .map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.last_name || c.lastName} {c.first_name || c.firstName} ({c.phone || 'Sans tel'})
+                      {c.property_name ? ` - Actuellement : ${c.property_name}` : ' - Sans bien'}
+                    </option>
+                  ))}
+              </select>
+            </FormField>
+          </div>
         ) : (
           <FormSection
             icon="fa-user-plus"
