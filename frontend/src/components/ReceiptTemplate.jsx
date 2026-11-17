@@ -15,6 +15,13 @@ export default function ReceiptTemplate({ transaction, onClose }) {
 
   if (!transaction) return null;
 
+  const clientName = transaction.client_name || transaction.clientName || transaction.client || 'Locataire Inconnu';
+  const propertyName = (transaction.property_name && transaction.property_name !== '—')
+    ? transaction.property_name
+    : (transaction.propertyName || transaction.property || 'Bien non spécifié');
+  const tenantSignature = transaction.signature_data || transaction.signatureData || transaction.signature || null;
+  const txDescription = transaction.description || 'Paiement de loyer';
+
   return (
     <div className="fixed inset-0 z-[100] bg-white text-slate-900 overflow-auto flex justify-center py-10 print:py-0 print:block">
       <style>{`
@@ -67,11 +74,17 @@ export default function ReceiptTemplate({ transaction, onClose }) {
         <div className="grid grid-cols-2 gap-6 mb-8">
           <div className="border-l-4 border-primary pl-4 bg-primary/5 py-3 rounded-r-xl">
             <h3 className="text-[11px] text-primary uppercase font-bold tracking-wider mb-1">Reçu de (Locataire) :</h3>
-            <p className="text-sm font-bold text-slate-900">{transaction.client || 'Locataire Inconnu'}</p>
+            <p className="text-sm font-bold text-slate-900">{clientName}</p>
+            {transaction.client_phone && (
+              <p className="text-xs text-slate-500 mt-0.5">{transaction.client_phone}</p>
+            )}
           </div>
           <div className="border-l-4 border-primary pl-4 bg-primary/5 py-3 rounded-r-xl">
             <h3 className="text-[11px] text-primary uppercase font-bold tracking-wider mb-1">Concernant le bien :</h3>
-            <p className="text-sm font-bold text-slate-900">{transaction.property || 'Bien non spécifié'}</p>
+            <p className="text-sm font-bold text-slate-900">{propertyName}</p>
+            {transaction.collector_name?.trim() && (
+              <p className="text-xs text-slate-500 mt-0.5">Collecteur : {transaction.collector_name.trim()}</p>
+            )}
           </div>
         </div>
 
@@ -88,8 +101,8 @@ export default function ReceiptTemplate({ transaction, onClose }) {
             <tbody>
               <tr className="even:bg-slate-50 border-b border-slate-200">
                 <td className="py-4 px-4 text-sm text-slate-800">
-                  <span className="font-bold text-slate-900">Paiement de loyer</span><br/>
-                  <span className="text-xs text-slate-500">Période d'occupation courante</span>
+                  <span className="font-bold text-slate-900">{txDescription}</span><br/>
+                  <span className="text-xs text-slate-500">Quittance de règlement locatif</span>
                 </td>
                 <td className="py-4 px-4 text-sm font-semibold text-slate-800">{formatMethod(transaction.method)}</td>
                 <td className="py-4 px-4 text-right font-black text-primary text-base">
@@ -117,16 +130,32 @@ export default function ReceiptTemplate({ transaction, onClose }) {
         </div>
 
         {/* Pied de page - Signatures */}
-        <div className="flex justify-between items-end mt-8 pt-6 border-t-2 border-primary/20 print:break-inside-avoid">
-          <div className="text-xs text-slate-500 max-w-sm">
-            <p className="mb-1"><strong className="text-primary print:text-primary">Mentions légales :</strong></p>
-            <p>Ce reçu officiel certifie le règlement libératoire sous réserve d'encaissement effectif. Fait foi devant toute juridiction.</p>
-          </div>
-          <div className="text-center">
-            <p className="text-xs font-bold text-primary mb-2 uppercase tracking-wider print:text-primary">Pour l'Agence SYGIM (Cachet & Signature)</p>
-            <div className="border-2 border-dashed border-primary/30 bg-primary/5 rounded-xl h-24 w-52 mx-auto flex items-center justify-center text-primary/40 text-xs font-semibold">
-              Cachet officiel SYGIM
+        <div className="mt-8 pt-6 border-t-2 border-primary/20 print:break-inside-avoid space-y-6">
+          <div className="grid grid-cols-2 gap-6 items-start">
+            <div className="text-center">
+              <p className="text-xs font-bold text-slate-700 mb-2 uppercase tracking-wider">Signature du Locataire</p>
+              <div className="border-2 border-dashed border-slate-300 bg-slate-50/70 rounded-xl h-24 w-full flex items-center justify-center p-2 overflow-hidden">
+                {tenantSignature ? (
+                  <img
+                    src={tenantSignature}
+                    alt="Signature du locataire"
+                    className="max-h-20 max-w-full object-contain mx-auto"
+                  />
+                ) : (
+                  <span className="text-slate-400 text-xs italic">Non signée</span>
+                )}
+              </div>
             </div>
+            <div className="text-center">
+              <p className="text-xs font-bold text-primary mb-2 uppercase tracking-wider print:text-primary">Pour l'Agence SYGIM (Cachet &amp; Signature)</p>
+              <div className="border-2 border-dashed border-primary/30 bg-primary/5 rounded-xl h-24 w-full flex items-center justify-center text-primary/40 text-xs font-semibold">
+                Cachet officiel SYGIM
+              </div>
+            </div>
+          </div>
+          <div className="text-xs text-slate-500 text-center">
+            <strong className="text-primary print:text-primary">Mentions légales : </strong>
+            Ce reçu officiel certifie le règlement libératoire sous réserve d'encaissement effectif. Fait foi devant toute juridiction.
           </div>
         </div>
 

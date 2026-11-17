@@ -161,6 +161,12 @@ class TransactionService extends BaseService {
     }
 
     data.collectorId = resolvedCollectorId;
+    if (!data.signatureData && data.signature) {
+      data.signatureData = data.signature;
+    }
+    if (!data.clientName && client) {
+      data.clientName = `${client.last_name || ''} ${client.first_name || ''}`.trim() || null;
+    }
     const createdTx = await this.repository.createWithClientUpdate(data);
 
     // Régularisation automatique d'un éventuel préfinancement UNIQUEMENT si la transaction est traitée/validée
