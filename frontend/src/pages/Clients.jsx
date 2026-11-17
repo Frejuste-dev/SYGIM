@@ -13,6 +13,7 @@ import TableSkeleton from '../components/ui/TableSkeleton';
 import { FormField, MoneyInput, PhoneInput, FormSection } from '../components/ui/forms';
 import { formatXOF, formatStatus } from '../utils/formatters';
 import { exportToExcel, exportToPDF } from '../utils/exportUtils';
+import ImportPortfolioModal from '../components/import/ImportPortfolioModal';
 
 const STATUS_OPTIONS = [
   { value: '', label: 'Tous les statuts' },
@@ -91,6 +92,7 @@ export default function Clients() {
   const collectors = Array.isArray(collectorsResult) ? collectorsResult : (collectorsResult?.data || []);
 
   const [showModal, setShowModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
   const [editingClient, setEditingClient] = useState(null);
   const [selectedClientForStatement, setSelectedClientForStatement] = useState(null);
   const [form, setForm] = useState({ firstName: '', lastName: '', phone: '', email: '', propertyId: '', propertyName: '', amountDue: '', collectorId: '' });
@@ -284,6 +286,16 @@ export default function Clients() {
               <span className="hidden sm:inline">PDF</span>
             </button>
           </div>
+
+          <button
+            type="button"
+            onClick={() => setShowImportModal(true)}
+            className="h-9 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-all shadow-2xs inline-flex items-center gap-1.5 whitespace-nowrap cursor-pointer"
+            title="Importer des locataires, biens et propriétaires depuis Excel / CSV"
+          >
+            <i className="fas fa-file-import text-xs"></i>
+            <span className="hidden sm:inline">Importer Excel / CSV</span>
+          </button>
 
           <button
             type="button"
@@ -653,6 +665,11 @@ export default function Clients() {
           onClose={() => setSelectedClientForStatement(null)}
         />
       )}
+
+      <ImportPortfolioModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+      />
     </div>
   );
 }

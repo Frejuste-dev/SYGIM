@@ -73,3 +73,13 @@ export const useToggleUserStatus = () => {
     },
   });
 };
+
+export const useResetUserPassword = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...payload }) => API.Users.resetPassword(id, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+    },
+  });
+};

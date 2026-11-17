@@ -138,6 +138,7 @@ app.use('/api/repairs',      require('./modules/repairs/repair.routes'));
 app.use('/api/rgpd',         require('./modules/rgpd/rgpd.routes'));
 app.use('/api/activity',     require('./modules/activity/activity.routes'));
 app.use('/api/notifications', require('./modules/notifications/notification.routes'));
+app.use('/api/import',        require('./modules/import/import.routes'));
 
 // ═══════════════════════════════════════════════════════════════════════
 // 5. SERVIR LES FICHIERS FRONTEND

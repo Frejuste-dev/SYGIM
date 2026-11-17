@@ -3,10 +3,13 @@ import TableSkeleton from './ui/TableSkeleton';
 
 const ROLE_LABELS = {
   admin: 'Administrateur',
+  super_admin: 'Super Admin',
   director: 'Directeur',
   accounting: 'Comptable',
+  manager: 'Manager',
   collector_manager: 'Manager des Récolteurs',
-  collector: 'Récolteur'
+  collector: 'Récolteur',
+  owner: 'Propriétaire'
 };
 
 export default function UsersTable({
@@ -177,18 +180,44 @@ export default function UsersTable({
                       )}
                     </td>
                     <td className="px-5 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => onEdit && onEdit(u)} className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-primary hover:bg-primary/10 transition-colors" title="Modifier">
-                          <i className="fas fa-pencil-alt text-sm"></i>
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => onEdit && onEdit(u)}
+                          className="px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-primary hover:bg-primary/10 transition-colors cursor-pointer"
+                          title="Modifier l'utilisateur"
+                          aria-label={`Modifier ${u.username}`}
+                        >
+                          <i className="fas fa-pencil-alt text-xs"></i>
+                          <span className="hidden xl:inline">Modifier</span>
                         </button>
-                        <button onClick={() => onToggleStatus && onToggleStatus(u)} className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${u.active || u.active === 1 ? 'text-amber-400 hover:text-amber-600 hover:bg-amber-50' : 'text-emerald-400 hover:text-emerald-600 hover:bg-emerald-50'}`} title={u.active || u.active === 1 ? 'Désactiver' : 'Activer'}>
-                          <i className={`fas ${u.active || u.active === 1 ? 'fa-pause' : 'fa-play'} text-sm`}></i>
+                        <button
+                          type="button"
+                          onClick={() => onResetPassword && onResetPassword(u)}
+                          className="px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-semibold text-amber-600 hover:text-amber-700 hover:bg-amber-50 transition-colors cursor-pointer"
+                          title="Réinitialiser le mot de passe"
+                          aria-label={`Réinitialiser le mot de passe de ${u.username}`}
+                        >
+                          <i className="fas fa-key text-xs"></i>
+                          <span className="hidden xl:inline">Mot de passe</span>
                         </button>
-                        <button onClick={() => onResetPassword && onResetPassword(u)} className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-primary hover:bg-primary/10 transition-colors" title="Réinitialiser le mot de passe">
-                          <i className="fas fa-key text-sm"></i>
+                        <button
+                          type="button"
+                          onClick={() => onToggleStatus && onToggleStatus(u)}
+                          className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors cursor-pointer ${u.active || u.active === 1 ? 'text-amber-500 hover:text-amber-700 hover:bg-amber-50' : 'text-emerald-500 hover:text-emerald-700 hover:bg-emerald-50'}`}
+                          title={u.active || u.active === 1 ? 'Désactiver le compte' : 'Activer le compte'}
+                          aria-label={u.active || u.active === 1 ? `Désactiver ${u.username}` : `Activer ${u.username}`}
+                        >
+                          <i className={`fas ${u.active || u.active === 1 ? 'fa-pause' : 'fa-play'} text-xs`}></i>
                         </button>
-                        <button onClick={() => onDelete && onDelete(u)} className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors" title="Supprimer">
-                          <i className="fas fa-trash text-sm"></i>
+                        <button
+                          type="button"
+                          onClick={() => onDelete && onDelete(u)}
+                          className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                          title="Supprimer"
+                          aria-label={`Supprimer ${u.username}`}
+                        >
+                          <i className="fas fa-trash text-xs"></i>
                         </button>
                       </div>
                     </td>

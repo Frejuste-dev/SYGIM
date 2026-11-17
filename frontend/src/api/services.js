@@ -78,7 +78,10 @@ export const API = {
             httpClient.patch(`/users/${userId}/activate`, {}),
         
         deactivate: (userId) => 
-            httpClient.patch(`/users/${userId}/deactivate`, {})
+            httpClient.patch(`/users/${userId}/deactivate`, {}),
+
+        resetPassword: (userId, payload = {}) =>
+            httpClient.post(`/users/${userId}/reset-password`, payload)
     },
 
     /**
@@ -422,5 +425,56 @@ export const API = {
 
         markAllAsRead: () =>
             httpClient.patch('/notifications/read-all')
+    },
+
+    /**
+     * Importation Massive Excel / CSV
+     */
+    Import: {
+        downloadTemplate: async () => {
+            const token = typeof window !== 'undefined' ? localStorage.getItem('sygim_token') : null;
+            const headers = {};
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+
+            const res = await fetch(`${CONFIG.API.BASE}/import/template`, {
+                method: 'GET',
+                credentials: 'include',
+                headers
+            });
+            if (!res.ok) throw new Error('Impossible de télécharger le modèle Excel.');
+            const blob = await res.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'modele_import_sygim.xlsx';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+        },
+
+        previewPortfolio: async (file) => {
+            const token = typeof window !== 'undefined' ? localStorage.getItem('sygim_token') : null;
+            const headers = {};
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const res = await fetch(`${CONFIG.API.BASE}/import/portfolio/preview`, {
+                method: 'POST',
+                credentials: 'include',
+                headers,
+                body: formData
+            });
+            const json = await res.json();
+            if (!res.ok) {
+                throw new Error(json?.message || json?.error || 'Erreur lors de l\'analyse du fichier.');
+            }
+            return json;
+        },
+
+        executePortfolio: (rows) =>
+            httpClient.post('/import/portfolio/execute', { rows })
     }
 };
