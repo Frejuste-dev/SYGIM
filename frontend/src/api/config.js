@@ -5,7 +5,7 @@
  * ╚════════════════════════════════════════════════════════════════════╝
  */
 
-const CLOUDFLARE_TUNNEL_URL = 'https://moore-stainless-perfume-internal.trycloudflare.com';
+const CLOUDFLARE_TUNNEL_URL = 'https://upon-rouge-away-examining.trycloudflare.com';
 
 export const CONFIG = {
     // ── API Configuration ──────────────────────────────────────
