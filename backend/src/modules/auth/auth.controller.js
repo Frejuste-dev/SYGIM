@@ -20,7 +20,11 @@ class AuthController {
       res.cookie('accessToken', result.accessToken, accessTokenOptions);
       res.cookie('refreshToken', result.refreshToken, refreshTokenOptions);
 
-      return res.status(200).json(ApiResponse.success({ user: result.user }, 'Connexion réussie'));
+      return res.status(200).json(ApiResponse.success({ 
+        user: result.user,
+        token: result.accessToken,
+        accessToken: result.accessToken
+      }, 'Connexion réussie'));
     } catch (error) {
       next(error);
     }
@@ -42,7 +46,11 @@ class AuthController {
       res.cookie('accessToken', result.accessToken, accessTokenOptions);
       res.cookie('refreshToken', result.refreshToken, refreshTokenOptions);
 
-      return res.status(200).json(ApiResponse.success({ success: true }, 'Token rafraîchi'));
+      return res.status(200).json(ApiResponse.success({ 
+        success: true,
+        token: result.accessToken,
+        accessToken: result.accessToken
+      }, 'Token rafraîchi'));
     } catch (error) {
       next(error);
     }

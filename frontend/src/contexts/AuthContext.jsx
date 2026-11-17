@@ -37,6 +37,7 @@ export const AuthProvider = ({ children }) => {
             // Nettoyer le cache React Query et le localStorage
             if (typeof window !== 'undefined') {
                 localStorage.removeItem(CONFIG.STORAGE.CURRENT_USER);
+                localStorage.removeItem('sygim_token');
             }
             queryClient.clear();
             // Mettre a jour l'etat React -> ProtectedRoute redirige vers /login
@@ -136,6 +137,10 @@ export const AuthProvider = ({ children }) => {
                     collectorId:   account.collectorId || account.collector_id || null
                 };
 
+                const authToken = data.token || data.accessToken;
+                if (authToken && typeof window !== 'undefined') {
+                    localStorage.setItem('sygim_token', authToken);
+                }
                 localStorage.setItem(CONFIG.STORAGE.CURRENT_USER, JSON.stringify(loggedUser));
                 queryClient.clear();
                 setUser(loggedUser);
@@ -159,6 +164,7 @@ export const AuthProvider = ({ children }) => {
         } finally {
             setUser(null);
             localStorage.removeItem(CONFIG.STORAGE.CURRENT_USER);
+            localStorage.removeItem('sygim_token');
             queryClient.clear();
         }
     };

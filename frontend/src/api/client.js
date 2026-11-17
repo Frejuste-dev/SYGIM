@@ -38,11 +38,19 @@ export class HttpClient {
             ...additionalHeaders
         };
 
+        // Support Authorization Bearer pour déploiements Cross-Site (Cloudflare Workers/Pages)
+        if (typeof window !== 'undefined') {
+            const token = localStorage.getItem('sygim_token');
+            if (token && !headers['Authorization']) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+        }
+
         return headers;
     }
 
     /**
-     * Tente un refresh token (via cookie HttpOnly)
+     * Tente un refresh token (via cookie HttpOnly et Bearer)
      * Utilise une promesse partagée pour éviter les refreshes concurrents
      * (race condition quand plusieurs appels API reçoivent 401 simultanément)
      */
@@ -53,12 +61,20 @@ export class HttpClient {
             const response = await fetch(`${this.baseUrl}/auth/refresh`, {
                 method: 'POST',
                 credentials: 'include',
-                headers: { 'Content-Type': 'application/json' }
+                headers: this._getHeaders()
             });
 
             if (!response.ok) throw new Error('Refresh token expiré ou invalide');
 
-            // Succès de la rotation côté backend, le nouveau cookie a été posé.
+            // Récupérer et stocker le nouveau token rafraîchi si présent
+            try {
+                const json = await response.json();
+                const newToken = json?.data?.token || json?.data?.accessToken;
+                if (newToken && typeof window !== 'undefined') {
+                    localStorage.setItem('sygim_token', newToken);
+                }
+            } catch (_) {}
+
             return true;
         })();
 
