@@ -19,42 +19,47 @@ router.use(authenticate);
 /**
  * @route   GET /api/collectors
  */
-router.get('/', checkRole(['admin', 'director', 'accounting', 'collector_manager', 'collector']), collectorController.getAll);
+router.get('/', checkRole(['admin', 'super_admin', 'director', 'accounting', 'manager', 'collector_manager', 'collector']), collectorController.getAll);
+
+/**
+ * @route   POST /api/collectors/unassign-properties
+ */
+router.post('/unassign-properties', checkRole(['admin', 'super_admin', 'director', 'manager', 'collector_manager']), collectorController.unassignProperties);
 
 /**
  * @route   GET /api/collectors/:id
  */
-router.get('/:id', checkRole(['admin', 'director', 'accounting', 'collector_manager', 'collector']), collectorController.getById);
+router.get('/:id', checkRole(['admin', 'super_admin', 'director', 'accounting', 'manager', 'collector_manager', 'collector']), collectorController.getById);
 
 /**
  * @route   GET /api/collectors/:id/stats
  * Access   Admin, Manager uniquement
  */
-router.get('/:id/stats', checkRole(['admin', 'director', 'collector_manager']), collectorController.getStats);
+router.get('/:id/stats', checkRole(['admin', 'super_admin', 'director', 'manager', 'collector_manager']), collectorController.getStats);
 
 /**
  * @route   GET /api/collectors/owner/:ownerId
  */
-router.get('/owner/:ownerId', checkRole(['admin', 'director', 'accounting', 'collector_manager', 'collector']), collectorController.getByOwner);
+router.get('/owner/:ownerId', checkRole(['admin', 'super_admin', 'director', 'accounting', 'manager', 'collector_manager', 'collector']), collectorController.getByOwner);
 
 /**
  * @route   POST /api/collectors
  */
-router.post('/', checkRole(['admin', 'director']), collectorValidator, collectorController.create);
+router.post('/', checkRole(['admin', 'super_admin', 'director']), collectorValidator, collectorController.create);
 
 /**
  * @route   PUT /api/collectors/:id
  */
-router.put('/:id', checkRole(['admin', 'director']), collectorValidator, collectorController.update);
+router.put('/:id', checkRole(['admin', 'super_admin', 'director']), collectorValidator, collectorController.update);
 
 /**
  * @route   DELETE /api/collectors/:id
  */
-router.delete('/:id', checkRole(['admin', 'director']), collectorController.delete);
+router.delete('/:id', checkRole(['admin', 'super_admin', 'director']), collectorController.delete);
 
 /**
  * @route   POST /api/collectors/:id/assign-properties
  */
-router.post('/:id/assign-properties', checkRole(['admin', 'director']), collectorController.assignProperties);
+router.post('/:id/assign-properties', checkRole(['admin', 'super_admin', 'director', 'manager', 'collector_manager']), collectorController.assignProperties);
 
 module.exports = router;

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useProperties, usePropertyStats, useCreateProperty, useUpdateProperty, useDeleteProperty } from '../hooks/queries/useProperties';
 import { useOwners } from '../hooks/queries/useOwners';
+import { useClients } from '../hooks/queries/useClients';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useDebounce } from '../hooks/useDebounce';
 import { useToast } from '../components/ToastContext';
@@ -12,6 +14,8 @@ import { FormField, MoneyInput, FormSection } from '../components/ui/forms';
 import { formatXOF, formatStatus } from '../utils/formatters';
 import { exportToExcel, exportToPDF } from '../utils/exportUtils';
 import ImportPortfolioModal from '../components/import/ImportPortfolioModal';
+import AssignPropertyModal from '../components/AssignPropertyModal';
+import TenantDepartureModal from '../components/TenantDepartureModal';
 
 const TYPE_ICONS = { appartement: 'fa-building', maison: 'fa-home', terrain: 'fa-map', commercial: 'fa-store' };
 
@@ -23,12 +27,15 @@ const EMPTY_FORM = () => ({
 });
 
 export default function Properties() {
+  const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const urlSearch = searchParams.get('search') || '';
   const [searchTerm, setSearchTerm] = useState(urlSearch);
   const debouncedSearch = useDebounce(searchTerm, 350);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [assigningProperty, setAssigningProperty] = useState(null);
+  const [departingClient, setDepartingClient] = useState(null);
 
   const typeFilter = searchParams.get('type') || '';
   const statusFilter = searchParams.get('status') || '';
@@ -84,6 +91,9 @@ export default function Properties() {
   
   const { data: ownersData = {} } = useOwners({ limit: 100 });
   const owners = Array.isArray(ownersData) ? ownersData : (ownersData?.data || []);
+
+  const { data: clientsData = {} } = useClients({ limit: 300 });
+  const allClients = Array.isArray(clientsData) ? clientsData : (clientsData?.data || []);
 
   const [showModal, setShowModal] = useState(false);
   const [editingProperty, setEditingProperty] = useState(null);
@@ -481,17 +491,35 @@ export default function Properties() {
                     </td>
                     <td className="py-3.5 px-4 text-right whitespace-nowrap">
                       <div className="flex items-center justify-end gap-1.5">
-                        {isVacant && (
+                        {isVacant ? (
                           <button
                             type="button"
-                            onClick={() => navigate(`/admin/property-assignments?propertyId=${p.id}`)}
+                            onClick={() => setAssigningProperty(p)}
                             className="h-8 px-2 bg-primary/10 hover:bg-primary hover:text-white text-primary rounded-lg text-xs font-bold transition-all inline-flex items-center gap-1 shadow-2xs cursor-pointer"
                             title="Attribuer ce bien à un locataire"
                           >
                             <i className="fas fa-key text-[10px]"></i>
                             <span>Attribuer</span>
                           </button>
-                        )}
+                        ) : p.tenant_id ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const matchedClient = allClients.find((c) => c.id === p.tenant_id) || {
+                                id: p.tenant_id,
+                                first_name: p.tenant_first_name || '',
+                                last_name: p.tenant_last_name || p.tenant_name || 'Locataire',
+                                property_title: p.name
+                              };
+                              setDepartingClient(matchedClient);
+                            }}
+                            className="h-8 px-2 bg-amber-50 hover:bg-amber-600 hover:text-white text-amber-700 border border-amber-200 rounded-lg text-xs font-bold transition-all inline-flex items-center gap-1 shadow-2xs cursor-pointer"
+                            title="Enregistrer le départ du locataire"
+                          >
+                            <i className="fas fa-sign-out-alt text-[10px]"></i>
+                            <span>Départ</span>
+                          </button>
+                        ) : null}
                         <button
                           type="button"
                           className="w-8 h-8 rounded-lg inline-flex items-center justify-center text-slate-500 hover:text-primary hover:bg-primary/10 border border-slate-200 bg-white transition-colors cursor-pointer"
@@ -917,6 +945,29 @@ export default function Properties() {
       <ImportPortfolioModal
         isOpen={showImportModal}
         onClose={() => setShowImportModal(false)}
+      />
+
+      <AssignPropertyModal
+        isOpen={Boolean(assigningProperty)}
+        onClose={() => setAssigningProperty(null)}
+        property={assigningProperty}
+        clients={allClients}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['properties'] });
+          queryClient.invalidateQueries({ queryKey: ['clients'] });
+          queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+        }}
+      />
+
+      <TenantDepartureModal
+        isOpen={Boolean(departingClient)}
+        onClose={() => setDepartingClient(null)}
+        client={departingClient}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['properties'] });
+          queryClient.invalidateQueries({ queryKey: ['clients'] });
+          queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+        }}
       />
     </div>
   );

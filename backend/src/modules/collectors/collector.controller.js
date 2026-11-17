@@ -89,6 +89,19 @@ class CollectorController {
     }
   }
 
+  async unassignProperties(req, res, next) {
+    try {
+      const { propertyIds } = req.body;
+      if (!Array.isArray(propertyIds) || propertyIds.length === 0) {
+        return res.status(400).json(ApiResponse.error('Liste de propriétés invalide', 400));
+      }
+      const result = await collectorService.unassignProperties(propertyIds);
+      res.status(200).json(ApiResponse.success(result));
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async delete(req, res, next) {
     try {
       const result = await collectorService.deleteCollector(req.params.id, req.user);

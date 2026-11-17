@@ -143,6 +143,14 @@ class CollectorService {
   }
 
   /**
+   * Retirer l'affectation collecteur sur des propriétés
+   */
+  async unassignProperties(propertyIds) {
+    await collectorRepository.unassignProperties(propertyIds);
+    return { success: true, unassignedCount: propertyIds.length };
+  }
+
+  /**
    * Suppression logique
    */
   async deleteCollector(id, user) {

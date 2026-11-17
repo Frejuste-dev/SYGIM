@@ -193,6 +193,15 @@ class CollectorRepository {
    */
   async assignProperties(collectorId, propertyIds) {
     await db.query('UPDATE properties SET collector_id = ? WHERE id IN (?)', [collectorId, propertyIds]);
+    await db.query('UPDATE clients SET collector_id = ? WHERE property_id IN (?)', [collectorId, propertyIds]);
+  }
+
+  /**
+   * Retirer le collecteur assigné à des propriétés
+   */
+  async unassignProperties(propertyIds) {
+    await db.query('UPDATE properties SET collector_id = NULL WHERE id IN (?)', [propertyIds]);
+    await db.query('UPDATE clients SET collector_id = NULL WHERE property_id IN (?)', [propertyIds]);
   }
 
   /**

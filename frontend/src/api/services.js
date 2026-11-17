@@ -264,7 +264,10 @@ export const API = {
             httpClient.get('/collectors/stats'),
         
         assignProperties: (collectorId, propertyIds) => 
-            httpClient.post(`/collectors/${collectorId}/assign-properties`, { propertyIds })
+            httpClient.post(`/collectors/${collectorId}/assign-properties`, { propertyIds }),
+
+        unassignProperties: (propertyIds) =>
+            httpClient.post('/collectors/unassign-properties', { propertyIds })
     },
 
     /**
