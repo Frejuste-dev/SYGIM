@@ -61,7 +61,7 @@ export default function Admin() {
       title: 'GESTION',
       items: [
         { name: 'Utilisateurs', path: '/admin/users', icon: 'fas fa-users', roles: ['admin', 'super_admin'] },
-        { name: 'Propriétés', path: '/admin/properties', icon: 'fas fa-building', roles: ['admin', 'super_admin', 'gestionnaire', 'director', 'accounting'] },
+        { name: 'Propriétés', path: '/admin/properties', icon: 'fas fa-building', roles: ['admin', 'super_admin', 'gestionnaire', 'director', 'accounting', 'collector', 'collecteur'] },
         { name: 'Attributions', path: '/admin/property-assignments', icon: 'fas fa-handshake', roles: ['admin', 'super_admin', 'director'] },
         { name: 'Locataires', path: '/admin/clients', icon: 'fas fa-user-friends', roles: ['admin', 'super_admin', 'gestionnaire', 'director', 'accounting'] },
         { name: 'Propriétaires', path: '/admin/owners', icon: 'fas fa-user-tie', roles: ['admin', 'super_admin', 'gestionnaire', 'director', 'accounting'] },

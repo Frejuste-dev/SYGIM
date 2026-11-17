@@ -20,8 +20,8 @@ router.put('/:id/reassign-owner', authorize('admin', 'director', 'manager', 'col
 router.get('/:id', authorize('admin', 'director', 'accounting', 'manager', 'collector_manager', 'collector'), (req, res, next) => PropertyController.getById(req, res, next));
 router.post('/', authorize('admin', 'director', 'manager', 'collector_manager', 'accounting'), propertyValidator, (req, res, next) => PropertyController.create(req, res, next));
 router.put('/:id', authorize('admin', 'director', 'manager', 'collector_manager', 'accounting'), updatePropertyValidator, (req, res, next) => PropertyController.update(req, res, next));
-router.post('/:id/assign', authorize('admin', 'director', 'manager', 'collector_manager', 'accounting'), assignTenantValidator, (req, res, next) => PropertyController.assignTenant(req, res, next));
-router.post('/:id/assign-tenant', authorize('admin', 'director', 'manager', 'collector_manager', 'accounting'), assignTenantValidator, (req, res, next) => PropertyController.assignTenant(req, res, next));
+router.post('/:id/assign', authorize('admin', 'super_admin', 'director', 'manager', 'collector_manager', 'gestionnaire', 'accounting', 'collector'), assignTenantValidator, (req, res, next) => PropertyController.assignTenant(req, res, next));
+router.post('/:id/assign-tenant', authorize('admin', 'super_admin', 'director', 'manager', 'collector_manager', 'gestionnaire', 'accounting', 'collector'), assignTenantValidator, (req, res, next) => PropertyController.assignTenant(req, res, next));
 router.delete('/:id', authorize('admin', 'director', 'manager', 'collector_manager'), (req, res, next) => PropertyController.delete(req, res, next));
 
 module.exports = router;

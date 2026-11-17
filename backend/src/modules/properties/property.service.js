@@ -261,15 +261,14 @@ class PropertyService extends BaseService {
       }
     }
 
-    // Vérification Collecteur
-    if (user.role === 'collector') {
-      if (!property.collector_id) {
-        throw AppError.forbidden('Accès refusé. Cette propriété n\'a pas de collecteur assigné.');
-      }
-      const CollectorRepository = require('../collectors/collector.repository');
-      const collector = await CollectorRepository.findByUserId(user.id);
-      if (!collector || property.collector_id !== collector.id) {
-        throw AppError.forbidden('Accès refusé. Cette propriété ne vous est pas assignée.');
+    // Vérification Collecteur : autorisé sur ses biens ou sur les biens sans collecteur assigné
+    if (user.role === 'collector' || user.role === 'collecteur') {
+      if (property.collector_id) {
+        const CollectorRepository = require('../collectors/collector.repository');
+        const collector = await CollectorRepository.findByUserId(user.id);
+        if (!collector || property.collector_id !== collector.id) {
+          throw AppError.forbidden('Accès refusé. Cette propriété est assignée à un autre collecteur.');
+        }
       }
     }
   }
