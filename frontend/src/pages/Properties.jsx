@@ -17,7 +17,7 @@ const TYPE_ICONS = { appartement: 'fa-building', maison: 'fa-home', terrain: 'fa
 const EMPTY_FORM = () => ({
   name: '', reference_code: '', zone: '', address: '', type: 'appartement', status: 'vacant',
   floor_level: '', unit_type: '',
-  value: '', rent: '', area: '', rooms: '', description: '', owner_id: '',
+  value: '', rent: '', charges: '', area: '', rooms: '', description: '', owner_id: '',
   commission_type: 'percentage', commission_rate: 10, commission_fixed_amount: ''
 });
 
@@ -134,6 +134,7 @@ export default function Properties() {
       status: property.status || 'vacant',
       value: property.value ?? '',
       rent: property.rent ?? '',
+      charges: property.charges ?? '',
       area: property.area ?? '',
       rooms: property.rooms ?? '',
       description: property.description || '',
@@ -167,6 +168,7 @@ export default function Properties() {
         unit_type: form.unit_type?.trim() || null,
         value: form.value ? parseFloat(form.value) : 0,
         rent: form.rent ? parseFloat(form.rent) : 0,
+        charges: form.charges ? parseFloat(form.charges) : 0,
         area: form.area ? parseFloat(form.area) : null,
         rooms: form.rooms ? parseInt(form.rooms) : null,
         owner_id: form.owner_id ? parseInt(form.owner_id) : null,
@@ -716,13 +718,23 @@ export default function Properties() {
                 </select>
               </FormField>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <FormField label="Loyer mensuel" id="rent" hint="Loyer facial hors charges">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <FormField label="Loyer mensuel" id="rent" required hint="Loyer facial hors charges">
                   <MoneyInput
                     id="rent"
                     value={form.rent}
                     onChange={(e, num) => setForm({ ...form, rent: (num ?? Number(e?.target?.value)) || 0 })}
                     placeholder="Ex : 250 000"
+                    currency="FCFA"
+                  />
+                </FormField>
+
+                <FormField label="Charges mensuelles" optional id="charges" hint="Gardiennage, eau, entretien">
+                  <MoneyInput
+                    id="charges"
+                    value={form.charges}
+                    onChange={(e, num) => setForm({ ...form, charges: (num ?? Number(e?.target?.value)) || 0 })}
+                    placeholder="Ex : 25 000"
                     currency="FCFA"
                   />
                 </FormField>
@@ -737,6 +749,19 @@ export default function Properties() {
                   />
                 </FormField>
               </div>
+
+              {/* Loyer total charges comprises (CC) calculé en temps réel */}
+              {(parseFloat(form.rent || 0) > 0 || parseFloat(form.charges || 0) > 0) && (
+                <div className="p-3 bg-emerald-50/90 border border-emerald-200/90 rounded-xl flex items-center justify-between animate-fade-in-up">
+                  <div className="flex items-center gap-2 text-xs font-bold text-emerald-900">
+                    <i className="fas fa-calculator text-emerald-600"></i>
+                    <span>Loyer total charges comprises (CC) :</span>
+                  </div>
+                  <span className="text-sm sm:text-base font-extrabold text-emerald-700 tabular-nums">
+                    {formatXOF((parseFloat(form.rent || 0)) + (parseFloat(form.charges || 0)))}
+                  </span>
+                </div>
+              )}
 
               {/* Commission agence avec bascule pourcentage / montant fixe */}
               <div className="p-3.5 bg-white border border-slate-200 rounded-xl space-y-3">

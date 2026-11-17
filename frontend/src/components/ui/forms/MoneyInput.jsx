@@ -24,7 +24,10 @@ export default function MoneyInput({
   className = '',
   inputClassName = '',
   size = 'md',
-  autoFocus = false
+  autoFocus = false,
+  'aria-invalid': ariaInvalid,
+  'aria-describedby': ariaDescribedBy,
+  ...rest
 }) {
   const formatNumberWithSpaces = (val) => {
     if (val === null || val === undefined || val === '') return '';
@@ -103,10 +106,13 @@ export default function MoneyInput({
           autoFocus={autoFocus}
           disabled={disabled}
           readOnly={readOnly}
+          aria-invalid={ariaInvalid || (hasError ? 'true' : undefined)}
+          aria-describedby={ariaDescribedBy}
           placeholder={placeholder}
           value={displayValue}
           onChange={handleChange}
           onBlur={onBlur}
+          {...rest}
           className={`w-full bg-white border rounded-xl font-bold tabular-nums text-slate-900 placeholder-slate-400 focus:outline-none transition-all ${
             sizeClasses[size] || sizeClasses.md
           } ${

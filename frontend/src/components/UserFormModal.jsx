@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import useModalEscape from '../hooks/useModalEscape';
-import { FormField, FormSection } from './ui/forms';
+import { FormField, FormSection, PhoneInput } from './ui/forms';
 
 const EMPTY_FORM = {
   username: '', password: '', firstName: '', lastName: '',
-  email: '', role: 'collector', active: true
+  phone: '', email: '', role: 'collector', active: true
 };
 
 const ROLE_DESCRIPTIONS = {
@@ -83,9 +83,21 @@ export default function UserFormModal({ isOpen, onClose, onSubmit }) {
       setError('L\'identifiant, le mot de passe et le rôle sont obligatoires.');
       return;
     }
-    if (form.password.length < 6) {
-      setError('Le mot de passe doit comporter au moins 6 caractères.');
+    if (form.password.length < 8) {
+      setError('Le mot de passe doit comporter au moins 8 caractères (règle SEC-07).');
       return;
+    }
+    if (!/[A-Za-z]/.test(form.password) || !/[0-9]/.test(form.password)) {
+      setError('Le mot de passe doit contenir au moins une lettre et un chiffre (règle SEC-07).');
+      return;
+    }
+    if (form.phone) {
+      const cleanDigits = String(form.phone).replace(/\D/g, '');
+      const actualDigits = cleanDigits.startsWith('225') ? cleanDigits.slice(3) : cleanDigits;
+      if (actualDigits.length > 0 && actualDigits.length < 10) {
+        setError('Le numéro de téléphone ivoirien doit comporter 10 chiffres (ex: 07 09 88 14 42).');
+        return;
+      }
     }
     if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
       setError('Veuillez renseigner une adresse email valide.');
@@ -171,7 +183,7 @@ export default function UserFormModal({ isOpen, onClose, onSubmit }) {
                       <span className="flex items-center gap-1.5 font-semibold">
                         Robustesse : <span className={pwStrength.text}>{pwStrength.label}</span>
                       </span>
-                    ) : 'Minimum 6 caractères'
+                    ) : 'Minimum 8 caractères (lettres et chiffres requis)'
                   }
                 >
                   <div className="relative">
@@ -234,16 +246,27 @@ export default function UserFormModal({ isOpen, onClose, onSubmit }) {
                 </FormField>
               </div>
 
-              <FormField label="Adresse Email professionnelle" optional id="email" hint="Pour réinitialisation et alertes">
-                <input
-                  id="email"
-                  type="email"
-                  value={form.email}
-                  onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  placeholder="Ex : p.koffi@agence.ci"
-                  className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 shadow-2xs focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
-                />
-              </FormField>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField label="Téléphone mobile" optional id="phone" hint="Pour notifications et alertes">
+                  <PhoneInput
+                    id="phone"
+                    value={form.phone}
+                    onChange={(e, clean) => setForm({ ...form, phone: clean ?? e?.target?.value ?? '' })}
+                    placeholder="07 09 88 14 42"
+                  />
+                </FormField>
+
+                <FormField label="Adresse Email professionnelle" optional id="email" hint="Pour réinitialisation et alertes">
+                  <input
+                    id="email"
+                    type="email"
+                    value={form.email}
+                    onChange={(e) => setForm({ ...form, email: e.target.value })}
+                    placeholder="Ex : p.koffi@agence.ci"
+                    className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 shadow-2xs focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+                  />
+                </FormField>
+              </div>
             </FormSection>
 
             {/* Section 3 : Rôle & Droits d'accès */}
