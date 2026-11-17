@@ -6,7 +6,42 @@
  */
 
 const reportService = require('./report.service');
+const OwnerRepository = require('../owners/owner.repository');
 const ApiResponse = require('../../utils/responses/ApiResponse');
+const AppError = require('../../utils/errors/AppError');
+
+/**
+ * Vérification stricte anti-IDOR et RBAC pour les rapports spécifiques à un propriétaire
+ */
+async function verifyOwnerAccess(ownerId, user) {
+  if (!user) {
+    throw AppError.unauthorized('Non authentifié');
+  }
+
+  const oId = parseInt(ownerId, 10);
+
+  // Rôle Propriétaire : accès strictement restreint à son propre compte
+  if (user.role === 'owner') {
+    const owner = await OwnerRepository.findByUserId(user.id);
+    if (!owner || owner.id !== oId) {
+      throw AppError.forbidden('Accès refusé. Vous ne pouvez consulter que vos propres états financiers.');
+    }
+    return;
+  }
+
+  // Rôle Collecteur : formellement exclu des rapports propriétaires
+  if (['collector', 'collecteur'].includes(user.role)) {
+    throw AppError.forbidden('Accès refusé. Les collecteurs ne sont pas autorisés à consulter ces rapports financiers.');
+  }
+
+  // Rôle Manager / Gestionnaire : vérifier le périmètre de son équipe
+  if (['manager', 'collector_manager', 'gestionnaire'].includes(user.role)) {
+    const hasAccess = await OwnerRepository.isAccessibleByUser(oId, user);
+    if (!hasAccess) {
+      throw AppError.forbidden('Accès refusé. Ce propriétaire n\'est pas géré par votre équipe.');
+    }
+  }
+}
 
 class ReportController {
   async getKpis(req, res, next) {
@@ -75,6 +110,7 @@ class ReportController {
   async getOwnerSituation(req, res, next) {
     try {
       const { ownerId } = req.params;
+      await verifyOwnerAccess(ownerId, req.user);
       const data = await reportService.getOwnerSituation(ownerId, req.query);
       res.status(200).json(ApiResponse.success(data));
     } catch (error) {
@@ -140,6 +176,7 @@ class ReportController {
   async exportOwnerStatementPdf(req, res, next) {
     try {
       const { ownerId } = req.params;
+      await verifyOwnerAccess(ownerId, req.user);
       const pdf = await reportService.exportOwnerStatementPdf(ownerId, req.query);
       const label = req.query.month || (req.query.startDate && req.query.endDate ? `${req.query.startDate}_au_${req.query.endDate}` : 'periode');
       res.header('Content-Type', 'application/pdf');
@@ -183,6 +220,7 @@ class ReportController {
   async getOwnerLedger(req, res, next) {
     try {
       const { ownerId } = req.params;
+      await verifyOwnerAccess(ownerId, req.user);
       const data = await reportService.getOwnerLedger(ownerId, req.query);
       res.status(200).json(ApiResponse.success(data));
     } catch (error) {
@@ -197,6 +235,7 @@ class ReportController {
   async getTaxDeclaration(req, res, next) {
     try {
       const { ownerId } = req.params;
+      await verifyOwnerAccess(ownerId, req.user);
       const data = await reportService.getTaxDeclaration(ownerId, req.query);
       res.status(200).json(ApiResponse.success(data));
     } catch (error) {

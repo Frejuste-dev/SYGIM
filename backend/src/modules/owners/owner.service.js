@@ -38,7 +38,7 @@ class OwnerService extends BaseService {
 
   async checkOwnership(id, user) {
     if (!user || !user.role) return;
-    if (['admin', 'director', 'accounting', 'manager', 'collector_manager', 'gestionnaire'].includes(user.role)) {
+    if (['admin', 'super_admin', 'director', 'accounting', 'gestionnaire'].includes(user.role)) {
       return;
     }
     const isAccessible = await this.repository.isAccessibleByUser(id, user);

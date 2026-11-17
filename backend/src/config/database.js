@@ -35,6 +35,10 @@ async function safeAlter(sql) {
 
 async function ensureSchemaUpgrades() {
     try {
+        // 0. Mise à niveau des rôles et liaisons utilisateurs
+        await safeAlter("ALTER TABLE users MODIFY COLUMN role ENUM('admin','director','accounting','collector_manager','collector','owner','super_admin','manager') DEFAULT 'collector'");
+        await safeAlter("ALTER TABLE owners ADD COLUMN user_id INT NULL");
+
         // 1. Colonnes de préférences de paiement sur la table owners
         await safeAlter("ALTER TABLE owners ADD COLUMN preferred_payment_method VARCHAR(50) DEFAULT 'bank_transfer'");
         await safeAlter("ALTER TABLE owners ADD COLUMN payout_schedule VARCHAR(50) DEFAULT 'monthly_full'");

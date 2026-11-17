@@ -21,11 +21,13 @@ const userValidator = [
   
   body('role')
     .notEmpty().withMessage('Le rôle est requis')
-    .isIn(['admin', 'collector', 'collector_manager', 'owner', 'accounting']).withMessage('Le rôle est invalide'),
+    .isIn(['admin', 'super_admin', 'director', 'manager', 'collector_manager', 'accounting', 'collector', 'owner']).withMessage('Le rôle est invalide'),
     
   body('password')
     .notEmpty().withMessage('Le mot de passe est requis')
-    .isLength({ min: 6 }).withMessage('Le mot de passe doit faire au moins 6 caractères'),
+    .isLength({ min: 8 }).withMessage('Le mot de passe doit faire au moins 8 caractères')
+    .matches(/[A-Za-z]/).withMessage('Le mot de passe doit contenir au moins une lettre')
+    .matches(/[0-9]/).withMessage('Le mot de passe doit contenir au moins un chiffre'),
 
   handleValidationErrors
 ];
@@ -39,11 +41,13 @@ const updateUserValidator = [
   
   body('role')
     .optional()
-    .isIn(['admin', 'collector', 'collector_manager', 'owner', 'accounting']).withMessage('Le rôle est invalide'),
+    .isIn(['admin', 'super_admin', 'director', 'manager', 'collector_manager', 'accounting', 'collector', 'owner']).withMessage('Le rôle est invalide'),
     
   body('password')
     .optional({ checkFalsy: true })
-    .isLength({ min: 6 }).withMessage('Le mot de passe doit faire au moins 6 caractères'),
+    .isLength({ min: 8 }).withMessage('Le mot de passe doit faire au moins 8 caractères')
+    .matches(/[A-Za-z]/).withMessage('Le mot de passe doit contenir au moins une lettre')
+    .matches(/[0-9]/).withMessage('Le mot de passe doit contenir au moins un chiffre'),
 
   handleValidationErrors
 ];
