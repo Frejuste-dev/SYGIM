@@ -5,7 +5,7 @@
  * ╚════════════════════════════════════════════════════════════════════╝
  */
 
-const CLOUDFLARE_TUNNEL_URL = 'https://upon-rouge-away-examining.trycloudflare.com';
+const CLOUDFLARE_TUNNEL_URL = 'https://jokes-spatial-exercises-extraordinary.trycloudflare.com';
 
 export const CONFIG = {
     // ── API Configuration ──────────────────────────────────────
