@@ -1065,7 +1065,9 @@ class ReportRepository {
       const arrears = isOccupied ? Math.max(0, (Number(p.amount_due || 0) - Number(p.client_total_paid || 0))) : 0;
       const contacts = isOccupied ? (p.tenant_phone || '—') : '—';
 
-      totalRent += rentAmount;
+      if (isOccupied) {
+        totalRent += rentAmount;
+      }
       totalCollected += amountPaid;
       totalArrears += arrears;
 

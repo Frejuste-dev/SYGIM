@@ -79,7 +79,7 @@ class OwnerRepository extends BaseRepository {
   async findAll(filters = {}, user = null) {
     let sql = `SELECT o.*, 
                  (SELECT COUNT(*) FROM properties p WHERE p.owner_id = o.id) as propertiesCount,
-                 (SELECT COALESCE(SUM(p.rent), 0) FROM properties p WHERE p.owner_id = o.id) as totalMonthlyRent
+                 (SELECT COALESCE(SUM(p.rent), 0) FROM properties p WHERE p.owner_id = o.id AND (p.status = 'loue' OR p.tenant_id IS NOT NULL)) as totalMonthlyRent
                FROM owners o WHERE 1=1`;
     const params = [];
 

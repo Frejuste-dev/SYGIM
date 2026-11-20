@@ -71,7 +71,7 @@ class OwnerSettlementService {
     `);
 
     const [properties] = await pool.query(`
-      SELECT p.id, p.name, p.address, p.type, p.status, p.rent, p.owner_id
+      SELECT p.id, p.name, p.address, p.type, p.status, p.rent, p.owner_id, p.tenant_id
       FROM properties p
       WHERE p.owner_id IS NOT NULL
       ORDER BY p.name ASC
@@ -114,7 +114,10 @@ class OwnerSettlementService {
     for (const p of properties) {
       if (!propsByOwner[p.owner_id]) propsByOwner[p.owner_id] = [];
       const propClients = clientsByProperty[p.id] || [];
-      const propDue = propClients.reduce((sum, c) => sum + parseFloat(c.amount_due || 0), 0) || parseFloat(p.rent || 0);
+      const isRented = p.status === 'loue' || Boolean(p.tenant_id) || propClients.length > 0;
+      const propDue = isRented
+        ? (propClients.reduce((sum, c) => sum + parseFloat(c.amount_due || 0), 0) || parseFloat(p.rent || 0))
+        : 0;
       const propPaid = propClients.reduce((sum, c) => sum + parseFloat(c.amount_paid || 0), 0);
       const propRepairs = repairs.filter(r => r.property_id === p.id);
       const propRepairDeduction = propRepairs.reduce((sum, r) => {
@@ -126,6 +129,7 @@ class OwnerSettlementService {
 
       propsByOwner[p.owner_id].push({
         ...p,
+        isRented,
         rent: parseFloat(p.rent || 0),
         tenants: propClients,
         tenantDue: propDue,
@@ -137,7 +141,7 @@ class OwnerSettlementService {
 
     return owners.map(owner => {
       const ownerProps = propsByOwner[owner.id] || [];
-      const expectedRent = ownerProps.reduce((s, p) => s + (p.tenantDue || p.rent || 0), 0);
+      const expectedRent = ownerProps.reduce((s, p) => s + (p.isRented ? (p.tenantDue || p.rent || 0) : 0), 0);
       const collectedFromTenants = ownerProps.reduce((s, p) => s + (p.tenantPaid || 0), 0);
       const unpaidByTenants = Math.max(0, expectedRent - collectedFromTenants);
       const commRate = parseFloat(owner.commission_rate ?? 10);
@@ -196,7 +200,7 @@ class OwnerSettlementService {
     const prefinancedFlag = Boolean(is_prefinanced || payout_mode === 'prefinancing');
     const baseAmount = prefinancedFlag
       ? Math.max(parseFloat(expected_rent || 0), parseFloat(total_collected || 0))
-      : (parseFloat(total_collected || 0) || parseFloat(expected_rent || 0));
+      : parseFloat(total_collected || 0);
 
     const rate = parseFloat(commission_rate ?? 10);
     const agencyCommission = parseFloat(((baseAmount * rate) / 100).toFixed(2));

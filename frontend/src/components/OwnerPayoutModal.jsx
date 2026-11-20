@@ -82,10 +82,11 @@ export default function OwnerPayoutModal({ isOpen, onClose, preselectedOwner = n
     let collectedRent = 0;
 
     if (selectedProperty) {
-      expectedRent = parseFloat(selectedProperty.tenantDue || selectedProperty.rent || 0);
+      const isPropRented = selectedProperty.status === 'loue' || Boolean(selectedProperty.tenant_id) || (selectedProperty.tenants?.length > 0);
+      expectedRent = isPropRented ? parseFloat(selectedProperty.tenantDue || selectedProperty.rent || 0) : 0;
       collectedRent = parseFloat(selectedProperty.tenantPaid || 0);
     } else {
-      expectedRent = parseFloat(selectedOwner.expectedRent || selectedOwner.totalMonthlyRent || 0);
+      expectedRent = parseFloat(selectedOwner.expectedRent ?? selectedOwner.totalMonthlyRent ?? 0);
       collectedRent = parseFloat(selectedOwner.collectedFromTenants || 0);
     }
 
@@ -94,7 +95,7 @@ export default function OwnerPayoutModal({ isOpen, onClose, preselectedOwner = n
 
     const baseAmount = isPref
       ? Math.max(expectedRent, collectedRent)
-      : (collectedRent > 0 ? collectedRent : expectedRent);
+      : collectedRent;
 
     const rate = parseFloat(commissionRate || 0);
     const commission = Math.round((baseAmount * rate) / 100);
