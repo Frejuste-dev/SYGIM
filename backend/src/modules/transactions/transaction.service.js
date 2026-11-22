@@ -167,6 +167,16 @@ class TransactionService extends BaseService {
     if (!data.clientName && client) {
       data.clientName = `${client.last_name || ''} ${client.first_name || ''}`.trim() || null;
     }
+
+    const normalizedMethod = String(data.method || 'cash').toLowerCase();
+    const AppError = require('../../utils/errors/AppError');
+    const recentDup = await this.repository.findRecentDuplicate(data.clientId, data.amount, normalizedMethod, 30);
+    if (recentDup) {
+      throw AppError.conflict(
+        `Encaissement en double détecté : une transaction identique (${recentDup.reference || '#' + recentDup.id}) a déjà été enregistrée il y a moins de 30 secondes.`
+      );
+    }
+
     const createdTx = await this.repository.createWithClientUpdate(data);
 
     // Régularisation automatique d'un éventuel préfinancement UNIQUEMENT si la transaction est traitée/validée

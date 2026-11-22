@@ -37,7 +37,7 @@ const propertyValidator = [
     .isIn(['vacant', 'loue', 'en_renovation', 'vendu']).withMessage('Le statut est invalide'),
 
   body('owner_id')
-    .optional({ checkFalsy: true })
+    .notEmpty().withMessage('Le propriétaire bailleur est requis')
     .isInt({ min: 1 }).withMessage('L\'identifiant du propriétaire doit être un entier positif'),
 
   body('tenant_id')
@@ -94,7 +94,7 @@ const updatePropertyValidator = [
     .isIn(['vacant', 'loue', 'en_renovation', 'vendu']).withMessage('Le statut est invalide'),
 
   body('owner_id')
-    .optional({ checkFalsy: true })
+    .notEmpty().withMessage('Le propriétaire bailleur est requis')
     .isInt({ min: 1 }).withMessage('L\'identifiant du propriétaire doit être un entier positif'),
 
   body('tenant_id')

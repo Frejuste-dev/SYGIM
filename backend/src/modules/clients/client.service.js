@@ -240,26 +240,41 @@ class ClientService extends BaseService {
   async update(id, data, user) {
     const fieldMap = {
       firstName:        'first_name',
+      first_name:       'first_name',
       lastName:         'last_name',
+      last_name:        'last_name',
       phone:            'phone',
       email:            'email',
       address:          'address',
       propertyId:       'property_id',
+      property_id:      'property_id',
       propertyName:     'property_name',
+      property_name:    'property_name',
       propertyValue:    'property_value',
+      property_value:   'property_value',
       amountDue:        'amount_due',
+      amount_due:       'amount_due',
       amountPaid:       'amount_paid',
+      amount_paid:      'amount_paid',
       paymentMethod:    'payment_method',
+      payment_method:   'payment_method',
       status:           'status',
       collectorId:      'collector_id',
+      collector_id:     'collector_id',
       agent:            'agent',
       ownerId:          'owner_id',
+      owner_id:         'owner_id',
       deposit:          'deposit',
       advancePayment:   'advance_payment',
+      advance_payment:  'advance_payment',
       contractStart:    'contract_start',
+      contract_start:   'contract_start',
       contractEnd:      'contract_end',
+      contract_end:     'contract_end',
       departureReason:  'departure_reason',
-      departureNotes:   'departure_notes'
+      departure_reason: 'departure_reason',
+      departureNotes:   'departure_notes',
+      departure_notes:  'departure_notes'
     };
 
     const clientData = {};
@@ -284,6 +299,8 @@ class ClientService extends BaseService {
       description: `Mise à jour des informations du locataire #${id}.`,
       newValues: clientData,
       status: 'SUCCESS',
+      notifyRoles: ['manager', 'collector_manager', 'admin'],
+      notifyUserIds: user?.id ? [user.id] : null,
       notification: {
         type: 'INFO',
         category: 'CLIENT',
@@ -330,6 +347,8 @@ class ClientService extends BaseService {
       oldValues: { oldTenantId: oldId, tenantName: oldName },
       newValues: { newTenantId: result.newTenantId, newTenantName: newName, rent: data.newRent || property.rent },
       status: 'SUCCESS',
+      notifyRoles: ['manager', 'collector_manager', 'admin'],
+      notifyUserIds: user?.id ? [user.id] : null,
       notification: {
         type: 'INFO',
         category: 'ASSIGNMENT',
@@ -373,6 +392,8 @@ class ClientService extends BaseService {
       oldValues: { tenantId: id, name: tenantName, propertyId: existing.property_id, amountDue: existing.amount_due },
       newValues: { status: 'inactive', departureDate, departureReason, departureNotes },
       status: 'SUCCESS',
+      notifyRoles: ['manager', 'collector_manager', 'admin'],
+      notifyUserIds: user?.id ? [user.id] : null,
       notification: {
         type: 'WARNING',
         category: 'ASSIGNMENT',

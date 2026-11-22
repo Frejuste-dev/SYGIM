@@ -18,6 +18,8 @@ class ManagerAuditService {
     newValues = null,
     status = 'SUCCESS',
     notification = null,
+    notifyRoles = null,
+    notifyUserIds = null,
   }) {
     try {
       const summary = targetSummary || `${propertyRef || 'Bien'} / ${ownerName || 'Propriétaire'}`;
@@ -46,20 +48,43 @@ class ManagerAuditService {
       );
 
       // 2. Création automatique ou personnalisée d'une notification
-      if (notification && userId) {
-        await pool.query(
-          `INSERT INTO user_notifications (
-            user_id, type, category, title, message, reference_link, is_read, created_at
-          ) VALUES (?, ?, ?, ?, ?, ?, 0, NOW())`,
-          [
-            userId,
-            notification.type || (status === 'SUCCESS' ? 'SUCCESS' : 'WARNING'),
-            notification.category || 'SYSTEM',
-            notification.title || operationLabel,
-            notification.message || description || summary,
-            notification.referenceLink || null,
-          ]
-        );
+      if (notification) {
+        const recipientIds = new Set();
+
+        if (Array.isArray(notifyUserIds)) {
+          notifyUserIds.filter(Boolean).forEach((id) => recipientIds.add(Number(id)));
+        }
+
+        if (Array.isArray(notifyRoles) && notifyRoles.length > 0) {
+          const placeholders = notifyRoles.map(() => '?').join(',');
+          const [roleUsers] = await pool.query(
+            `SELECT id FROM users WHERE active = 1 AND role IN (${placeholders})`,
+            notifyRoles
+          );
+          for (const row of roleUsers) {
+            recipientIds.add(Number(row.id));
+          }
+        }
+
+        if (recipientIds.size === 0 && userId) {
+          recipientIds.add(Number(userId));
+        }
+
+        for (const targetUserId of recipientIds) {
+          await pool.query(
+            `INSERT INTO user_notifications (
+              user_id, type, category, title, message, reference_link, is_read, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, 0, NOW())`,
+            [
+              targetUserId,
+              notification.type || (status === 'SUCCESS' ? 'SUCCESS' : 'WARNING'),
+              notification.category || 'SYSTEM',
+              notification.title || operationLabel,
+              notification.message || description || summary,
+              notification.referenceLink || null,
+            ]
+          );
+        }
       }
     } catch (err) {
       console.error('[ManagerAuditService] Erreur lors de la journalisation:', err.message);

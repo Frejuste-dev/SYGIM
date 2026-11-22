@@ -320,15 +320,24 @@ class PropertyService extends BaseService {
         const [cRows] = await conn.query('SELECT * FROM clients WHERE id = ?', [tenantId]);
         if (cRows.length === 0) throw AppError.notFound('Locataire existant introuvable');
 
+        let collectorId = data.collectorId || prop.collector_id || null;
+        if (!collectorId && user?.role === 'collector') {
+          const [colRows] = await conn.query('SELECT id FROM collectors WHERE user_id = ?', [user.id]);
+          if (colRows.length > 0) collectorId = colRows[0].id;
+        }
+
         await conn.query(
           `UPDATE clients 
            SET property_id = ?, 
                property_name = ?, 
+               owner_id = COALESCE(?, owner_id),
                amount_due = ?, 
+               deposit = CASE WHEN ? > 0 THEN ? ELSE deposit END,
+               collector_id = COALESCE(collector_id, ?),
                status = 'pending',
                contract_start = COALESCE(?, contract_start)
            WHERE id = ?`,
-          [propertyId, prop.name, rent, startDate, tenantId]
+          [propertyId, prop.name, prop.owner_id || null, rent, deposit, deposit, collectorId, startDate, tenantId]
         );
       } else {
         throw AppError.badRequest('Veuillez sélectionner un locataire ou créer un nouveau locataire');

@@ -972,10 +972,17 @@ class ReportRepository {
     );
     const primaryZone = zoneRow?.zone || owner.address || 'SOWETO';
 
-    // Résolution de la période
+    // Résolution de la période (supporte month=11&year=2026 ainsi que month=YYYY-MM)
     const now = new Date();
-    const m = month ? parseInt(month, 10) : (now.getMonth() + 1);
-    const y = year ? parseInt(year, 10) : now.getFullYear();
+    let m = now.getMonth() + 1;
+    let y = year ? parseInt(year, 10) : now.getFullYear();
+    if (typeof month === 'string' && /^\d{4}-\d{2}$/.test(month.trim())) {
+      const [yPart, mPart] = month.trim().split('-');
+      y = year ? parseInt(year, 10) : parseInt(yPart, 10);
+      m = parseInt(mPart, 10);
+    } else if (month !== undefined && month !== null && month !== '') {
+      m = parseInt(month, 10);
+    }
     const lastDay = new Date(y, m, 0).getDate();
     const startDate = `${y}-${String(m).padStart(2, '0')}-01`;
     const endDate = `${y}-${String(m).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
