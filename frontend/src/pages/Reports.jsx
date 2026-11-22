@@ -94,20 +94,35 @@ const REPORT_DOMAINS = [
 export default function Reports() {
   const { user } = useAuth();
   const isManager = Boolean(user && ['collector_manager', 'gestionnaire', 'manager'].includes(user?.role));
+  const isOwner = user?.role === 'owner';
   const { showToast } = useToast();
   const queryClient = useQueryClient();
+
+  const visibleDomains = useMemo(() => {
+    if (!isOwner) return REPORT_DOMAINS;
+    return REPORT_DOMAINS
+      .filter(d => d.id === 'owners')
+      .map(d => ({
+        ...d,
+        tabs: d.tabs.filter(t => ['owner_situation', 'owner_ledger', 'tax_declaration'].includes(t.key))
+      }));
+  }, [isOwner]);
 
   const [searchParams, setSearchParams] = useSearchParams();
   const urlTab = searchParams.get('tab');
   const [activeTab, setActiveTab] = useState(
-    urlTab || (isManager ? 'owner_situation' : 'overview')
+    urlTab || ((isManager || isOwner) ? 'owner_situation' : 'overview')
   );
 
   useEffect(() => {
-    if (urlTab && urlTab !== activeTab) {
-      setActiveTab(urlTab);
+    if (isOwner && !['owner_situation', 'owner_ledger', 'tax_declaration'].includes(activeTab)) {
+      setActiveTab('owner_situation');
+    } else if (urlTab && urlTab !== activeTab) {
+      if (!isOwner || ['owner_situation', 'owner_ledger', 'tax_declaration'].includes(urlTab)) {
+        setActiveTab(urlTab);
+      }
     }
-  }, [urlTab]);
+  }, [urlTab, isOwner, activeTab]);
 
   const handleTabChange = (key) => {
     setActiveTab(key);
@@ -118,8 +133,8 @@ export default function Reports() {
 
   // Domaine actif déterminé automatiquement selon l'onglet actif
   const currentDomain = useMemo(() => {
-    return REPORT_DOMAINS.find(d => d.tabs.some(t => t.key === activeTab)) || REPORT_DOMAINS[0];
-  }, [activeTab]);
+    return visibleDomains.find(d => d.tabs.some(t => t.key === activeTab)) || visibleDomains[0];
+  }, [activeTab, visibleDomains]);
 
   const [activeDomainId, setActiveDomainId] = useState(currentDomain.id);
 
@@ -131,7 +146,7 @@ export default function Reports() {
 
   const handleDomainChange = (domainId) => {
     setActiveDomainId(domainId);
-    const domain = REPORT_DOMAINS.find(d => d.id === domainId);
+    const domain = visibleDomains.find(d => d.id === domainId);
     if (domain && domain.tabs.length > 0) {
       if (!domain.tabs.some(t => t.key === activeTab)) {
         handleTabChange(domain.tabs[0].key);
@@ -250,15 +265,15 @@ export default function Reports() {
   }, [startDate, endDate]);
 
   // TanStack Query Hooks
-  const { data: dashboard, isLoading: loadingDashboard, refetch: refetchDashboard } = useReportDashboard(dateParams);
+  const { data: dashboard, isLoading: loadingDashboard, refetch: refetchDashboard } = useReportDashboard(dateParams, { enabled: !isOwner });
   const {
     data: prefinancingData = { summary: {}, prefinancings: [], eligibleCases: [] },
     isLoading: loadingPrefinancing,
     refetch: refetchPrefinancing
-  } = useReportPrefinancing(dateParams);
-  const { data: collectors = [], isLoading: loadingCollectors, refetch: refetchCollectors } = useReportCollectors(dateParams);
-  const { data: properties = [], isLoading: loadingProperties, refetch: refetchProperties } = useReportProperties();
-  const { data: overdue = [], isLoading: loadingOverdue, refetch: refetchOverdue } = useReportOverdue();
+  } = useReportPrefinancing(dateParams, { enabled: !isOwner });
+  const { data: collectors = [], isLoading: loadingCollectors, refetch: refetchCollectors } = useReportCollectors(dateParams, { enabled: !isOwner });
+  const { data: properties = [], isLoading: loadingProperties, refetch: refetchProperties } = useReportProperties({}, { enabled: !isOwner });
+  const { data: overdue = [], isLoading: loadingOverdue, refetch: refetchOverdue } = useReportOverdue({}, { enabled: !isOwner });
   const {
     data: ownerStatementsData = { totals: {}, statements: [] },
     isLoading: loadingStatements,
@@ -269,7 +284,7 @@ export default function Reports() {
     month: selectedMonth || undefined,
     search: tenantSearch
   }, {
-    enabled: activeTab === 'owner_statements'
+    enabled: activeTab === 'owner_statements' && !isOwner
   });
 
   const loading = loadingDashboard || loadingPrefinancing || loadingCollectors || loadingProperties || loadingOverdue;
@@ -835,7 +850,7 @@ export default function Reports() {
       <div className="space-y-3 print:hidden">
         {/* Niveau 1 : Les 5 Domaines Métiers */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2.5 p-1.5 bg-slate-100/90 rounded-2xl border border-slate-200">
-          {REPORT_DOMAINS.map((domain, index) => {
+          {visibleDomains.map((domain, index) => {
             const isDomainActive = domain.id === activeDomainId;
             return (
               <button

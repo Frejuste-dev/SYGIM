@@ -261,6 +261,22 @@ class TransactionRepository extends BaseRepository {
     return rows.map(r => r.id);
   }
 
+  async findRecentDuplicate(clientId, amount, method, windowSeconds = 30) {
+    const [rows] = await pool.query(
+      `SELECT id, reference, created_at
+       FROM transactions
+       WHERE client_id = ?
+         AND amount = ?
+         AND LOWER(COALESCE(method, '')) = LOWER(?)
+         AND status IN ('pending', 'processed')
+         AND created_at >= (NOW() - INTERVAL ? SECOND)
+       ORDER BY id DESC
+       LIMIT 1`,
+      [clientId, parseFloat(amount), String(method || 'cash').toLowerCase(), windowSeconds]
+    );
+    return rows.length ? rows[0] : null;
+  }
+
   async createWithClientUpdate(data) {
     let connection;
     try {
@@ -442,6 +458,41 @@ class TransactionRepository extends BaseRepository {
            WHERE id = ?`,
           [totalCredited, tx.method || 'cash', totalCredited, totalCredited, tx.client_id]
         );
+
+        // 3. Synchroniser l'encaissement validé dans la table payments (relevé financier locataire)
+        const txAmount = parseFloat(tx.amount || 0);
+        const txMethodLower = String(tx.method || '').toLowerCase();
+        if (txAmount > 0 && !['assignment', 'departure'].includes(txMethodLower)) {
+          const [existingPay] = await connection.query(
+            'SELECT id FROM payments WHERE receipt_number = ? OR transaction_reference = ? LIMIT 1',
+            [tx.reference, tx.reference]
+          );
+          if (existingPay.length === 0) {
+            const [cRows] = await connection.query('SELECT property_id FROM clients WHERE id = ?', [tx.client_id]);
+            const propId = cRows.length ? cRows[0].property_id : null;
+            const methodUpper = txMethodLower === 'check' ? 'CHEQUE' : String(tx.method || 'cash').toUpperCase();
+            await connection.query(
+              `INSERT INTO payments (
+                uuid, transaction_reference, receipt_number,
+                client_id, collector_id, property_id,
+                amount_received, payment_method, payment_date,
+                status, created_by
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, NOW()), 'RECEIVED', ?)`,
+              [
+                randomUUID(),
+                tx.reference || randomUUID(),
+                tx.reference || null,
+                tx.client_id,
+                tx.collector_id || null,
+                propId,
+                txAmount,
+                methodUpper,
+                tx.date || new Date(),
+                validatorUserId
+              ]
+            );
+          }
+        }
       }
 
       await connection.commit();

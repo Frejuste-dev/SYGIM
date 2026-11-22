@@ -11,16 +11,17 @@ const normalizeList = (res) => {
   return [];
 };
 
-export const useReportDashboard = (dateParams = {}) => {
+export const useReportDashboard = (dateParams = {}, options = {}) => {
   return useQuery({
     queryKey: ['reports', 'dashboard', dateParams],
     queryFn: () => API.Reports.getDashboard(dateParams).then(unwrapData),
     staleTime: 60_000,
     placeholderData: (prev) => prev,
+    enabled: options.enabled !== undefined ? options.enabled : true,
   });
 };
 
-export const useReportPrefinancing = (dateParams = {}) => {
+export const useReportPrefinancing = (dateParams = {}, options = {}) => {
   return useQuery({
     queryKey: ['reports', 'prefinancing', dateParams],
     queryFn: () => API.Reports.getPrefinancing(dateParams).then(res => {
@@ -29,33 +30,37 @@ export const useReportPrefinancing = (dateParams = {}) => {
     }),
     staleTime: 60_000,
     placeholderData: (prev) => prev,
+    enabled: options.enabled !== undefined ? options.enabled : true,
   });
 };
 
-export const useReportCollectors = (dateParams = {}) => {
+export const useReportCollectors = (dateParams = {}, options = {}) => {
   return useQuery({
     queryKey: ['reports', 'collectors', dateParams],
     queryFn: () => API.Reports.getAgent(dateParams).then(normalizeList),
     staleTime: 60_000,
     placeholderData: (prev) => prev,
+    enabled: options.enabled !== undefined ? options.enabled : true,
   });
 };
 
-export const useReportProperties = (filters = {}) => {
+export const useReportProperties = (filters = {}, options = {}) => {
   return useQuery({
     queryKey: ['reports', 'properties', filters],
     queryFn: () => API.Reports.getPropertyStats(filters).then(normalizeList),
     staleTime: 60_000,
     placeholderData: (prev) => prev,
+    enabled: options.enabled !== undefined ? options.enabled : true,
   });
 };
 
-export const useReportOverdue = (filters = {}) => {
+export const useReportOverdue = (filters = {}, options = {}) => {
   return useQuery({
     queryKey: ['reports', 'overdue', filters],
     queryFn: () => API.Reports.getOverdue(filters).then(normalizeList),
     staleTime: 60_000,
     placeholderData: (prev) => prev,
+    enabled: options.enabled !== undefined ? options.enabled : true,
   });
 };
 

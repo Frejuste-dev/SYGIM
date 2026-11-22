@@ -269,7 +269,7 @@ export default function Owners() {
         showToast({ type: 'success', message: 'Propriétaire et biens mis à jour avec succès.' });
       } else {
         await createOwner.mutateAsync(form);
-        showToast({ type: 'success', message: 'Propriétaire créé et biens attribués avec succès.' });
+        showToast({ type: 'success', message: 'Propriétaire créé avec succès.' });
       }
       queryClient.invalidateQueries({ queryKey: ['properties'] });
       queryClient.invalidateQueries({ queryKey: ['owners'] });
@@ -926,7 +926,8 @@ export default function Owners() {
               </div>
             </FormSection>
 
-            {/* 3. Attribution Multi-Biens Immobiliers & État d'occupation */}
+            {/* 3. Attribution Multi-Biens Immobiliers & État d'occupation (Édition uniquement) */}
+            {editingOwner && (
             <div className="bg-primary/5 p-4 sm:p-5 rounded-2xl border border-primary/20 space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2 min-w-0">
@@ -1005,6 +1006,7 @@ export default function Owners() {
                 )}
               </div>
             </div>
+            )}
 
             {/* 4. Adresse postale & Notes */}
             <div>

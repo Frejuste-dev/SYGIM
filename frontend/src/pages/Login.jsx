@@ -10,8 +10,10 @@ const ROLE_ROUTES = {
   director:          '/admin/dashboard',
   accounting:        '/admin/dashboard',
   gestionnaire:      '/admin/dashboard',
+  manager:           '/admin/manager',
   collector_manager: '/admin/manager',
   collector:         '/admin/collector',
+  owner:             '/admin/reports?tab=owner_situation',
 };
 
 const ERROR_MAP = {

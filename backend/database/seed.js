@@ -34,7 +34,7 @@ const DEFAULT_USERS = [
     },
     {
         username:      'comptable',
-        password:      'Cpt2026!',
+        password:      'Comptable2026!',
         role:          'accounting',
         firstName:     'Service',
         lastName:      'Comptabilité',
@@ -49,6 +49,24 @@ const DEFAULT_USERS = [
         lastName:      'Récolteurs',
         displayName:   'Manager des Récolteurs',
         avatar:        'MGR'
+    },
+    {
+        username:      'manager_demo',
+        password:      'Mgr2026!',
+        role:          'manager',
+        firstName:     'Gestionnaire',
+        lastName:      'Patrimoine',
+        displayName:   'Gestionnaire Patrimoine',
+        avatar:        'GP'
+    },
+    {
+        username:      'proprietaire',
+        password:      'Owner2026!',
+        role:          'owner',
+        firstName:     'Bailleur',
+        lastName:      'Démo',
+        displayName:   'Propriétaire Démo',
+        avatar:        'PR'
     },
     {
         username:      'korede',

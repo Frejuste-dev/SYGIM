@@ -260,6 +260,42 @@ class FinancialController {
         ORDER BY p.payment_date DESC
       `, [clientId]);
 
+      const [validatedTxRows] = await pool.query(`
+        SELECT id, reference, amount, method, COALESCE(validated_at, date, created_at) AS payment_date,
+               description
+        FROM transactions
+        WHERE client_id = ?
+          AND status = 'processed'
+          AND amount > 0
+          AND COALESCE(payment_type, 'payment') NOT IN ('assignment', 'departure')
+          AND COALESCE(method, '') NOT IN ('assignment', 'departure', '')
+        ORDER BY COALESCE(validated_at, created_at) DESC, id DESC
+      `, [clientId]);
+
+      const knownRefs = new Set();
+      for (const p of payments) {
+        if (p.receipt_number) knownRefs.add(p.receipt_number);
+        if (p.transaction_reference) knownRefs.add(p.transaction_reference);
+      }
+
+      const mergedPayments = [...payments];
+      for (const tx of validatedTxRows) {
+        if (tx.reference && knownRefs.has(tx.reference)) continue;
+        mergedPayments.push({
+          id: `TX-${tx.id}`,
+          uuid: null,
+          transaction_reference: tx.reference,
+          receipt_number: tx.reference,
+          amount_received: tx.amount,
+          payment_method: String(tx.method || 'cash').toUpperCase(),
+          payment_date: tx.payment_date,
+          status: 'RECEIVED',
+          is_reversed: 0,
+          reversal_reason: null,
+          reversed_at: null
+        });
+      }
+
       const [ledgerEntries] = await pool.query(`
         SELECT id, uuid, transaction_type, amount, running_balance, source_payment_id, consumed_invoice_id, created_at
         FROM tenant_credit_ledger
@@ -267,12 +303,50 @@ class FinancialController {
         ORDER BY id DESC
       `, [clientId]);
 
-      const currentAdvanceBalance = await tenantCreditLedgerRepository.getLatestRunningBalance(clientId);
-      const totalDue = invoices
-        .filter(inv => inv.status !== 'CANCELLED')
-        .reduce((sum, inv) => sum + parseFloat(inv.balance_due), 0);
+      let effectiveLedger = ledgerEntries;
+      if (effectiveLedger.length === 0 && mergedPayments.length > 0) {
+        let running = 0;
+        const chronological = [...mergedPayments]
+          .filter(p => !p.is_reversed)
+          .sort((a, b) => new Date(a.payment_date) - new Date(b.payment_date));
+        effectiveLedger = chronological.map((p, idx) => {
+          const amt = parseFloat(p.amount_received || 0);
+          running = parseFloat((running + amt).toFixed(2));
+          return {
+            id: `PAY-${p.id || idx + 1}`,
+            uuid: p.uuid || null,
+            transaction_type: 'PAYMENT_RECEIVED',
+            amount: amt,
+            running_balance: running,
+            source_payment_id: typeof p.id === 'number' ? p.id : null,
+            consumed_invoice_id: null,
+            reference: p.receipt_number || p.transaction_reference,
+            created_at: p.payment_date
+          };
+        }).reverse();
+      }
 
-      const netBalance = parseFloat((totalDue - currentAdvanceBalance).toFixed(2));
+      const currentAdvanceBalance = await tenantCreditLedgerRepository.getLatestRunningBalance(clientId);
+      const totalPaymentsValid = mergedPayments
+        .filter(p => !p.is_reversed)
+        .reduce((sum, p) => sum + parseFloat(p.amount_received || 0), 0);
+
+      let totalDue = 0;
+      let effectiveAdvance = currentAdvanceBalance;
+
+      if (invoices.length > 0) {
+        totalDue = invoices
+          .filter(inv => inv.status !== 'CANCELLED')
+          .reduce((sum, inv) => sum + parseFloat(inv.balance_due), 0);
+      } else {
+        const rawDue = parseFloat(client.amount_due || 0);
+        totalDue = Math.max(0, parseFloat((rawDue - totalPaymentsValid).toFixed(2)));
+        if (effectiveAdvance === 0 && totalPaymentsValid > rawDue) {
+          effectiveAdvance = parseFloat((totalPaymentsValid - rawDue).toFixed(2));
+        }
+      }
+
+      const netBalance = parseFloat((totalDue - effectiveAdvance).toFixed(2));
 
       return res.json(ApiResponse.success({
         client: {
@@ -283,12 +357,13 @@ class FinancialController {
         },
         summary: {
           totalDebtRemaining: totalDue,
-          creditAdvanceBalance: currentAdvanceBalance,
+          totalPaid: totalPaymentsValid,
+          creditAdvanceBalance: effectiveAdvance,
           netPosition: netBalance > 0 ? `DOIT_${netBalance}` : (netBalance < 0 ? `CREDITEUR_${Math.abs(netBalance)}` : 'A_JOUR')
         },
         invoices,
-        payments,
-        ledger: ledgerEntries
+        payments: mergedPayments,
+        ledger: effectiveLedger
       }, 'Relevé de compte locataire généré.'));
     } catch (error) {
       next(error);

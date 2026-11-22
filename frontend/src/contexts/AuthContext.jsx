@@ -102,7 +102,18 @@ export const AuthProvider = ({ children }) => {
             }
         };
         
-        validateSession();
+        const pathname = typeof window !== 'undefined' ? window.location.pathname : '';
+        const hasStoredToken = typeof window !== 'undefined' && Boolean(localStorage.getItem('sygim_token'));
+        const isPublicAuthPage = pathname === '/login' || pathname === '/';
+
+        if (isPublicAuthPage && !cachedUser && !hasStoredToken) {
+            if (!ignore) {
+                setUser(null);
+                setLoading(false);
+            }
+        } else {
+            validateSession();
+        }
 
         return () => {
             ignore = true;

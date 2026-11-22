@@ -9,9 +9,14 @@ export default function Admin() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { confirm } = useConfirm();
+  const isAdmin = user?.role === 'admin' || user?.role === 'super_admin' || user?.isSuperAdmin;
+  const userRole = user?.role?.toLowerCase() || '';
+  const isManager = userRole === 'manager' || userRole === 'collector_manager';
+  const isOwner = userRole === 'owner';
+
   const { data: notifData = {} } = useNotifications();
   const unreadCount = notifData.unreadCount || 0;
-  const { data: alertsData = {} } = useOverdueAlerts();
+  const { data: alertsData = {} } = useOverdueAlerts({}, { enabled: Boolean(user && !isManager && !isOwner) });
   const overdueAlerts = alertsData.alerts || [];
   const overdueCount = alertsData.count ?? overdueAlerts.length;
 
@@ -27,16 +32,22 @@ export default function Admin() {
     }
   };
 
-  const isAdmin = user?.role === 'admin' || user?.role === 'super_admin' || user?.isSuperAdmin;
-  const userRole = user?.role?.toLowerCase() || '';
-  const isManager = userRole === 'manager' || userRole === 'collector_manager';
-  const totalNotifications = isManager ? unreadCount : (unreadCount + overdueCount);
+  const totalNotifications = (isManager || isOwner) ? unreadCount : (unreadCount + overdueCount);
 
   const dashboardPath = userRole === 'collector' || userRole === 'collecteur' 
     ? '/admin/collector' 
     : isManager 
       ? '/admin/manager' 
-      : '/admin/dashboard';
+      : isOwner
+        ? '/admin/reports?tab=owner_situation'
+        : '/admin/dashboard';
+
+  // Navigation dédiée pour le rôle PROPRIÉTAIRE
+  const ownerMenuItems = [
+    { name: 'Mes États Financiers', path: '/admin/reports?tab=owner_situation', icon: 'fas fa-file-contract' },
+    { name: 'Notifications', path: '/admin/notifications', icon: 'fas fa-bell', badge: unreadCount },
+    { name: 'Mon Profil', path: '/admin/profile', icon: 'fas fa-user' },
+  ];
 
   // Navigation dédiée pour le rôle MANAGER
   const managerMenuItems = [
@@ -131,6 +142,23 @@ export default function Admin() {
                 </NavLink>
               ))}
             </div>
+          ) : isOwner ? (
+            <div>
+              <div className="px-6 mb-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider mt-2">
+                ESPACE PROPRIÉTAIRE
+              </div>
+              {ownerMenuItems.map((item) => (
+                <NavLink key={item.path} to={item.path} className={navLinkStyle}>
+                  <i className={`${item.icon} w-4 text-center text-slate-400 shrink-0`}></i>
+                  <span className="flex-1 truncate whitespace-nowrap text-sm">{item.name}</span>
+                  {Boolean(item.badge) && item.badge > 0 && (
+                    <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-500 text-white shadow-2xs shrink-0">
+                      {item.badge}
+                    </span>
+                  )}
+                </NavLink>
+              ))}
+            </div>
           ) : (
             navigationSections.map((section, sIdx) => {
               const visibleItems = section.items.filter(item => item.roles.includes(userRole));
@@ -187,7 +215,7 @@ export default function Admin() {
               <button 
                 className="text-slate-500 hover:text-slate-900 text-lg relative focus:outline-none mr-2 p-1 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
                 onClick={() => {
-                  if (isManager) {
+                  if (isManager || isOwner) {
                     navigate('/admin/notifications');
                   } else {
                     setIsNotificationsOpen(!isNotificationsOpen);
