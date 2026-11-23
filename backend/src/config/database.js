@@ -27,6 +27,9 @@ if (process.env.DB_SSL === 'true') {
     poolConfig.ssl = {
         rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false'
     };
+    if (process.env.DB_SSL_CA) {
+        poolConfig.ssl.ca = process.env.DB_SSL_CA.replace(/\\n/g, '\n');
+    }
 }
 
 const pool = mysql.createPool(poolConfig);

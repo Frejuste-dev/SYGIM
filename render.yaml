@@ -2,6 +2,7 @@ services:
   - type: web
     name: sygim-api
     runtime: node
+    plan: free
     rootDir: backend
     buildCommand: npm install --omit=dev
     startCommand: node src/index.js
@@ -13,6 +14,8 @@ services:
         value: "true"
       - key: DB_SSL
         value: "true"
+      - key: DB_SSL_REJECT_UNAUTHORIZED
+        value: "false"
       - key: JWT_SECRET
         generateValue: true
       - key: JWT_REFRESH_SECRET
@@ -20,10 +23,10 @@ services:
       - key: DB_HOST
         sync: false
       - key: DB_PORT
-        value: "3306"
+        sync: false
       - key: DB_USER
         sync: false
       - key: DB_PASSWORD
         sync: false
       - key: DB_NAME
-        value: sygim_db
+        sync: false
