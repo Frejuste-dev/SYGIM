@@ -28,6 +28,9 @@ const ApiResponse = require('./utils/responses/ApiResponse');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Indispensable derrière les reverse proxies cloud (Render, Railway, Koyeb, Cloudflare) pour express-rate-limit
+app.set('trust proxy', 1);
+
 // ═══════════════════════════════════════════════════════════════════════
 // 2. MIDDLEWARE GLOBAL - SÉCURITÉ ET PERFORMANCE
 // ═══════════════════════════════════════════════════════════════════════

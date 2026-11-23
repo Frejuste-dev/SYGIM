@@ -9,19 +9,27 @@ const { randomUUID } = require('crypto');
 require('dotenv').config();
 const Logger = require('../utils/logger/Logger');
 
-const pool = mysql.createPool({
-    host:               process.env.DB_HOST     || 'localhost',
-    port:               process.env.DB_PORT     || 3306,
-    user:               process.env.DB_USER     || 'root',
-    password:           process.env.DB_PASSWORD || '',
-    database:           process.env.DB_NAME     || 'sygim_db',
+const poolConfig = {
+    host:               process.env.DB_HOST     || process.env.MYSQLHOST     || 'localhost',
+    port:               parseInt(process.env.DB_PORT || process.env.MYSQLPORT || '3306', 10),
+    user:               process.env.DB_USER     || process.env.MYSQLUSER     || 'root',
+    password:           process.env.DB_PASSWORD !== undefined ? process.env.DB_PASSWORD : (process.env.MYSQLPASSWORD || ''),
+    database:           process.env.DB_NAME     || process.env.MYSQLDATABASE || 'sygim_db',
     waitForConnections: true,
     connectionLimit:    parseInt(process.env.DB_CONNECTION_LIMIT || '25'),
     queueLimit:         0,
     charset:            'utf8mb4',
     timezone:           '+00:00',
     namedPlaceholders:  true,
-});
+};
+
+if (process.env.DB_SSL === 'true') {
+    poolConfig.ssl = {
+        rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false'
+    };
+}
+
+const pool = mysql.createPool(poolConfig);
 
 async function safeAlter(sql) {
     try {
@@ -213,7 +221,7 @@ if (process.env.RUN_AUTO_DDL === 'true') {
 async function testConnection() {
     try {
         const conn = await pool.getConnection();
-        Logger.info('MySQL connecté avec succès', { database: process.env.DB_NAME || 'sygim_db' });
+        Logger.info('MySQL connecté avec succès', { database: process.env.DB_NAME || process.env.MYSQLDATABASE || 'sygim_db' });
         conn.release();
         return true;
     } catch (err) {

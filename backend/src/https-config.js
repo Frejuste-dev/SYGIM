@@ -5,8 +5,7 @@ const http = require('http');
 const Logger = require('./utils/logger/Logger');
 
 function configureServer(app, port = 5000, httpsPort = 5443) {
-  const env = process.env.NODE_ENV || 'development';
-  const useHttps = process.env.USE_HTTPS === 'true' || env === 'production';
+  const useHttps = process.env.USE_HTTPS === 'true';
 
   const httpServer = http.createServer(app);
   httpServer.listen(port, () => {

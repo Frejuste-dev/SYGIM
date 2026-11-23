@@ -11,6 +11,16 @@ const Logger = require('../utils/logger/Logger');
  * @throws {Error} Si une variable obligatoire est manquante ou invalide
  */
 const validateEnv = () => {
+  // Normaliser les variables MySQL Railway si DB_* ne sont pas définies
+  if (!process.env.DB_HOST && process.env.MYSQLHOST) process.env.DB_HOST = process.env.MYSQLHOST;
+  if (!process.env.DB_PORT && process.env.MYSQLPORT) process.env.DB_PORT = process.env.MYSQLPORT;
+  if (!process.env.DB_NAME && process.env.MYSQLDATABASE) process.env.DB_NAME = process.env.MYSQLDATABASE;
+  if (!process.env.DB_USER && process.env.MYSQLUSER) process.env.DB_USER = process.env.MYSQLUSER;
+  if (process.env.DB_PASSWORD === undefined && process.env.MYSQLPASSWORD !== undefined) {
+    process.env.DB_PASSWORD = process.env.MYSQLPASSWORD;
+  }
+  process.env.PORT = process.env.PORT || '5000';
+
   const required = [
     'PORT',
     'DB_HOST',
