@@ -1,9 +1,11 @@
 // Script pour générer certificat SSL auto-signé
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
+const { execFileSync } = require('child_process');
 
 const certsDir = path.join(__dirname, '../backend/certs');
+const keyPath = path.join(certsDir, 'server.key');
+const certPath = path.join(certsDir, 'server.crt');
 
 // Créer dossier certs
 if (!fs.existsSync(certsDir)) {
@@ -14,17 +16,33 @@ if (!fs.existsSync(certsDir)) {
 try {
   // Vérifier si OpenSSL est disponible
   try {
-    execSync('openssl version', { stdio: 'pipe' });
+    execFileSync('openssl', ['version'], { stdio: 'pipe', shell: false });
     
     console.log('🔐 Génération certificat SSL auto-signé...\n');
     
-    // Générer clé privée et certificat
-    const cmd = `openssl req -x509 -newkey rsa:4096 -keyout "${path.join(certsDir, 'server.key')}" -out "${path.join(certsDir, 'server.crt')}" -days 365 -nodes -subj "/C=ML/ST=Mali/L=Bamako/O=SYGIM/CN=localhost"`;
+    // Générer clé privée et certificat sans passer par un shell
+    execFileSync(
+      'openssl',
+      [
+        'req',
+        '-x509',
+        '-newkey',
+        'rsa:4096',
+        '-keyout',
+        keyPath,
+        '-out',
+        certPath,
+        '-days',
+        '365',
+        '-nodes',
+        '-subj',
+        '/C=ML/ST=Mali/L=Bamako/O=SYGIM/CN=localhost',
+      ],
+      { stdio: 'pipe', shell: false }
+    );
     
-    execSync(cmd, { stdio: 'pipe' });
-    
-    if (fs.existsSync(path.join(certsDir, 'server.crt')) && 
-        fs.existsSync(path.join(certsDir, 'server.key'))) {
+    if (fs.existsSync(certPath) && 
+        fs.existsSync(keyPath)) {
       console.log('✅ Certificat SSL généré avec succès!\n');
       console.log('📋 Détails:');
       console.log('   - Fichier: backend/certs/server.crt');
