@@ -1,13 +1,18 @@
 // Fix admin role assignment for production users
+require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 const mysql = require('mysql2/promise');
 
 async function fixAdminRole() {
   try {
+    if (!process.env.DB_PASSWORD) {
+      throw new Error("Variable d'environnement DB_PASSWORD requise.");
+    }
+
     const connection = await mysql.createConnection({
-      host: 'localhost',
-      user: 'root',
-      password: 'L2026@!King',
-      database: 'sygim_db'
+      host: process.env.DB_HOST || 'localhost',
+      user: process.env.DB_USER || 'root',
+      password: process.env.DB_PASSWORD,
+      database: process.env.DB_NAME || 'sygim_db'
     });
 
     console.log('✅ Connecté à la base de données');

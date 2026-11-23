@@ -45,7 +45,7 @@ async function clean() {
 
         for (const table of tables) {
             try {
-                await conn.query(`TRUNCATE TABLE ${table}`);
+                await conn.query('TRUNCATE TABLE ??', [table]);
                 console.log(`✅ ${table}: VIDÉE`);
             } catch (e) {
                 console.log(`⚠️  ${table}: ${e.message}`);

@@ -10,6 +10,7 @@
 
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 const authService = require('../../src/modules/auth/auth.service');
 const authRepository = require('../../src/modules/auth/auth.repository');
 
@@ -19,7 +20,7 @@ jest.mock('../../src/modules/auth/auth.repository');
 describe('Refresh Token Functional Test', () => {
   let testUserId = 123;
   let testUsername = 'refresh_test_user';
-  let testPassword = 'TestPassword123!';
+  let testPassword = process.env.TEST_USER_PASSWORD || crypto.randomBytes(12).toString('base64url');
   let initialAccessToken;
   let initialRefreshToken;
   let initialClaims;
@@ -51,8 +52,6 @@ describe('Refresh Token Functional Test', () => {
     });
 
     authRepository.findRefreshToken.mockImplementation((hashedToken) => {
-      console.log('Searching for hashedToken:', hashedToken);
-      console.log('Current mockDbRefreshTokens:', mockDbRefreshTokens);
       const token = mockDbRefreshTokens.find(t => t.token === hashedToken && !t.revokedAt);
       if (token) {
         return Promise.resolve({
@@ -90,8 +89,8 @@ describe('Refresh Token Functional Test', () => {
       initialAccessToken = result.accessToken;
       initialRefreshToken = result.refreshToken;
 
-      // Décoder et stocker les claims initiaux
-      initialClaims = jwt.decode(initialAccessToken);
+      // Vérifier et décoder les claims initiaux
+      initialClaims = jwt.verify(initialAccessToken, process.env.JWT_SECRET, { algorithms: ['HS256'] });
       
       expect(initialClaims).toHaveProperty('id');
       expect(initialClaims).toHaveProperty('username');
@@ -122,11 +121,11 @@ describe('Refresh Token Functional Test', () => {
       const expiredToken = jwt.sign(
         { id: testUserId, username: testUsername, role: 'manager' },
         process.env.JWT_SECRET,
-        { expiresIn: '-1s' } // Expiré immédiatement
+        { expiresIn: '-1s', algorithm: 'HS256' } // Expiré immédiatement
       );
 
       expect(() => {
-        jwt.verify(expiredToken, process.env.JWT_SECRET);
+        jwt.verify(expiredToken, process.env.JWT_SECRET, { algorithms: ['HS256'] });
       }).toThrow();
       
       console.log('✓ Étape 3: Token expiré correctement rejeté');
@@ -141,8 +140,8 @@ describe('Refresh Token Functional Test', () => {
 
       refreshedAccessToken = result.accessToken;
       
-      // Décoder et stocker les claims du nouveau token
-      refreshedClaims = jwt.decode(refreshedAccessToken);
+      // Vérifier et décoder les claims du nouveau token
+      refreshedClaims = jwt.verify(refreshedAccessToken, process.env.JWT_SECRET, { algorithms: ['HS256'] });
       
       expect(refreshedClaims).toHaveProperty('id');
       expect(refreshedClaims).toHaveProperty('username');
@@ -172,7 +171,7 @@ describe('Refresh Token Functional Test', () => {
 
   describe('Étape 6: Vérification du nouveau token', () => {
     it('le nouveau token devrait être valide et vérifiable', () => {
-      const decoded = jwt.verify(refreshedAccessToken, process.env.JWT_SECRET);
+      const decoded = jwt.verify(refreshedAccessToken, process.env.JWT_SECRET, { algorithms: ['HS256'] });
       
       expect(decoded).toHaveProperty('id');
       expect(decoded).toHaveProperty('username');
@@ -220,11 +219,11 @@ describe('Refresh Token Functional Test', () => {
       
       // 1. Login
       const loginResult = await authService.login(testUsername, testPassword);
-      const loginClaims = jwt.decode(loginResult.accessToken);
+      const loginClaims = jwt.verify(loginResult.accessToken, process.env.JWT_SECRET, { algorithms: ['HS256'] });
       
       // 2. Refresh
       const refreshResult = await authService.refreshAccessToken(loginResult.refreshToken);
-      const refreshClaims = jwt.decode(refreshResult.accessToken);
+      const refreshClaims = jwt.verify(refreshResult.accessToken, process.env.JWT_SECRET, { algorithms: ['HS256'] });
       
       // 3. Vérification claims identiques
       expect(refreshClaims.id).toBe(loginClaims.id);
@@ -232,7 +231,7 @@ describe('Refresh Token Functional Test', () => {
       expect(refreshClaims.role).toBe(loginClaims.role);
       
       // 4. Vérification que le nouveau token est valide
-      const verified = jwt.verify(refreshResult.accessToken, process.env.JWT_SECRET);
+      const verified = jwt.verify(refreshResult.accessToken, process.env.JWT_SECRET, { algorithms: ['HS256'] });
       expect(verified.id).toBe(testUserId);
       expect(verified.username).toBe(testUsername);
       expect(verified.role).toBe('manager');

@@ -169,8 +169,8 @@ Toutes les routes (sauf /health, /api/auth/login, /api/auth/register) nécessite
                 type: 'object',
                 required: ['username', 'password'],
                 properties: {
-                  username: { type: 'string', example: 'admin_prod' },
-                  password: { type: 'string', format: 'password', example: 'AdminSecure2024!' }
+                  username: { type: 'string', example: 'admin' },
+                  password: { type: 'string', format: 'password', example: '<mot_de_passe>' }
                 }
               }
             }

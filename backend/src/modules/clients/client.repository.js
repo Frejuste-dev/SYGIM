@@ -152,8 +152,14 @@ class ClientRepository extends BaseRepository {
     try {
       await conn.beginTransaction();
 
-      const columns = Object.keys(clientData).join(',');
-      const placeholders = Object.keys(clientData).fill('?').join(',');
+      const keys = Object.keys(clientData || {});
+      for (const key of keys) {
+        if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(key)) {
+          throw new Error(`Identifiant de colonne SQL invalide: ${key}`);
+        }
+      }
+      const columns = keys.map(k => `\`${k}\``).join(',');
+      const placeholders = keys.map(() => '?').join(',');
 
       const [insertResult] = await conn.query(
         `INSERT INTO clients (${columns}) VALUES (${placeholders})`,

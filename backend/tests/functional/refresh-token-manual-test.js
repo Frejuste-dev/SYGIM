@@ -11,10 +11,10 @@ const crypto = require('crypto');
 const mockDbRefreshTokens = [];
 const testUserId = 123;
 const testUsername = 'refresh_test_user';
-const testPassword = 'TestPassword123!';
+const testPassword = process.env.TEST_PASSWORD || crypto.randomBytes(12).toString('base64url');
 
 // Configuration
-process.env.JWT_SECRET = 'test-jwt-secret-for-functional-tests';
+process.env.JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(32).toString('hex');
 process.env.JWT_EXPIRES_IN = '15m';
 
 // Fonctions utilitaires (simulant auth.service)
@@ -26,7 +26,7 @@ function generateAccessToken(user) {
   return jwt.sign(
     { id: user.primaryKey, username: user.username, role: user.role },
     process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRES_IN || '15m' }
+    { expiresIn: process.env.JWT_EXPIRES_IN || '15m', algorithm: 'HS256' }
   );
 }
 
@@ -131,7 +131,7 @@ async function runTest() {
     const loginResult = await login(testUsername, testPassword);
     initialAccessToken = loginResult.accessToken;
     initialRefreshToken = loginResult.refreshToken;
-    initialClaims = jwt.decode(initialAccessToken);
+    initialClaims = jwt.verify(initialAccessToken, process.env.JWT_SECRET, { algorithms: ['HS256'] });
     
     console.log('✓ Connexion réussie');
     console.log('  Claims initiaux:', {
@@ -152,11 +152,11 @@ async function runTest() {
     const expiredToken = jwt.sign(
       { id: testUserId, username: testUsername, role: 'manager' },
       process.env.JWT_SECRET,
-      { expiresIn: '-1s' }
+      { expiresIn: '-1s', algorithm: 'HS256' }
     );
     
     try {
-      jwt.verify(expiredToken, process.env.JWT_SECRET);
+      jwt.verify(expiredToken, process.env.JWT_SECRET, { algorithms: ['HS256'] });
       console.log('✗ Token expiré non rejeté (ERREUR)');
       process.exit(1);
     } catch (e) {
@@ -167,7 +167,7 @@ async function runTest() {
     console.log('\n[Étape 4] Rafraîchissement du token...');
     const refreshResult = await refreshAccessToken(initialRefreshToken);
     refreshedAccessToken = refreshResult.accessToken;
-    refreshedClaims = jwt.decode(refreshedAccessToken);
+    refreshedClaims = jwt.verify(refreshedAccessToken, process.env.JWT_SECRET, { algorithms: ['HS256'] });
     
     console.log('✓ Token rafraîchi avec succès');
     console.log('  Claims rafraîchis:', {
@@ -189,7 +189,7 @@ async function runTest() {
 
     // Étape 6: Vérification du nouveau token
     console.log('\n[Étape 6] Vérification du nouveau token...');
-    const decoded = jwt.verify(refreshedAccessToken, process.env.JWT_SECRET);
+    const decoded = jwt.verify(refreshedAccessToken, process.env.JWT_SECRET, { algorithms: ['HS256'] });
     expect(decoded.id).toBe(testUserId);
     expect(decoded.username).toBe(testUsername);
     expect(decoded.role).toBe('manager');
@@ -232,16 +232,16 @@ async function runTest() {
     mockDbRefreshTokens.length = 0; // Reset
     
     const completeLogin = await login(testUsername, testPassword);
-    const completeLoginClaims = jwt.decode(completeLogin.accessToken);
+    const completeLoginClaims = jwt.verify(completeLogin.accessToken, process.env.JWT_SECRET, { algorithms: ['HS256'] });
     
     const completeRefresh = await refreshAccessToken(completeLogin.refreshToken);
-    const completeRefreshClaims = jwt.decode(completeRefresh.accessToken);
+    const completeRefreshClaims = jwt.verify(completeRefresh.accessToken, process.env.JWT_SECRET, { algorithms: ['HS256'] });
     
     expect(completeRefreshClaims.id).toBe(completeLoginClaims.id);
     expect(completeRefreshClaims.username).toBe(completeLoginClaims.username);
     expect(completeRefreshClaims.role).toBe(completeLoginClaims.role);
     
-    const completeVerified = jwt.verify(completeRefresh.accessToken, process.env.JWT_SECRET);
+    const completeVerified = jwt.verify(completeRefresh.accessToken, process.env.JWT_SECRET, { algorithms: ['HS256'] });
     expect(completeVerified.id).toBe(testUserId);
     expect(completeVerified.username).toBe(testUsername);
     expect(completeVerified.role).toBe('manager');

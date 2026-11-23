@@ -23,7 +23,7 @@ describe('Auth Middleware - Phase 1D Cookie & Fallback', () => {
 
     authenticate(req, res, next);
 
-    expect(jwt.verify).toHaveBeenCalledWith('valid_cookie_token', 'test_secret');
+    expect(jwt.verify).toHaveBeenCalledWith('valid_cookie_token', 'test_secret', { algorithms: ['HS256'] });
     expect(req.user).toEqual({ id: 1, role: 'admin' });
     expect(next).toHaveBeenCalledWith(); // Called without errors
   });
@@ -52,7 +52,7 @@ describe('Auth Middleware - Phase 1D Cookie & Fallback', () => {
 
     authenticate(req, res, next);
 
-    expect(jwt.verify).toHaveBeenCalledWith('valid_header_token', 'test_secret');
+    expect(jwt.verify).toHaveBeenCalledWith('valid_header_token', 'test_secret', { algorithms: ['HS256'] });
     expect(req.user).toEqual({ id: 2, role: 'user' });
     expect(next).toHaveBeenCalledWith();
   });

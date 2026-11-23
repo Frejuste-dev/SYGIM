@@ -1,4 +1,8 @@
 # Phase 5: Functional Testing for Production
+if ([string]::IsNullOrWhiteSpace($env:SYGIM_ADMIN_PASSWORD)) {
+  Write-Error "Variable d'environnement manquante : SYGIM_ADMIN_PASSWORD"
+  exit 1
+}
 $baseUrl = 'http://localhost:5000'
 
 Write-Host @"
@@ -26,7 +30,7 @@ Write-Host "`n[TEST 2/6] Login Admin (admin_prod)" -ForegroundColor Cyan
 try {
   $loginBody = @{
     username = 'admin_prod'
-    password = 'AdminSecure2024!'
+    password = $env:SYGIM_ADMIN_PASSWORD
   } | ConvertTo-Json
 
   $loginResponse = Invoke-WebRequest -Uri "$baseUrl/api/auth/login" -Method POST `

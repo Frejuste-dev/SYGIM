@@ -7,25 +7,51 @@ const Logger = require('../utils/logger/Logger');
 const AppError = require('../utils/errors/AppError');
 const { pool: db } = require('../config/database');
 
+const IDENTIFIER_REGEX = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
+
 class BaseRepository {
   constructor(tableName) {
+    if (!IDENTIFIER_REGEX.test(tableName)) {
+      throw new Error(`Nom de table SQL invalide: ${tableName}`);
+    }
     this.tableName = tableName;
+  }
+
+  _validateIdentifier(identifier, label = 'colonne') {
+    if (!IDENTIFIER_REGEX.test(identifier)) {
+      throw AppError.badRequest(`Identifiant de ${label} SQL invalide: ${identifier}`);
+    }
+    const allowed = Array.isArray(this.allowedColumns || this.fillable)
+      ? (this.allowedColumns || this.fillable)
+      : null;
+    if (allowed && !allowed.includes(identifier)) {
+      return false;
+    }
+    return true;
+  }
+
+  _sanitizeFilters(filters = {}) {
+    const whereConditions = [];
+    const params = [];
+
+    for (const [key, value] of Object.entries(filters || {})) {
+      if (value !== undefined && value !== null) {
+        if (!this._validateIdentifier(key, 'filtre')) {
+          continue;
+        }
+        whereConditions.push(`\`${key}\` = ?`);
+        params.push(value);
+      }
+    }
+
+    return { whereConditions, params };
   }
 
   async findAll(filters = {}, limit = 100, offset = 0) {
     try {
       const start = Date.now();
-      let query = `SELECT * FROM ${this.tableName}`;
-      const params = [];
-
-      // Ajouter les filtres dynamiques
-      const whereConditions = [];
-      for (const [key, value] of Object.entries(filters)) {
-        if (value !== undefined && value !== null) {
-          whereConditions.push(`${key} = ?`);
-          params.push(value);
-        }
-      }
+      let query = `SELECT * FROM \`${this.tableName}\``;
+      const { whereConditions, params } = this._sanitizeFilters(filters);
 
       if (whereConditions.length > 0) {
         query += ` WHERE ${whereConditions.join(' AND ')}`;
@@ -40,6 +66,9 @@ class BaseRepository {
       Logger.debug(`${this.tableName}.findAll completed`, { duration, count: results.length });
       return results;
     } catch (error) {
+      if (error instanceof AppError) {
+        throw error;
+      }
       Logger.error(`Error in ${this.tableName}.findAll`, error);
       throw AppError.internal(`Erreur lors de la lecture de ${this.tableName}`);
     }
@@ -47,7 +76,7 @@ class BaseRepository {
 
   async findById(id) {
     try {
-      const query = `SELECT * FROM ${this.tableName} WHERE id = ? LIMIT 1`;
+      const query = `SELECT * FROM \`${this.tableName}\` WHERE id = ? LIMIT 1`;
       const [results] = await db.query(query, [id]);
 
       if (results.length === 0) {
@@ -141,7 +170,7 @@ class BaseRepository {
 
   async delete(id) {
     try {
-      const query = `DELETE FROM ${this.tableName} WHERE id = ?`;
+      const query = `DELETE FROM \`${this.tableName}\` WHERE id = ?`;
       const [result] = await db.query(query, [id]);
 
       if (result.affectedRows === 0) {
@@ -160,16 +189,8 @@ class BaseRepository {
 
   async count(filters = {}) {
     try {
-      let query = `SELECT COUNT(*) as total FROM ${this.tableName}`;
-      const params = [];
-
-      const whereConditions = [];
-      for (const [key, value] of Object.entries(filters)) {
-        if (value !== undefined && value !== null) {
-          whereConditions.push(`${key} = ?`);
-          params.push(value);
-        }
-      }
+      let query = `SELECT COUNT(*) as total FROM \`${this.tableName}\``;
+      const { whereConditions, params } = this._sanitizeFilters(filters);
 
       if (whereConditions.length > 0) {
         query += ` WHERE ${whereConditions.join(' AND ')}`;
@@ -178,6 +199,9 @@ class BaseRepository {
       const [results] = await db.query(query, params);
       return results[0].total;
     } catch (error) {
+      if (error instanceof AppError) {
+        throw error;
+      }
       Logger.error(`Error in ${this.tableName}.count`, error);
       throw AppError.internal('Erreur lors du comptage');
     }

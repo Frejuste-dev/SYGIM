@@ -18,7 +18,7 @@ const authenticate = (req, res, next) => {
     token = req.cookies.accessToken;
     
     try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const decoded = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] });
       req.user = decoded;
       return next();
     } catch (error) {
@@ -33,7 +33,7 @@ const authenticate = (req, res, next) => {
     token = authHeader.split(' ')[1];
     
     try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const decoded = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] });
       req.user = decoded;
       return next();
     } catch (error) {
@@ -77,7 +77,7 @@ const generateToken = (user) => {
       displayName: user.display_name || user.displayName || ''
     },
     process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
+    { expiresIn: process.env.JWT_EXPIRES_IN || '24h', algorithm: 'HS256' }
   );
 };
 

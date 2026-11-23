@@ -9,8 +9,8 @@ const loginDuration = new Trend('login_duration');
 const queryDuration = new Trend('query_duration');
 
 const CREDENTIALS = {
-  admin: { username: __ENV.ADMIN_USER || 'admin', password: __ENV.ADMIN_PASS || 'admin123' },
-  collector: { username: __ENV.COLLECTOR_USER || 'collector', password: __ENV.COLLECTOR_PASS || 'collector123' }
+  admin: { username: __ENV.ADMIN_USER || 'admin', password: __ENV.ADMIN_PASS || '' },
+  collector: { username: __ENV.COLLECTOR_USER || 'collector', password: __ENV.COLLECTOR_PASS || '' }
 };
 
 export const options = {
@@ -30,6 +30,7 @@ export const options = {
 
 function getToken(role) {
   const creds = CREDENTIALS[role] || CREDENTIALS.collector;
+  if (!creds.password) return null;
   const res = http.post(`${BASE_URL}/auth/login`, JSON.stringify(creds), {
     headers: { 'Content-Type': 'application/json' }
   });
@@ -39,8 +40,11 @@ function getToken(role) {
   return res.json().data?.accessToken;
 }
 
-function authedGet(url, token, tag) {
-  const res = http.get(url, {
+function authedGet(endpointPath, token, tag) {
+  if (typeof endpointPath !== 'string' || !endpointPath.startsWith('/')) {
+    throw new Error(`Invalid endpoint path: ${endpointPath}`);
+  }
+  const res = http.get(`${BASE_URL}${endpointPath}`, {
     headers: { Authorization: `Bearer ${token}` }
   });
   check(res, { [`${tag} ok`]: (r) => r.status === 200 }) || errorRate.add(1);
@@ -54,14 +58,14 @@ export default function () {
     if (!adminToken) { sleep(3); return; }
 
     group('Endpoints GET', () => {
-      authedGet(`${BASE_URL}/clients`, adminToken, 'clients');
-      authedGet(`${BASE_URL}/properties`, adminToken, 'properties');
-      authedGet(`${BASE_URL}/owners`, adminToken, 'owners');
-      authedGet(`${BASE_URL}/transactions`, adminToken, 'transactions');
-      authedGet(`${BASE_URL}/collectors`, adminToken, 'collectors');
-      authedGet(`${BASE_URL}/alerts/dashboard`, adminToken, 'alerts');
-      authedGet(`${BASE_URL}/reports/dashboard`, adminToken, 'reports');
-      authedGet(`${BASE_URL}/health`, adminToken, 'health');
+      authedGet('/clients', adminToken, 'clients');
+      authedGet('/properties', adminToken, 'properties');
+      authedGet('/owners', adminToken, 'owners');
+      authedGet('/transactions', adminToken, 'transactions');
+      authedGet('/collectors', adminToken, 'collectors');
+      authedGet('/alerts/dashboard', adminToken, 'alerts');
+      authedGet('/reports/dashboard', adminToken, 'reports');
+      authedGet('/health', adminToken, 'health');
     });
 
     group('Endpoints POST', () => {

@@ -1,7 +1,7 @@
 const mysql = require('mysql2/promise');
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
+const { execFileSync } = require('child_process');
 
 // Force reading .env.dev for database credentials
 require('dotenv').config({ path: path.join(__dirname, '..', '.env.dev') });
@@ -33,9 +33,10 @@ async function setupTestDb() {
     await connection.query(schema);
 
     console.log('🔄 Enregistrement des migrations (Baseline)...');
-    execSync('npm run db:migrate:baseline', {
+    execFileSync(process.execPath, ['src/infrastructure/database/migrate.js', 'baseline'], {
       env: { ...process.env, DB_NAME: 'sygim_test' },
-      stdio: 'inherit'
+      stdio: 'inherit',
+      shell: false
     });
     
     console.log('✅ Base de données sygim_test prête.');
@@ -55,8 +56,8 @@ async function setupTestDb() {
       DB_NAME: 'sygim_test' 
     };
 
-    execSync('node database/seed.js', { env: envForSeed, stdio: 'inherit' });
-    execSync('node database/seed-test-data.js', { env: envForSeed, stdio: 'inherit' });
+    execFileSync(process.execPath, ['database/seed.js'], { env: envForSeed, stdio: 'inherit', shell: false });
+    execFileSync(process.execPath, ['database/seed-test-data.js'], { env: envForSeed, stdio: 'inherit', shell: false });
     
     console.log('✅ Base de test peuplée avec succès.');
   } catch (error) {

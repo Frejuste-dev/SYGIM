@@ -73,7 +73,6 @@ class AuthRepository {
    * Trouve un utilisateur par son username via l'index optimisé
    */
   async findByUsername(username) {
-    Logger.debug('Querying user by username', { username: username.toLowerCase() });
     const [rows] = await pool.query(
       `SELECT id as primaryKey, username, password_hash as password, role, active as isActive, deletedAt
        FROM users 

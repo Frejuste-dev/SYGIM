@@ -17,12 +17,17 @@
  */
 
 require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
+const crypto = require('crypto');
 const { pool } = require('../src/config/database');
 
 const log = (msg) => console.log(`   ${msg}`);
+const IDENTIFIER_REGEX = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
 
 async function getId(table, field, value) {
-  const [rows] = await pool.query(`SELECT id FROM ${table} WHERE ${field} = ? LIMIT 1`, [value]);
+  if (!IDENTIFIER_REGEX.test(table) || !IDENTIFIER_REGEX.test(field)) {
+    throw new Error('Identifiant SQL invalide');
+  }
+  const [rows] = await pool.query('SELECT id FROM ?? WHERE ?? = ? LIMIT 1', [table, field, value]);
   return rows.length ? rows[0].id : null;
 }
 
@@ -40,13 +45,14 @@ async function seedSecondManager() {
   const existing = await getId('users', 'username', 'manager_b');
   if (existing) { log('Manager B déjà existant'); return existing; }
   const bcrypt = require('bcryptjs');
-  const hash = await bcrypt.hash('MgrB2026!', 10);
+  const managerBPassword = process.env.SEED_MANAGER_B_PASSWORD || crypto.randomBytes(16).toString('base64url');
+  const hash = await bcrypt.hash(managerBPassword, 10);
   const [res] = await pool.query(
     `INSERT INTO users (username, password_hash, role, first_name, last_name, display_name, avatar, active)
      VALUES (?, ?, 'collector_manager', 'Manager', 'B', 'Manager B', 'MGB', 1)`,
     ['manager_b', hash]
   );
-  log('Manager B (manager_b / MgrB2026!) créé');
+  log('Manager B (manager_b) créé');
   return res.insertId;
 }
 

@@ -14,11 +14,15 @@ async function runLiveCutover() {
   console.log('🚀 PHASE 8.2 — BASCULE FINALE EN PRODUCTION (LIVE CUTOVER)');
   console.log('===============================================================\n');
 
+  if (!process.env.DB_PASSWORD) {
+    throw new Error('DB_PASSWORD environment variable is required');
+  }
+
   const connection = await mysql.createConnection({
-    host: '127.0.0.1',
+    host: process.env.DB_HOST || '127.0.0.1',
     port: process.env.DB_PORT ? parseInt(process.env.DB_PORT) : 3306,
     user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || 'sibmlab@1014',
+    password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME || 'sygim_dev'
   });
 

@@ -134,20 +134,22 @@ class TransactionRepository extends BaseRepository {
   }
 
   async getStats(period) {
-    let dateFilter = '';
-    if (period === 'day') {
-      dateFilter = 'AND date = CURDATE()';
-    } else if (period === 'month') {
-      dateFilter = 'AND MONTH(date) = MONTH(CURDATE()) AND YEAR(date) = YEAR(CURDATE())';
-    } else if (period === 'year') {
-      dateFilter = 'AND YEAR(date) = YEAR(CURDATE())';
-    }
+    const normalizedPeriod = ['day', 'month', 'year'].includes(period) ? period : 'all';
+    const dateCondition = `AND (
+      ? = 'all'
+      OR (? = 'day' AND date = CURDATE())
+      OR (? = 'month' AND MONTH(date) = MONTH(CURDATE()) AND YEAR(date) = YEAR(CURDATE()))
+      OR (? = 'year' AND YEAR(date) = YEAR(CURDATE()))
+    )`;
+    const dateParams = [normalizedPeriod, normalizedPeriod, normalizedPeriod, normalizedPeriod];
 
     const [totalCollected] = await pool.query(
-      `SELECT COALESCE(SUM(amount), 0) as total FROM transactions WHERE status = 'processed' ${dateFilter}`
+      `SELECT COALESCE(SUM(amount), 0) as total FROM transactions WHERE status = 'processed' ${dateCondition}`,
+      dateParams
     );
     const [totalPending] = await pool.query(
-      `SELECT COALESCE(SUM(amount), 0) as total FROM transactions WHERE status = 'pending' ${dateFilter}`
+      `SELECT COALESCE(SUM(amount), 0) as total FROM transactions WHERE status = 'pending' ${dateCondition}`,
+      dateParams
     );
     const [countByMethod] = await pool.query(
       `SELECT
@@ -165,7 +167,7 @@ class TransactionRepository extends BaseRepository {
          AND amount > 0
          AND COALESCE(payment_type, 'payment') NOT IN ('assignment', 'departure')
          AND COALESCE(method, '') NOT IN ('assignment', 'departure', '')
-         ${dateFilter}
+         ${dateCondition}
        GROUP BY 
          CASE
            WHEN LOWER(TRIM(method)) IN ('cash', 'especes', 'espece', 'espèce', 'espèces') THEN 'Espèces'
@@ -173,7 +175,8 @@ class TransactionRepository extends BaseRepository {
            WHEN LOWER(TRIM(method)) IN ('cheque', 'check', 'chèque') THEN 'Chèque'
            WHEN LOWER(TRIM(method)) IN ('transfer', 'bank_transfer', 'virement', 'virement bancaire', 'virement_bancaire') THEN 'Virement bancaire'
            ELSE 'Espèces'
-         END`
+         END`,
+      dateParams
     );
     const [recentTransactions] = await pool.query(
       'SELECT * FROM transactions ORDER BY created_at DESC LIMIT 10'

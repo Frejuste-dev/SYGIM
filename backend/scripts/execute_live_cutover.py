@@ -1,3 +1,4 @@
+import os
 import mysql.connector
 import uuid
 import datetime
@@ -7,11 +8,15 @@ def live_cutover():
     print("[PHASE 8.2] BASCULE FINALE EN PRODUCTION (LIVE CUTOVER)")
     print("===============================================================\n")
 
+    db_password = os.environ.get("DB_PASSWORD")
+    if not db_password:
+        raise RuntimeError("DB_PASSWORD environment variable is required")
+
     db = mysql.connector.connect(
-        host="127.0.0.1",
-        user="root",
-        password="sibmlab@1014",
-        database="sygim_dev"
+        host=os.environ.get("DB_HOST", "127.0.0.1"),
+        user=os.environ.get("DB_USER", "root"),
+        password=db_password,
+        database=os.environ.get("DB_NAME", "sygim_dev")
     )
     cursor = db.cursor(dictionary=True)
 

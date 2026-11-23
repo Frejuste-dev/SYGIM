@@ -373,7 +373,7 @@ describe('logSanitizer — Tests Unitaires (SEC-003-B)', () => {
     const requestLogger = require('../../../src/middleware/requestLogger');
     const Logger = require('../../../src/utils/logger/Logger');
 
-    it('doit transmettre req.body et req.query bruts au logger sans les muter, Winston assurant la sanitisation centrale', () => {
+    it('ne doit jamais journaliser req.body ni les valeurs brutes de req.query tout en gardant req intact', () => {
       const req = {
         method: 'POST',
         path: '/api/v1/auth/login',
@@ -394,22 +394,21 @@ describe('logSanitizer — Tests Unitaires (SEC-003-B)', () => {
       expect(req.body.username).toBe('testuser');
       expect(req.query.token).toBe('secret-query-token');
 
-      // 2. Logger.debug reçoit les données sans double-traversée locale
+      // 2. Logger.debug ne reçoit que les métadonnées minimales (aucun body ni valeur de query)
       expect(debugSpy).toHaveBeenCalledWith(
         'Incoming request [POST /api/v1/auth/login]',
         expect.objectContaining({
-          body: req.body,
-          query: req.query
+          requestId: expect.any(String),
+          method: 'POST',
+          path: '/api/v1/auth/login',
+          queryKeys: ['token', 'page']
         })
       );
 
-      // 3. Le formateur central Winston assainit l'entrée complète
+      // 3. Aucune exposition de body ou de query dans le payload journalisé
       const passedToLogger = debugSpy.mock.calls[0][1];
-      const sanitizedAtWinston = sanitize(passedToLogger);
-      expect(sanitizedAtWinston.body.password).toBe(REDACTED);
-      expect(sanitizedAtWinston.body.username).toBe('testuser');
-      expect(sanitizedAtWinston.query.token).toBe(REDACTED);
-      expect(sanitizedAtWinston.query.page).toBe('1');
+      expect(passedToLogger.body).toBeUndefined();
+      expect(passedToLogger.query).toBeUndefined();
 
       debugSpy.mockRestore();
     });

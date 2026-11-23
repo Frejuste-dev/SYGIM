@@ -1,15 +1,24 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const { execSync } = require('child_process');
+const { execFileSync } = require('child_process');
 const { pool } = require('../../../src/config/database');
 
 const TEST_MIGRATIONS_DIR = path.join(__dirname, 'test_migrations');
 
 function runMigrate(args = '') {
-  return execSync(`node src/infrastructure/database/migrate.js ${args}`, {
+  const argList = Array.isArray(args)
+    ? args.map(String)
+    : String(args).trim().split(/\s+/).filter(Boolean);
+  for (const arg of argList) {
+    if (!/^[a-zA-Z0-9_-]+$/.test(arg)) {
+      throw new Error(`Invalid migration argument: ${arg}`);
+    }
+  }
+  return execFileSync(process.execPath, ['src/infrastructure/database/migrate.js', ...argList], {
     env: { ...process.env, MIGRATIONS_DIR: TEST_MIGRATIONS_DIR, DB_NAME: 'sygim_test_migrations' },
-    encoding: 'utf8'
+    encoding: 'utf8',
+    shell: false
   });
 }
 

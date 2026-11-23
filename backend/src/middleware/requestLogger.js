@@ -19,9 +19,7 @@ function requestLogger(req, res, next) {
       method: req.method,
       path: req.path,
       statusCode: res.statusCode,
-      durationMs: duration,
-      userAgent: req.get('user-agent'),
-      ip: req.ip
+      durationMs: duration
     };
 
     if (res.statusCode >= 500) {
@@ -33,11 +31,11 @@ function requestLogger(req, res, next) {
     }
   });
 
-  // Délégation au sanitizer central Winston : transmission des métadonnées brutes sans mutation de req
   Logger.debug(`Incoming request [${req.method} ${req.path}]`, {
     requestId: req.id,
-    body: req.body,
-    query: req.query
+    method: req.method,
+    path: req.path,
+    queryKeys: Object.keys(req.query || {})
   });
 
   next();

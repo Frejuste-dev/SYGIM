@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # Configuration
-CONTAINER_NAME="sygim_mysql"
-DB_NAME="sygim_db"
-DB_USER="root"
-DB_PASS="local_root_password"
+CONTAINER_NAME="${CONTAINER_NAME:-sygim_mysql}"
+DB_NAME="${DB_NAME:-sygim_db}"
+DB_USER="${DB_USER:-root}"
+: "${DB_PASS:?La variable d'environnement DB_PASS doit etre definie}"
 BACKUP_DIR="../../backups"
 
 if [ -z "$1" ]; then
@@ -38,7 +38,7 @@ fi
 
 echo ""
 echo "[SYGIM] Lancement de la restauration..."
-docker exec -i ${CONTAINER_NAME} /usr/bin/mysql -u ${DB_USER} --password=${DB_PASS} ${DB_NAME} < "${TARGET_FILE}"
+docker exec -i -e MYSQL_PWD="${DB_PASS}" "${CONTAINER_NAME}" /usr/bin/mysql -u "${DB_USER}" "${DB_NAME}" < "${TARGET_FILE}"
 
 if [ $? -eq 0 ]; then
     echo ""

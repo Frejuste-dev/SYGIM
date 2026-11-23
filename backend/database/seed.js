@@ -10,13 +10,17 @@
  */
 
 require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
+const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const { pool } = require('../src/config/database');
+
+const resolveSeedPassword = (envKey) =>
+    process.env[envKey] || process.env.SEED_DEFAULT_PASSWORD || crypto.randomBytes(16).toString('base64url');
 
 const DEFAULT_USERS = [
     {
         username:      'admin',
-        password:      'Admin2026!',
+        password:      resolveSeedPassword('SEED_ADMIN_PASSWORD'),
         role:          'admin',
         firstName:     'Super',
         lastName:      'Admin',
@@ -25,7 +29,7 @@ const DEFAULT_USERS = [
     },
     {
         username:      'directeur',
-        password:      'Dir2026!',
+        password:      resolveSeedPassword('SEED_DIRECTOR_PASSWORD'),
         role:          'director',
         firstName:     'Direction',
         lastName:      'Générale',
@@ -34,7 +38,7 @@ const DEFAULT_USERS = [
     },
     {
         username:      'comptable',
-        password:      'Comptable2026!',
+        password:      resolveSeedPassword('SEED_ACCOUNTING_PASSWORD'),
         role:          'accounting',
         firstName:     'Service',
         lastName:      'Comptabilité',
@@ -43,7 +47,7 @@ const DEFAULT_USERS = [
     },
     {
         username:      'manager',
-        password:      'Mgr2026!',
+        password:      resolveSeedPassword('SEED_MANAGER_PASSWORD'),
         role:          'collector_manager',
         firstName:     'Manager',
         lastName:      'Récolteurs',
@@ -52,7 +56,7 @@ const DEFAULT_USERS = [
     },
     {
         username:      'manager_demo',
-        password:      'Mgr2026!',
+        password:      resolveSeedPassword('SEED_MANAGER_DEMO_PASSWORD'),
         role:          'manager',
         firstName:     'Gestionnaire',
         lastName:      'Patrimoine',
@@ -61,7 +65,7 @@ const DEFAULT_USERS = [
     },
     {
         username:      'proprietaire',
-        password:      'Owner2026!',
+        password:      resolveSeedPassword('SEED_OWNER_PASSWORD'),
         role:          'owner',
         firstName:     'Bailleur',
         lastName:      'Démo',
@@ -70,7 +74,7 @@ const DEFAULT_USERS = [
     },
     {
         username:      'korede',
-        password:      'Korede2026!',
+        password:      resolveSeedPassword('SEED_KOREDE_PASSWORD'),
         role:          'collector',
         firstName:     '',
         lastName:      'KOREDE',
@@ -80,7 +84,7 @@ const DEFAULT_USERS = [
     },
     {
         username:      'leonce',
-        password:      'Leonce2026!',
+        password:      resolveSeedPassword('SEED_LEONCE_PASSWORD'),
         role:          'collector',
         firstName:     '',
         lastName:      'LEONCE',
@@ -173,7 +177,7 @@ async function seed() {
         console.log('Comptes créés :');
         console.log('────────────────────────────────────────');
         for (const u of DEFAULT_USERS) {
-            console.log(`   ${u.username.padEnd(12)} | ${u.role.padEnd(18)} | mot de passe: ${u.password}`);
+            console.log(`   ${u.username.padEnd(12)} | ${u.role.padEnd(18)} | statut: prêt (mot de passe configuré via env ou généré)`);
         }
         console.log('────────────────────────────────────────');
         console.log('');

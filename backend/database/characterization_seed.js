@@ -5,7 +5,7 @@ const bcrypt = require('bcryptjs');
 const dbConfig = {
   host: process.env.DB_HOST || 'localhost',
   user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || 'sibmlab@1014',
+  password: process.env.DB_PASSWORD,
   database: 'sygim_characterization',
   port: process.env.DB_PORT || 3306,
   multipleStatements: true
@@ -14,6 +14,14 @@ const dbConfig = {
 async function seed() {
   let connection;
   try {
+    if (!process.env.DB_PASSWORD) {
+      throw new Error('DB_PASSWORD environment variable is required');
+    }
+    const seedPassword = process.env.SEED_TEST_PASSWORD;
+    if (!seedPassword) {
+      throw new Error('SEED_TEST_PASSWORD environment variable is required');
+    }
+
     console.log('Connecting to sygim_characterization database...');
     connection = await mysql.createConnection(dbConfig);
     
@@ -23,13 +31,13 @@ async function seed() {
     // Truncate tables to ensure a clean slate
     const tables = ['users', 'owners', 'properties', 'collectors', 'clients', 'transactions', 'refresh_tokens', 'activity_logs'];
     for (const table of tables) {
-      await connection.query(`TRUNCATE TABLE ${table}`);
+      await connection.query('TRUNCATE TABLE ??', [table]);
       console.log(`Truncated ${table}`);
     }
 
     console.log('Inserting deterministic golden dataset...');
 
-    const passwordHash = await bcrypt.hash('password123', 12);
+    const passwordHash = await bcrypt.hash(seedPassword, 12);
 
     // 1. USERS
     await connection.query(`
